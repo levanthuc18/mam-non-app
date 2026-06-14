@@ -1828,6 +1828,55 @@ function ImportHSExcel({ meta, students, upStudents, ym }) {
   );
 }
 
+function HSDetail({ s, meta, ym, setHS, chuyenLop, inp }) {
+  const lopThang = lopOfMonth(s, ym);
+  const lab = { fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 };
+  const wrap = { flex: "1 1 140px", minWidth: 0 };
+  const sel = { ...inp, width: "100%", marginTop: 2 };
+  return (
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+      <div style={wrap}>
+        <label style={lab}>Lớp (từ tháng {ym})</label>
+        <select value={lopThang || ""} onChange={(e) => chuyenLop(s.id, e.target.value)} style={sel}>
+          {meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}
+        </select>
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Phân loại</label>
+        <select value={s.pl} onChange={(e) => setHS(s.id, { pl: e.target.value })} style={sel}>
+          {PHAN_LOAI.map((p) => <option key={p} value={p}>{PL_LABEL[p] || p}</option>)}
+        </select>
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Trạng thái</label>
+        <select value={s.trangThai} onChange={(e) => setHS(s.id, { trangThai: e.target.value })} style={sel}>
+          {TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Nợ đầu kỳ (đ)</label>
+        <NumInput value={s.noDauKy || 0} onChange={(v) => setHS(s.id, { noDauKy: v })} w={130} />
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Ngày sinh</label>
+        <input type="date" value={s.ngaySinh || ""} onChange={(e) => setHS(s.id, { ngaySinh: e.target.value })} style={sel} />
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Ngày nhập học</label>
+        <input type="date" value={s.ngayNhapHoc || ""} onChange={(e) => setHS(s.id, { ngayNhapHoc: e.target.value })} style={sel} />
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Ngày nghỉ học</label>
+        <input type="date" value={s.ngayNghiHoc || ""} onChange={(e) => setHS(s.id, { ngayNghiHoc: e.target.value })} style={sel} />
+      </div>
+      <div style={wrap}>
+        <label style={lab}>SĐT phụ huynh</label>
+        <input type="tel" inputMode="tel" value={s.phuHuynh?.sdt || ""} onChange={(e) => setHS(s.id, { phuHuynh: { ...(s.phuHuynh || {}), sdt: e.target.value } })} placeholder="(không bắt buộc)" style={sel} />
+      </div>
+    </div>
+  );
+}
+
 function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [sec, setSec] = useState("hs");
   const [ten, setTen] = useState("");
