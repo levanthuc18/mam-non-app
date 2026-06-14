@@ -34,7 +34,7 @@ const noDau = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").
 // ===== Storage: Supabase (neu da cau hinh) HOAC window.storage + mirror RAM =====
 // [ONLINE] Dien URL + anon key cua Supabase de dong bo nhieu may. De trong "" => chay local nhu cu.
 const SUPABASE_URL = "https://seflblpxqvedpjpqphet.supabase.co";  // URL lấy ở trên
-const SUPABASE_KEY = "sb_publishable_pRwY-KFY6pPRoPWR63DWYw_qhVyKg8v";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZmxibHB4cXZlZHBqcHFwaGV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNjI1MTYsImV4cCI6MjA5NjkzODUxNn0.SVGFvNbhaEGVsE4bSrdz2hubgTAH-LkIS-EqVMzUu9Q";
 const SB = !!(SUPABASE_URL && SUPABASE_KEY);
 const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" };
 
