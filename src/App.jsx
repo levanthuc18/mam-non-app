@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 
 // ====================================================================
 // QUAN LY MAM NON — v5
@@ -933,7 +933,7 @@ export default function App() {
           <ThuPhiTab {...{ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }} />
         )}
         {tab === "dd" && (
-          <DiemDanhTab {...{ allRows: ddRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked: nextChot, ddLockReason: nextChot, isWide, ym, isGV, gvLopId, gvTen }} />
+          <DiemDanhTab {...{ allRows: ddRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked: nextChot, ddLockReason: nextChot, isWide, ym, isGV, gvLopId, gvTen, students }} />
         )}
         {tab === "phieu" && mData && phieuRow && (
           <PhieuThu {...{ phieuRow, allRows, setPhieuId, getLop, meta, month, year, upMeta, mData, upMData }} />
@@ -1247,7 +1247,7 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 }
 
 // ====================================================================
-function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen }) {
+function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students }) {
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const days = new Date(year, month, 0).getDate();
@@ -1274,7 +1274,12 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
   return (
     <>
       {isGV
-        ? <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>👩‍🏫 {gvTen} — Lớp {lopTen}</div>
+        ? <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
+            👩‍🏫 {gvTen} — Lớp {lopTen}
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 4, fontWeight: 500 }}>
+              {studentRows.length} cháu trong lớp · Toàn trường {students.filter(s => TT_THU_PHI[s.trangThai]).length} cháu đang học
+            </div>
+          </div>
         : <><SearchBar value={search} onChange={setSearch} /><Chips items={chipsLop} val={lopFilter} set={setLopFilter} /></>}
       {locked && (ddLockReason
         ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt (đã dùng để tính tiền). Mở khóa tháng sau để sửa.</div>
@@ -1327,8 +1332,35 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
   );
 }
 
+const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locked, index, todayD }) {
+  const a = att[r.hs.id] || {};
+  const soNghi = Object.keys(a).length;
+  return (
+    <tr style={{ background: index % 2 ? "#FAFCFA" : "#fff" }}>
+      <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>{r.hs.ten}</td>
+      {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
+        const dw = new Date(year, month - 1, d).getDay();
+        const isCN = dw === 0; const isLe = le[d]; const off = a[d]; const closed = isCN || isLe;
+        return (
+          <td key={d} onClick={() => !closed && toggle(r.hs.id, d)}
+            style={{ width: 34, height: 38, fontSize: 15, textAlign: "center", cursor: closed || locked ? "default" : "pointer",
+              background: isCN ? "#EFEFEC" : isLe ? C.amberSoft : off ? C.coralSoft : "transparent",
+              color: C.coral, fontWeight: 700, border: `1px solid ${C.line}`, userSelect: "none",
+              outline: d === todayD ? `1.5px solid ${C.pine}` : "none", outlineOffset: -1 }}>
+            {off && !closed ? "✕" : ""}
+          </td>
+        );
+      })}
+      <td style={{ textAlign: "center", fontWeight: 700, color: soNghi ? C.coral : C.sub, padding: "0 6px" }}>{soNghi}</td>
+    </tr>
+  );
+});
+
 function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, month, days, locked, isGV }) {
   const dayArr = Array.from({ length: days }, (_, i) => i + 1);
+  const today = new Date();
+  const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const todayD = isCurMonth ? today.getDate() : null;
   if (studentRows.length === 0) return <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh.</div>;
   return (
     <Card style={{ padding: 8, overflowX: "auto" }}>
@@ -1337,22 +1369,15 @@ function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, month, day
         <thead><tr>
           <th style={{ position: "sticky", left: 0, background: C.card, textAlign: "left", padding: "4px 6px", minWidth: 106, zIndex: 2 }}>Học sinh</th>
           {dayArr.map((d) => { const dw = new Date(year, month - 1, d).getDay(); const isCN = dw === 0; const isLe = le[d]; return (
-            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : "transparent", color: isCN ? "#B6BDB8" : isLe ? C.amber : dw === 6 ? C.blueA : C.sub, fontWeight: 600 }}>
+            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : d === todayD ? C.pineSoft : "transparent", color: isCN ? "#B6BDB8" : isLe ? C.amber : d === todayD ? C.pine : dw === 6 ? C.blueA : C.sub, fontWeight: 600, borderBottom: d === todayD ? `2px solid ${C.pine}` : undefined }}>
               <div style={{ fontSize: 9, opacity: 0.8 }}>{TUAN[dw]}</div><div>{d}</div>{isLe && <div style={{ fontSize: 8 }}>lễ</div>}
             </th>); })}
           <th style={{ padding: "0 6px", color: C.coral, fontWeight: 700 }}>Nghỉ</th>
         </tr></thead>
         <tbody>
-          {studentRows.map((r, ri) => {
-            const a = att[r.hs.id] || {}; const soNghi = Object.keys(a).length;
-            return (
-              <tr key={r.hs.id} style={{ background: ri % 2 ? "#FAFCFA" : "#fff" }}>
-                <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>{r.hs.ten}</td>
-                {dayArr.map((d) => { const dw = new Date(year, month - 1, d).getDay(); const isCN = dw === 0; const isLe = le[d]; const off = a[d]; const closed = isCN || isLe; return <td key={d} onClick={() => !closed && toggle(r.hs.id, d)} style={{ width: 34, height: 38, fontSize: 15, textAlign: "center", cursor: closed || locked ? "default" : "pointer", background: isCN ? "#EFEFEC" : isLe ? C.amberSoft : off ? C.coralSoft : "transparent", color: C.coral, fontWeight: 700, border: `1px solid ${C.line}`, userSelect: "none" }}>{off && !closed ? "✕" : ""}</td>; })}
-                <td style={{ textAlign: "center", fontWeight: 700, color: soNghi ? C.coral : C.sub, padding: "0 6px" }}>{soNghi}</td>
-              </tr>
-            );
-          })}
+          {studentRows.map((r, ri) => (
+            <DDRow key={r.hs.id} r={r} att={att} toggle={toggle} le={le} year={year} month={month} days={days} locked={locked} index={ri} todayD={todayD} />
+          ))}
         </tbody>
       </table>
     </Card>
