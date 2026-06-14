@@ -317,7 +317,7 @@ function LockNote() { return <div style={{ background: C.goldSoft, border: `1px 
 // ===== Confirm + Toast trong app (thay window.confirm/alert bi chan o artifact) =====
 let _ask = null, _toast = null;
 function ask(msg, opts) { return new Promise((res) => { _ask && _ask({ msg, opts: opts || {}, res }); }); }
-function toast(msg) { _toast && _toast(msg); }
+function toast(msg, undo) { _toast && _toast({ msg, undo }); }
 
 // ===== [AUDIT] Nhat ky thao tac =====
 let CURRENT_ACTOR = "Admin";
@@ -349,11 +349,16 @@ function ConfirmHost() {
   );
 }
 function ToastHost() {
-  const [msg, setMsg] = useState(null);
+  const [state, setState] = useState(null);
   const t = useRef(null);
-  useEffect(() => { _toast = (m) => { setMsg(m); clearTimeout(t.current); t.current = setTimeout(() => setMsg(null), 2600); }; return () => { _toast = null; }; }, []);
-  if (!msg) return null;
-  return <div style={{ position: "fixed", bottom: 78, left: "50%", transform: "translateX(-50%)", zIndex: 100, background: C.ink, color: "#fff", padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)" }}>{msg}</div>;
+  useEffect(() => { _toast = (s) => { setState(s); clearTimeout(t.current); t.current = setTimeout(() => setState(null), s && s.undo ? 6000 : 2600); }; return () => { _toast = null; }; }, []);
+  if (!state) return null;
+  return (
+    <div style={{ position: "fixed", bottom: 78, left: "50%", transform: "translateX(-50%)", zIndex: 100, background: C.ink, color: "#fff", padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 10 }}>
+      <span>{state.msg}</span>
+      {state.undo && <button onClick={() => { state.undo(); clearTimeout(t.current); setState(null); }} style={{ background: "#fff", color: C.ink, border: "none", borderRadius: 99, padding: "4px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>↩ Hoàn tác</button>}
+    </div>
+  );
 }
 
 // ====================================================================
@@ -1018,6 +1023,7 @@ function NgayAnBar({ onApply, rows }) {
 function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }) {
   const [fastMode, setFastMode] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [thuLimit, setThuLimit] = useState(50);
   const inputRefs = useRef({});
   // [UX-I] dem trang thai
   const cnt = { chuaThu: 0, thieu: 0, xong: 0 };
@@ -1026,8 +1032,10 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
     else if (r.conNo > 0) cnt.thieu++;
     else if ((r.rec.thucThu || 0) > 0 && r.conNo <= 0) cnt.xong++;
   });
-  const batchThuDu = (onlyNo) => {
+  const batchThuDu = async (onlyNo) => {
     const pairs = rows.filter((r) => !onlyNo || r.conNo > 0).map((r) => ({ sid: r.hs.id, thucThu: r.tongPhaiThu }));
+    if (pairs.length === 0) return;
+    if (!(await ask(`Đánh "thu đủ" cho ${pairs.length} HS đang hiển thị?\nThao tác này ghi đè số đã thu của từng em.`, { okText: "Thu đủ" }))) return;
     thuDuNhieu(pairs);
     toast(onlyNo ? `Đã thu đủ ${pairs.length} HS còn nợ.` : `Đã thu đủ ${pairs.length} HS đang hiển thị.`);
   };
@@ -1064,7 +1072,7 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
       {!locked && !fastMode && <NgayAnBar onApply={setNgayAnAll} rows={rows} />}
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
-      {rows.map((r) => {
+      {rows.slice(0, thuLimit).map((r) => {
         const open = openId === r.hs.id;
         if (fastMode) {
           const idx = rows.findIndex((x) => x.hs.id === r.hs.id);
@@ -1159,6 +1167,9 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
           </div>
         );
       })}
+      {rows.length > thuLimit && (
+        <button onClick={() => setThuLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10 }}>Hiện thêm 50 HS ({Math.min(thuLimit, rows.length)}/{rows.length})</button>
+      )}
       <ThuNgoai mData={mData} upMData={upMData} locked={locked} />
       <KhoanThuLop mData={mData} upMData={upMData} locked={locked} classes={chipsLop.slice(1).map(([id, ten]) => ({ id, ten }))} rows={rows} lopFilter={lopFilter} />
     </>
@@ -2035,9 +2046,15 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [hsSearch, setHsSearch] = useState("");
   const [showAddHS, setShowAddHS] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [hsStatusFilter, setHsStatusFilter] = useState("all");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedHS, setSelectedHS] = useState([]);
+  const [bulkTargetLop, setBulkTargetLop] = useState(meta.classes[0]?.id || "");
+  const [bulkTargetTT, setBulkTargetTT] = useState("Đang học");
+  const [hsLimit, setHsLimit] = useState(50);
 
   const addHS = () => { const t = ten.trim(); if (!t || !lop) return; upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }]); setTen(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh."); };
-  const delHS = async (id) => { const hs = students.find((s) => s.id === id); if (await ask("Xóa học sinh này? (mất cả lịch sử)", { danger: true, okText: "Xóa" })) { upStudents(students.filter((s) => s.id !== id)); logAction(`Xóa HS "${hs?.ten || id}"`); toast("Đã xóa học sinh."); } };
+  const delHS = async (id) => { const hs = students.find((s) => s.id === id); if (await ask("Xóa học sinh này? (mất cả lịch sử)", { danger: true, okText: "Xóa" })) { const newList = students.filter((s) => s.id !== id); upStudents(newList); logAction(`Xóa HS "${hs?.ten || id}"`); toast("Đã xóa học sinh", hs ? () => upStudents([...newList, hs]) : undefined); } };
   const setHS = (id, p) => upStudents(students.map((s) => (s.id === id ? { ...s, ...p } : s)));
   const chuyenLop = (id, lopMoi) => {
     const hs = students.find((s) => s.id === id);
@@ -2052,7 +2069,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
     if (hs) logAction(`Chuyển lớp HS "${hs.ten}" → ${tenLop} (từ T${ym})`);
   };
   const themLop = () => { const t = tenLopMoi.trim(); if (!t) return; upMeta({ ...meta, classes: [...meta.classes, { id: "c" + uid(), ten: t, hocPhi: 800000, banTru: 200000, tienAn: 30000, t7: 80000, veSinh: 20000, tiengAnh: 100000, ngoaiKhoa: 100000, dauNam: 1200000 }] }); setTenLopMoi(""); logAction(`Thêm lớp "${t}"`); };
-  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } const tenLop = meta.classes.find((c) => c.id === id)?.ten || id; if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { upMeta({ ...meta, classes: meta.classes.filter((c) => c.id !== id) }); logAction(`Xóa lớp "${tenLop}"`); toast("Đã xóa lớp."); } };
+  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } const lopCu = meta.classes.find((c) => c.id === id); if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { const newClasses = meta.classes.filter((c) => c.id !== id); upMeta({ ...meta, classes: newClasses }); logAction(`Xóa lớp "${lopCu?.ten || id}"`); toast("Đã xóa lớp", lopCu ? () => upMeta({ ...meta, classes: [...newClasses, lopCu] }) : undefined); } };
   const setLopGia = (id, k, v) => upMeta({ ...meta, classes: meta.classes.map((c) => (c.id === id ? { ...c, [k]: v } : c)) });
   const cycleKhoan = (id, key) => {
     const cur = khoanMode(meta.classes.find((c) => c.id === id), key);
@@ -2061,7 +2078,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   };
   const setBank = (p, k, v) => upMeta({ ...meta, bank: { ...meta.bank, [p]: { ...meta.bank[p], [k]: v } } });
   const themGV = () => { const t = gvTen.trim(), p = gvPin.trim(); if (!t || !p || !gvLop) { toast("Nhập đủ tên, PIN, lớp."); return; } if ((meta.giaoVien || []).some((g) => g.pin === p)) { toast("PIN này đã dùng — chọn PIN khác."); return; } upMeta({ ...meta, giaoVien: [...(meta.giaoVien || []), { id: "gv" + uid(), ten: t, pin: p, lopId: gvLop }] }); setGvTen(""); setGvPin(""); logAction(`Thêm giáo viên "${t}"`); toast("Đã thêm giáo viên."); };
-  const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { upMeta({ ...meta, giaoVien: (meta.giaoVien || []).filter((g) => g.id !== id) }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); } };
+  const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { const newGV = (meta.giaoVien || []).filter((g) => g.id !== id); upMeta({ ...meta, giaoVien: newGV }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); toast("Đã xóa giáo viên", gv ? () => upMeta({ ...meta, giaoVien: [...newGV, gv] }) : undefined); } };
   const setDK = (k, v) => upMeta({ ...meta, soDuDauKy: { ...meta.soDuDauKy, [k]: v } });
   const inp = { padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13.5, color: C.ink, background: C.card, outline: "none" };
 
@@ -2097,23 +2114,54 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             </div>
           </Card>
           </>)}
-          <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Chạm HS để sửa lớp / phân loại / trạng thái / nợ đầu kỳ. Chuyển lớp áp dụng từ tháng đang xem ({ym}).</div>
+          {/* Bulk action bar */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+            <button onClick={() => { setBulkMode((v) => !v); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>{bulkMode ? "⛔ Thoát chọn" : "☑ Chọn hàng loạt"}</button>
+            {bulkMode && selectedHS.length > 0 && (<>
+              <span style={{ fontSize: 12, color: C.sub }}>Đã chọn <b>{selectedHS.length}</b></span>
+              <select value={bulkTargetLop} onChange={(e) => setBulkTargetLop(e.target.value)} style={{ ...inp, width: 110 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
+              <button onClick={() => {
+                const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten;
+                upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; }));
+                logAction(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop} (từ T${ym})`);
+                toast(`Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); setSelectedHS([]);
+              }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Chuyển lớp</button>
+              <select value={bulkTargetTT} onChange={(e) => setBulkTargetTT(e.target.value)} style={{ ...inp, width: 120 }}>{TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+              <button onClick={() => {
+                upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, trangThai: bulkTargetTT } : s));
+                logAction(`Đổi trạng thái hàng loạt ${selectedHS.length} HS → ${bulkTargetTT} (T${ym})`);
+                toast(`Đã đổi ${selectedHS.length} HS sang "${bulkTargetTT}"`); setSelectedHS([]);
+              }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Đổi trạng thái</button>
+            </>)}
+          </div>
+
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>{bulkMode ? "Chạm để chọn/bỏ chọn nhiều em, rồi dùng nút bên trên." : "Chạm HS để sửa lớp / phân loại / trạng thái / nợ đầu kỳ. Chuyển lớp áp dụng từ tháng đang xem (" + ym + ")."}</div>
           <SearchBar value={hsSearch} onChange={setHsSearch} />
           <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={setHsFilter} />
-          {students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch)))).map((s) => {
+          <Chips items={[["all", "Mọi trạng thái"], ...TRANG_THAI.map((t) => [t, t])]} val={hsStatusFilter} set={setHsStatusFilter} />
+          {(() => {
+            const filtered = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter));
+            const shown = filtered.slice(0, hsLimit);
+            return (<>
+            {filtered.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh phù hợp.</div>}
+            {shown.map((s) => {
             const edit = editHS === s.id;
             const lh = lopHienTai(s);
+            const isSel = selectedHS.includes(s.id);
             return (
-              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden" }}>
-                <div onClick={() => setEditHS(edit ? null : s.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", cursor: "pointer" }}>
+              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `1.5px solid ${C.pine}` : undefined }}>
+                <div onClick={() => { if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", cursor: "pointer" }}>
+                  {bulkMode && <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{isSel ? "✓" : ""}</div>}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{s.ten}</div>
                     <div style={{ fontSize: 11.5, color: C.sub }}>{meta.classes.find((c) => c.id === lh)?.ten} · {s.pl} · <span style={{ color: TT_COLOR[s.trangThai] }}>{s.trangThai}</span></div>
                   </div>
-                  <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />
-                  <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}>🗑</button>
+                  {!bulkMode && (<>
+                    <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />
+                    <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}>🗑</button>
+                  </>)}
                 </div>
-                {edit && (
+                {edit && !bulkMode && (
                   <div style={{ borderTop: `1px dashed ${C.line}`, padding: "12px", background: "#FBFDFB" }}>
                     <HSDetail s={s} meta={meta} ym={ym} setHS={setHS} chuyenLop={chuyenLop} inp={inp} />
                   </div>
@@ -2121,6 +2169,11 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
               </Card>
             );
           })}
+            {filtered.length > hsLimit && (
+              <button onClick={() => setHsLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Hiện thêm 50 HS ({shown.length}/{filtered.length})</button>
+            )}
+            </>);
+          })()}
         </>
       )}
 
