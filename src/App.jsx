@@ -1893,6 +1893,8 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [editHS, setEditHS] = useState(null);
   const [hsFilter, setHsFilter] = useState("all");
   const [hsSearch, setHsSearch] = useState("");
+  const [showAddHS, setShowAddHS] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const addHS = () => { const t = ten.trim(); if (!t || !lop) return; upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }]); setTen(""); setNgaySinh(""); setPhSdt(""); toast("Đã thêm học sinh."); };
   const delHS = async (id) => { if (await ask("Xóa học sinh này? (mất cả lịch sử)", { danger: true, okText: "Xóa" })) { upStudents(students.filter((s) => s.id !== id)); toast("Đã xóa học sinh."); } };
@@ -1926,7 +1928,16 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
 
       {sec === "hs" && (
         <>
-          <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button onClick={() => setShowAddHS((v) => !v)} style={{ flex: 1, padding: "11px 8px", borderRadius: 12, border: `1.5px solid ${showAddHS ? C.pine : C.line}`, background: showAddHS ? C.pine : C.card, color: showAddHS ? "#fff" : C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            {showAddHS ? "▲ Thu gọn" : "＋ Thêm 1 HS"}
+          </button>
+          <button onClick={() => setShowImport((v) => !v)} style={{ flex: 1, padding: "11px 8px", borderRadius: 12, border: `1.5px solid ${showImport ? C.blueA : C.line}`, background: showImport ? C.blueA : C.card, color: showImport ? "#fff" : C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            {showImport ? "▲ Thu gọn" : "📥 Nhập hàng loạt"}
+          </button>
+          </div>
+          {showImport && <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />}
+          {showAddHS && (<>
           <Card style={{ marginBottom: 12 }}>
             <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>+ Thêm học sinh</div>
             <input value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHS()} placeholder="Họ tên học sinh…" style={{ ...inp, width: "100%", marginBottom: 8 }} />
@@ -1942,6 +1953,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
               <button onClick={addHS} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer", flexShrink: 0 }}>Thêm</button>
             </div>
           </Card>
+          </>)}
           <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Chạm HS để sửa lớp / phân loại / trạng thái / nợ đầu kỳ. Chuyển lớp áp dụng từ tháng đang xem ({ym}).</div>
           <SearchBar value={hsSearch} onChange={setHsSearch} />
           <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={setHsFilter} />
