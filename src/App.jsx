@@ -2253,16 +2253,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
         </>
       )}
 
-      >
-            );
-          })}
-            {filtered.length > hsLimit && (
-              <button onClick={() => setHsLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Hiện thêm 50 HS ({shown.length}/{filtered.length})</button>
-            )}
-            </>);
-          })()}
-        </>
-      )}
+
 
       {sec === "lop" && (
         <>
