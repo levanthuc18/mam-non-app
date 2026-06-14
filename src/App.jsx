@@ -1263,7 +1263,14 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
 
   const toggle = (sid, d) => { if (locked) return; const cur = { ...(att[sid] || {}) }; if (cur[d]) delete cur[d]; else cur[d] = true; upDDData({ ...att, [sid]: cur }); };
   // [PQ] GV khong dat ngay le (anh huong tien an) -> chi Admin
-  const toggleLe = (d) => { if (locked || isGV) return; const cur = { ...(leData || {}) }; if (cur[d]) delete cur[d]; else cur[d] = true; upLeData(cur); };
+    const toggleLe = (d) => {
+    if (locked || isGV) return;
+    const cur = { ...(leData || {}) };
+    const isAdding = !cur[d];
+    if (cur[d]) delete cur[d]; else cur[d] = true;
+    upLeData(cur);
+    logAction(`${isAdding ? "Đặt" : "Bỏ"} ngày lễ ${d}/${month}/${year}`);
+  };
   const lopTen = isGV ? (allRows.find((r) => r.lopId === gvLopId)?.lop?.ten || "?") : "";
 
   const dow = new Date(year, month - 1, viewDay).getDay();
