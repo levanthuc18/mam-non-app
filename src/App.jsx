@@ -319,6 +319,17 @@ let _ask = null, _toast = null;
 function ask(msg, opts) { return new Promise((res) => { _ask && _ask({ msg, opts: opts || {}, res }); }); }
 function toast(msg) { _toast && _toast(msg); }
 
+// ===== [AUDIT] Nhat ky thao tac =====
+let CURRENT_ACTOR = "Admin";
+async function logAction(act) {
+  try {
+    const log = (await sGet("mn5:log")) || [];
+    log.unshift({ t: new Date().toISOString(), who: CURRENT_ACTOR, act });
+    if (log.length > 800) log.length = 800;
+    await sSet("mn5:log", log);
+  } catch {}
+}
+
 function ConfirmHost() {
   const [state, setState] = useState(null);
   useEffect(() => { _ask = (s) => setState(s); return () => { _ask = null; }; }, []);
@@ -486,6 +497,7 @@ export default function App() {
   const isGV = auth?.role === "gv";
   const gvLopId = auth?.lopId || null;
   const gvTen = auth?.ten || "";
+  CURRENT_ACTOR = isAdmin ? "Admin" : (isGV ? gvTen : "?");
   const [openId, setOpenId] = useState(null);
   const [phieuId, setPhieuId] = useState(null);
   const [lopFilter, setLopFilter] = useState("all");
@@ -713,6 +725,7 @@ export default function App() {
     }
     upMData(data);
     toast(`Đã tạo tháng ${month}/${year}.`);
+    logAction(`Tạo bảng thu tháng ${month}/${year}`);
   };
 
   const delThang = async () => {
@@ -720,6 +733,7 @@ export default function App() {
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
       await sDel(`mn5:thang:${ym}`);
       setMData(null);
+      logAction(`Xóa bảng thu tháng ${month}/${year}`);
       toast(`Đã xóa bảng thu. Điểm danh tháng ${month}/${year} vẫn còn.`);
     }
   };
@@ -746,6 +760,7 @@ export default function App() {
     const fees = { ...mData.fees };
     pairs.forEach(({ sid, thucThu }) => { if (fees[sid]) fees[sid] = { ...fees[sid], thucThu }; });
     upMData({ ...mData, fees });
+    if (pairs.length > 1) logAction(`Thu đủ hàng loạt ${pairs.length} HS (T${month}/${year})`);
   };
   const setKhoan = (sid, key, val) => {
     if (locked) return;
@@ -1339,6 +1354,7 @@ function CongNoTab({ students, meta, ym, mData }) {
   const [data, setData] = useState([]);
   const [tongNo, setTongNo] = useState(0);
   const [tongDu, setTongDu] = useState(0);
+  const [noFilter, setNoFilter] = useState("all");
   const [showDetail, setShowDetail] = useState(null);
 
   useEffect(() => { (async () => {
@@ -1393,8 +1409,19 @@ function CongNoTab({ students, meta, ym, mData }) {
         </Card>
       </div>
       <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Lũy kế xuyên tháng, bù trừ thừa/thiếu. Bao gồm cả HS đã nghỉ học còn nợ.</div>
+      <Chips items={[["all", "Tất cả"], ["g500", "Nợ > 500k"], ["g1tr", "Nợ > 1 triệu"], ["m3", "Nợ ≥ 3 tháng"], ["thua", "Thu thừa"]]} val={noFilter} set={setNoFilter} />
 
-      {data.filter((x) => x.luyKe !== 0).map((x) => {
+      {(() => {
+        const soThangNo = (x) => (x.chiTiet || []).filter((c) => c.no > 0).length;
+        const filtered = data.filter((x) => {
+          if (noFilter === "thua") return x.luyKe < 0;
+          if (noFilter === "g500") return x.luyKe > 500000;
+          if (noFilter === "g1tr") return x.luyKe > 1000000;
+          if (noFilter === "m3") return x.luyKe > 0 && soThangNo(x) >= 3;
+          return x.luyKe !== 0;
+        });
+        if (filtered.length === 0) return <div style={{ textAlign: "center", color: C.green, fontSize: 14, fontWeight: 600, padding: 20 }}>✓ Không có HS phù hợp bộ lọc</div>;
+        return filtered.map((x) => {
         const open = showDetail === x.hs.id;
         return (
           <div key={x.hs.id} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginBottom: 8, overflow: "hidden" }}>
@@ -1422,8 +1449,8 @@ function CongNoTab({ students, meta, ym, mData }) {
             )}
           </div>
         );
-      })}
-      {data.filter((x) => x.luyKe !== 0).length === 0 && <div style={{ textAlign: "center", color: C.green, fontSize: 14, fontWeight: 600, padding: 20 }}>✓ Không ai còn nợ</div>}
+      });
+      })()}
     </>
   );
 }
@@ -1587,15 +1614,89 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
       upMData({ ...mData, daChot: true, noLuyKe });
+      logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; upMData({ ...rest, daChot: false }); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
   return (
     <>
+      {/* ===== DASHBOARD VAN HANH ===== */}
+      {(() => {
+        const cnt = { tong: students.length, dangHoc: 0, hocThu: 0, nghi: 0, baoLuu: 0, raTruong: 0 };
+        students.forEach((s) => {
+          if (s.trangThai === "Đang học") cnt.dangHoc++;
+          else if (s.trangThai === "Học thử") cnt.hocThu++;
+          else if (s.trangThai === "Nghỉ học") cnt.nghi++;
+          else if (s.trangThai === "Bảo lưu") cnt.baoLuu++;
+          else if (s.trangThai === "Ra trường") cnt.raTruong++;
+        });
+        const recRows = allRows.filter((r) => r.coRec);
+        const canThu = recRows.reduce((a, r) => a + r.tongPhaiThu, 0);
+        const daThu = recRows.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
+        const tyLe = canThu > 0 ? Math.round(daThu / canThu * 100) : 100;
+        const topNo = recRows.filter((r) => r.conNo > 0).sort((a, b) => b.conNo - a.conNo).slice(0, 10);
+        const cell = (lb, v, col) => <div style={{ flex: 1, textAlign: "center", padding: "8px 2px", background: "#FAFCFA", borderRadius: 10 }}><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: col }}>{v}</div><div style={{ fontSize: 10.5, color: C.sub }}>{lb}</div></div>;
+        return (
+          <Card style={{ marginBottom: 12 }}>
+            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.pine, marginBottom: 10 }}>🏫 Tổng quan vận hành — T{month}/{year}</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+              {cell("Tổng HS", cnt.tong, C.ink)}
+              {cell("Đang học", cnt.dangHoc, C.green)}
+              {cell("Học thử", cnt.hocThu, C.blueA)}
+              {cell("Nghỉ", cnt.nghi, C.coral)}
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: topNo.length ? 10 : 0 }}>
+              <Donut pct={tyLe} color={tyLe >= 80 ? C.green : tyLe >= 50 ? C.amber : C.coral} size={68} />
+              <div style={{ flex: 1, fontSize: 12.5 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "1px 0" }}><span style={{ color: C.sub }}>Cần thu (gồm nợ cũ)</span><b>{fmt(canThu)}</b></div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "1px 0" }}><span style={{ color: C.sub }}>Đã thu</span><b style={{ color: C.green }}>{fmt(daThu)}</b></div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "1px 0" }}><span style={{ color: C.sub }}>Còn thiếu</span><b style={{ color: C.coral }}>{fmt(Math.max(0, canThu - daThu))}</b></div>
+                <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Tỷ lệ thu tháng này</div>
+              </div>
+            </div>
+            {topNo.length > 0 && (
+              <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 4 }}>🔴 Top {topNo.length} HS còn nợ</div>
+                {topNo.map((r, i) => (
+                  <div key={r.hs.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderBottom: i < topNo.length - 1 ? `1px dotted ${C.line}` : "none" }}>
+                    <span>{i + 1}. {r.hs.ten} <span style={{ color: C.sub, fontSize: 11 }}>· {r.lop?.ten}</span></span>
+                    <b style={{ color: C.coral }}>{fmt(r.conNo)}</b>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      })()}
+
+      {/* ===== CANH BAO BAT THUONG ===== */}
+      {(() => {
+        const recRows = allRows.filter((r) => r.coRec);
+        const suaTay = recRows.filter((r) => r.ps.suaCount > 0);
+        const thuThua = recRows.filter((r) => r.conNo < 0);
+        const anGib0 = recRows.filter((r) => r.hs.pl !== "GV" && r.hs.pl !== "T7" && (r.rec.ngayAn || 0) === 0);
+        const groups = [
+          ["Học phí/khoản sửa tay", suaTay, C.amber],
+          ["Thu thừa", thuThua, C.blueA],
+          ["Ngày ăn = 0", anGib0, C.coral],
+        ].filter(([, list]) => list.length > 0);
+        if (groups.length === 0) return null;
+        return (
+          <Card style={{ marginBottom: 12, background: C.amberSoft, borderColor: "#EAD8A0" }}>
+            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: "#7A5E12", marginBottom: 6 }}>⚠️ Cảnh báo bất thường — T{month}</div>
+            {groups.map(([lb, list, col]) => (
+              <div key={lb} style={{ fontSize: 12.5, padding: "4px 0", borderTop: `1px dashed #EAD8A0` }}>
+                <b style={{ color: col }}>{lb} ({list.length})</b>: <span style={{ color: C.sub }}>{list.slice(0, 6).map((r) => r.hs.ten).join(", ")}{list.length > 6 ? `… +${list.length - 6}` : ""}</span>
+              </div>
+            ))}
+          </Card>
+        );
+      })()}
+
       {/* ===== KET QUA KINH DOANH ===== */}
       <Card style={{ marginBottom: 12 }}>
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.pine, marginBottom: 10 }}>📊 Kết quả kinh doanh — T{month}/{year}</div>
@@ -1843,13 +1944,13 @@ function HSDetail({ s, meta, ym, setHS, chuyenLop, inp }) {
       </div>
       <div style={wrap}>
         <label style={lab}>Phân loại</label>
-        <select value={s.pl} onChange={(e) => setHS(s.id, { pl: e.target.value })} style={sel}>
+        <select value={s.pl} onChange={(e) => { setHS(s.id, { pl: e.target.value }); logAction(`Đổi phân loại HS "${s.ten}" → ${e.target.value} (T${ym})`); }} style={sel}>
           {PHAN_LOAI.map((p) => <option key={p} value={p}>{PL_LABEL[p] || p}</option>)}
         </select>
       </div>
       <div style={wrap}>
         <label style={lab}>Trạng thái</label>
-        <select value={s.trangThai} onChange={(e) => setHS(s.id, { trangThai: e.target.value })} style={sel}>
+        <select value={s.trangThai} onChange={(e) => { setHS(s.id, { trangThai: e.target.value }); logAction(`Đổi trạng thái HS "${s.ten}" → ${e.target.value} (T${ym})`); }} style={sel}>
           {TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
@@ -1877,6 +1978,45 @@ function HSDetail({ s, meta, ym, setHS, chuyenLop, inp }) {
   );
 }
 
+function AuditLog() {
+  const [log, setLog] = useState(null);
+  const [limit, setLimit] = useState(100);
+  const load = async () => { setLog((await sGet("mn5:log")) || []); setLimit(100); };
+  useEffect(() => { load(); }, []);
+  const fmtT = (iso) => { try { const d = new Date(iso); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; } catch { return iso; } };
+  const clear = async () => { if (await ask("Xóa toàn bộ nhật ký thao tác?", { danger: true, okText: "Xóa" })) { await sSet("mn5:log", []); setLog([]); toast("Đã xóa nhật ký."); } };
+  if (log == null) return <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 24 }}>Đang tải nhật ký…</div>;
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: C.sub }}>Ghi lại các thao tác quan trọng (thêm/xóa/chuyển lớp/chốt tháng…). Lưu tối đa 800 dòng gần nhất.</div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <button onClick={load} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>↻ Tải lại</button>
+        {log.length > 0 && <button onClick={clear} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>🗑 Xóa nhật ký</button>}
+      </div>
+      {log.length === 0 ? (
+        <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 24 }}>Chưa có thao tác nào được ghi.</div>
+      ) : (<>
+        {log.slice(0, limit).map((e, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "9px 12px", marginBottom: 6, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, fontSize: 13 }}>
+            <div style={{ color: C.sub, fontSize: 11.5, whiteSpace: "nowrap", flexShrink: 0, minWidth: 76 }}>{fmtT(e.t)}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontWeight: 700, color: e.who === "Admin" ? C.pine : C.blueA }}>{e.who}</span>
+              <span style={{ color: C.ink }}> · {e.act}</span>
+            </div>
+          </div>
+        ))}
+        {log.length > limit && (
+          <button onClick={() => setLimit((l) => l + 100)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            Xem thêm ({Math.min(limit, log.length)}/{log.length})
+          </button>
+        )}
+      </>)}
+    </>
+  );
+}
+
 function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [sec, setSec] = useState("hs");
   const [ten, setTen] = useState("");
@@ -1896,10 +2036,12 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [showAddHS, setShowAddHS] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  const addHS = () => { const t = ten.trim(); if (!t || !lop) return; upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }]); setTen(""); setNgaySinh(""); setPhSdt(""); toast("Đã thêm học sinh."); };
-  const delHS = async (id) => { if (await ask("Xóa học sinh này? (mất cả lịch sử)", { danger: true, okText: "Xóa" })) { upStudents(students.filter((s) => s.id !== id)); toast("Đã xóa học sinh."); } };
+  const addHS = () => { const t = ten.trim(); if (!t || !lop) return; upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }]); setTen(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh."); };
+  const delHS = async (id) => { const hs = students.find((s) => s.id === id); if (await ask("Xóa học sinh này? (mất cả lịch sử)", { danger: true, okText: "Xóa" })) { upStudents(students.filter((s) => s.id !== id)); logAction(`Xóa HS "${hs?.ten || id}"`); toast("Đã xóa học sinh."); } };
   const setHS = (id, p) => upStudents(students.map((s) => (s.id === id ? { ...s, ...p } : s)));
   const chuyenLop = (id, lopMoi) => {
+    const hs = students.find((s) => s.id === id);
+    const tenLop = meta.classes.find((c) => c.id === lopMoi)?.ten || lopMoi;
     upStudents(students.map((s) => {
       if (s.id !== id) return s;
       const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym);
@@ -1907,9 +2049,10 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
       hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang));
       return { ...s, lopHistory: hist };
     }));
+    if (hs) logAction(`Chuyển lớp HS "${hs.ten}" → ${tenLop} (từ T${ym})`);
   };
-  const themLop = () => { const t = tenLopMoi.trim(); if (!t) return; upMeta({ ...meta, classes: [...meta.classes, { id: "c" + uid(), ten: t, hocPhi: 800000, banTru: 200000, tienAn: 30000, t7: 80000, veSinh: 20000, tiengAnh: 100000, ngoaiKhoa: 100000, dauNam: 1200000 }] }); setTenLopMoi(""); };
-  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { upMeta({ ...meta, classes: meta.classes.filter((c) => c.id !== id) }); toast("Đã xóa lớp."); } };
+  const themLop = () => { const t = tenLopMoi.trim(); if (!t) return; upMeta({ ...meta, classes: [...meta.classes, { id: "c" + uid(), ten: t, hocPhi: 800000, banTru: 200000, tienAn: 30000, t7: 80000, veSinh: 20000, tiengAnh: 100000, ngoaiKhoa: 100000, dauNam: 1200000 }] }); setTenLopMoi(""); logAction(`Thêm lớp "${t}"`); };
+  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } const tenLop = meta.classes.find((c) => c.id === id)?.ten || id; if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { upMeta({ ...meta, classes: meta.classes.filter((c) => c.id !== id) }); logAction(`Xóa lớp "${tenLop}"`); toast("Đã xóa lớp."); } };
   const setLopGia = (id, k, v) => upMeta({ ...meta, classes: meta.classes.map((c) => (c.id === id ? { ...c, [k]: v } : c)) });
   const cycleKhoan = (id, key) => {
     const cur = khoanMode(meta.classes.find((c) => c.id === id), key);
@@ -1917,14 +2060,14 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
     upMeta({ ...meta, classes: meta.classes.map((c) => (c.id === id ? { ...c, lapLai: { ...(c.lapLai || {}), [key]: next } } : c)) });
   };
   const setBank = (p, k, v) => upMeta({ ...meta, bank: { ...meta.bank, [p]: { ...meta.bank[p], [k]: v } } });
-  const themGV = () => { const t = gvTen.trim(), p = gvPin.trim(); if (!t || !p || !gvLop) { toast("Nhập đủ tên, PIN, lớp."); return; } if ((meta.giaoVien || []).some((g) => g.pin === p)) { toast("PIN này đã dùng — chọn PIN khác."); return; } upMeta({ ...meta, giaoVien: [...(meta.giaoVien || []), { id: "gv" + uid(), ten: t, pin: p, lopId: gvLop }] }); setGvTen(""); setGvPin(""); toast("Đã thêm giáo viên."); };
-  const xoaGV = async (id) => { if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) upMeta({ ...meta, giaoVien: (meta.giaoVien || []).filter((g) => g.id !== id) }); };
+  const themGV = () => { const t = gvTen.trim(), p = gvPin.trim(); if (!t || !p || !gvLop) { toast("Nhập đủ tên, PIN, lớp."); return; } if ((meta.giaoVien || []).some((g) => g.pin === p)) { toast("PIN này đã dùng — chọn PIN khác."); return; } upMeta({ ...meta, giaoVien: [...(meta.giaoVien || []), { id: "gv" + uid(), ten: t, pin: p, lopId: gvLop }] }); setGvTen(""); setGvPin(""); logAction(`Thêm giáo viên "${t}"`); toast("Đã thêm giáo viên."); };
+  const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { upMeta({ ...meta, giaoVien: (meta.giaoVien || []).filter((g) => g.id !== id) }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); } };
   const setDK = (k, v) => upMeta({ ...meta, soDuDauKy: { ...meta.soDuDauKy, [k]: v } });
   const inp = { padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13.5, color: C.ink, background: C.card, outline: "none" };
 
   return (
     <>
-      <Chips items={[["hs", "Học sinh"], ["lop", "Lớp & đơn giá"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Đầu kỳ"], ["data", "Dữ liệu"], ["backup", "Sao lưu"]]} val={sec} set={setSec} />
+      <Chips items={[["hs", "Học sinh"], ["lop", "Lớp & đơn giá"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Đầu kỳ"], ["log", "Nhật ký"], ["data", "Dữ liệu"], ["backup", "Sao lưu"]]} val={sec} set={setSec} />
 
       {sec === "hs" && (
         <>
@@ -2067,6 +2210,8 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
       )}
 
       {sec === "backup" && <BackupExport meta={meta} students={students} />}
+
+      {sec === "log" && <AuditLog />}
 
       {sec === "data" && (
         <Card>
