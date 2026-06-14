@@ -2124,7 +2124,14 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const setBank = (p, k, v) => upMeta({ ...meta, bank: { ...meta.bank, [p]: { ...meta.bank[p], [k]: v } } });
   const themGV = () => { const t = gvTen.trim(), p = gvPin.trim(); if (!t || !p || !gvLop) { toast("Nhập đủ tên, PIN, lớp."); return; } if ((meta.giaoVien || []).some((g) => g.pin === p)) { toast("PIN này đã dùng — chọn PIN khác."); return; } upMeta({ ...meta, giaoVien: [...(meta.giaoVien || []), { id: "gv" + uid(), ten: t, pin: p, lopId: gvLop }] }); setGvTen(""); setGvPin(""); logAction(`Thêm giáo viên "${t}"`); toast("Đã thêm giáo viên."); };
   const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { const newGV = (meta.giaoVien || []).filter((g) => g.id !== id); upMeta({ ...meta, giaoVien: newGV }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); toast("Đã xóa giáo viên", gv ? () => upMeta({ ...meta, giaoVien: [...newGV, gv] }) : undefined); } };
-  const setDK = (k, v) => upMeta({ ...meta, soDuDauKy:{sec === "hs" && (
+  const setDK = (k, v) => upMeta({ ...meta, soDuDauKy: { ...meta.soDuDauKy, [k]: v } });
+  const inp = { padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13.5, color: C.ink, background: C.card, outline: "none" };
+
+  return (
+    <>
+      <Chips items={[["hs", "Học sinh"], ["lop", "Lớp & đơn giá"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Đầu kỳ"], ["log", "Nhật ký"], ["data", "Dữ liệu"], ["backup", "Sao lưu"]]} val={sec} set={setSec} />
+
+      {sec === "hs" && (
         <>
           {/* Sentinel để detect scroll */}
           <div ref={sentinelRef} style={{ height: 1, margin: 0 }} />
@@ -2252,8 +2259,6 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
           })()}
         </>
       )}
-
-
 
       {sec === "lop" && (
         <>
