@@ -919,6 +919,7 @@ export default function App() {
         *{box-sizing:border-box}
         button:active{transform:scale(0.97)}
         @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
       `}</style>
 
@@ -956,7 +957,7 @@ export default function App() {
         )}
 
         {tab === "thu" && mData && (
-          <ThuPhiTab {...{ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }} />
+          <ThuPhiTab {...{ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }} />
         )}
         {tab === "dd" && (
           <DiemDanhTab {...{ allRows: ddRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked: nextChot, ddLockReason: nextChot, isWide, ym, isGV, gvLopId, gvTen, students }} />
@@ -1263,8 +1264,92 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
   );
 }
 
-function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }) {
+// ===== Bottom Sheet cơ sở =====
+function BottomSheet({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
+      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "8px 16px 24px", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", animation: "slideUp .22s ease" }}>
+        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.line, margin: "0 auto 14px" }} />
+        {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 14 }}>{title}</div>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ===== Sheet chọn lớp =====
+function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allRows }) {
+  const [q, setQ] = useState("");
+  const stats = useMemo(() => {
+    const s = {};
+    allRows.forEach((r) => {
+      if (!r.coRec) return;
+      const id = r.lopId || "none";
+      if (!s[id]) s[id] = { count: 0, no: 0 };
+      s[id].count++;
+      s[id].no += Math.max(0, r.conNo);
+    });
+    return s;
+  }, [allRows]);
+
+  const totalNo = allRows.reduce((a, r) => a + (r.coRec ? Math.max(0, r.conNo) : 0), 0);
+  const totalHS = allRows.filter((r) => r.coRec).length;
+
+  const filtered = chipsLop.filter(([id, ten]) => {
+    if (!q.trim()) return true;
+    return noDau(ten).includes(noDau(q));
+  });
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title="Chọn lớp học">
+      <div style={{ position: "relative", marginBottom: 12 }}>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.gray, fontSize: 14 }}>🔍</span>
+        <input
+          value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm lớp học…"
+          style={{ width: "100%", padding: "10px 12px 10px 34px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 14, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none" }}
+          onFocus={(e) => (e.target.style.borderColor = C.pine)} onBlur={(e) => (e.target.style.borderColor = C.line)}
+        />
+      </div>
+
+      <div>
+        {filtered.map(([id, ten]) => {
+          const active = lopFilter === id;
+          const count = id === "all" ? totalHS : (stats[id]?.count || 0);
+          const no = id === "all" ? totalNo : (stats[id]?.no || 0);
+          return (
+            <div
+              key={id}
+              onClick={() => { setLopFilter(id); onClose(); }}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}
+            >
+              <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "border-color .2s" }}>
+                {active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink, transition: "color .2s" }}>
+                  {id === "all" ? "Tất cả lớp" : ten}
+                </div>
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>
+                  {count} học sinh · Nợ: {fmt(no)} đ
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div style={{ textAlign: "center", padding: 20, color: C.sub, fontSize: 13 }}>Không tìm thấy lớp</div>
+        )}
+      </div>
+    </BottomSheet>
+  );
+}
+
+function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }) {
   const [fastMode, setFastMode] = useState(false);
+  const [lopSheetOpen, setLopSheetOpen] = useState(false);
+  const [thuSheetOpen, setThuSheetOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
   const [showNgayAn, setShowNgayAn] = useState(false);
