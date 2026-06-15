@@ -40,13 +40,16 @@ const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "C
 
 const MEM = {};
 // [FIX chot] Ghi nho trang thai chot/mo cua tung thang trong phien -> tranh ban doc cu (Supabase tre) tu mo khoa
+// [FIX chot F5] Luu CHOT_MEM xuong localStorage de song sot qua F5 (RAM bi xoa khi reload)
 const CHOT_MEM = {};
+try { const _cm = (typeof localStorage !== "undefined") && localStorage.getItem("mn5:chotmem"); if (_cm) Object.assign(CHOT_MEM, JSON.parse(_cm)); } catch {}
+function saveChotMem() { try { if (typeof localStorage !== "undefined") localStorage.setItem("mn5:chotmem", JSON.stringify(CHOT_MEM)); } catch {} }
 let storageOK = true;
 
 async function sGet(k) {
   if (SB) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: SB_H });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); const v = d?.[0] ? d[0].value : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
     } catch {}
     return MEM[k] ?? null;
@@ -73,7 +76,7 @@ async function sList(prefix) {
   const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
   if (SB) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: SB_H });
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); return Array.from(new Set([...memKeys, ...d.map((x) => x.key)])); }
     } catch {}
     return memKeys;
@@ -560,9 +563,7 @@ export default function App() {
   const reseedAll = async () => {
     const keys = await sList("mn5:");
     for (const k of keys) await sDel(k);
-    Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]);
-    const chotKeys = await sList("mn5:chot:");
-    for (const k of chotKeys) await sDel(k);
+    Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]); saveChotMem();
     const r = await doSeed();
     setMeta({ ...r.m }); setStudents([...r.st]);
     setMData(null); setSeeded(true);
@@ -587,8 +588,7 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    const chotFlag = await sGet(`mn5:chot:${ym}`);
-    if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; else if (chotFlag != null) rest.daChot = chotFlag; setMData({ ...rest, __ym: ym }); }
+    if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -712,7 +712,7 @@ export default function App() {
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
-  const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; const dd = { ...d, __ym: ym }; setMData(dd); flush(`mn5:chot:${ym}`, !!d.daChot); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
+  const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; saveChotMem(); const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
   const upDDData = (d) => { setDDData(d); flush(`mn5:dd:${ym}`, d); };
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
@@ -754,8 +754,7 @@ export default function App() {
     if (locked) { toast("Tháng đã chốt — mở khóa trước khi xóa."); return; }
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
       await sDel(`mn5:thang:${ym}`);
-      await sDel(`mn5:chot:${ym}`);
-      delete CHOT_MEM[ym];
+      delete CHOT_MEM[ym]; saveChotMem();
       setMData(null);
       logAction(`Xóa bảng thu tháng ${month}/${year}`);
       toast(`Đã xóa bảng thu. Điểm danh tháng ${month}/${year} vẫn còn.`);
@@ -1898,13 +1897,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
     if (await ask(msg, { okText: "Chốt tháng" })) {
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
-      await flush(`mn5:chot:${ym}`, true);
       await upMData({ ...mData, daChot: true, noLuyKe });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await sDel(`mn5:chot:${ym}`); await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
