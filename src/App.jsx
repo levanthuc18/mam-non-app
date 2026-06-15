@@ -1850,7 +1850,10 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         const tongLTM = lichSu.reduce((a, r) => a + r.laiTienMat, 0);
         const splitA = (v) => Math.round(v * tyLeA / 100);
         return (
-        <Card style={{ marginBottom: 12, overflowX: "auto" }}>
+        <Card style={{ marginBottom: 12, overflowX: "auto", padding: 0 }}>
+          <CardHeader icon="📈" title="Lịch sử theo tháng" cardKey="lichSu" />
+          {openCards.lichSu && (
+          <div style={{ padding: "10px 14px 14px" }}>
           <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>📈 Lịch sử theo tháng</div>
           <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 520, fontFamily: font.body }}>
             <thead>
@@ -1890,6 +1893,8 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
             </tbody>
           </table>
           <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>LN kế toán = Phải thu − Chi phí · LN tiền mặt = Đã thu − Đã trả. Chia A/B theo tỷ lệ góp vốn.</div>
+          </div>
+          )}
         </Card>
         );
       })()}
