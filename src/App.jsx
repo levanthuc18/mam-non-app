@@ -1266,6 +1266,8 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
 function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab }) {
   const [fastMode, setFastMode] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [cfgOpen, setCfgOpen] = useState(false);
+  const [showNgayAn, setShowNgayAn] = useState(false);
   const [thuLimit, setThuLimit] = useState(50);
   const inputRefs = useRef({});
   // [UX-I] dem trang thai
@@ -1282,43 +1284,51 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
     thuDuNhieu(pairs);
     toast(onlyNo ? `Đã thu đủ ${pairs.length} HS còn nợ.` : `Đã thu đủ ${pairs.length} HS đang hiển thị.`);
   };
+  const cfgItem = { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 9, border: "none", background: "none", color: C.ink, fontWeight: 700, fontSize: 13.5, fontFamily: font.body, cursor: "pointer" };
   return (
     <>
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        {[["Phải thu", tk.ps, C.ink], ["Đã thu", tk.thu, C.green], ["Còn nợ", tk.no, tk.no > 0 ? C.coral : C.green]].map(([l, v, col]) => (
-          <Card key={l} style={{ flex: 1, padding: "10px 12px" }}><div style={{ fontSize: 11, color: C.sub }}>{l}</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: col }}>{fmt(v)}</div></Card>
-        ))}
-      </div>
-      {tk.ps > 0 && (() => { const pct = Math.min(100, Math.round(tk.thu / tk.ps * 100)); return (
-        <div style={{ marginTop: -4, marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.sub, marginBottom: 4 }}>Đã thu {pct}% phải thu toàn trường</div>
-          <div style={{ height: 7, borderRadius: 99, background: C.line, overflow: "hidden" }}><div style={{ width: pct + "%", height: "100%", background: pct >= 100 ? C.green : C.pine, borderRadius: 99, transition: "width .3s" }} /></div>
-        </div>
-      ); })()}
-      {/* [UX-I] StatCards bam de loc */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        {[["chuaThu", "Chưa thu", cnt.chuaThu, C.coral, C.coralSoft], ["thieu", "Thiếu", cnt.thieu, C.amber, C.amberSoft], ["xong", "Hoàn thành", cnt.xong, C.green, C.greenSoft]].map(([k, l, v, c, bg]) => (
-          <button key={k} onClick={() => setThuFilter(thuFilter === k ? "all" : k)} style={{ flex: 1, padding: "9px 6px", borderRadius: 12, border: `1.5px solid ${thuFilter === k ? c : "transparent"}`, background: bg, color: c, fontWeight: 700, cursor: "pointer", fontFamily: font.body }}>
-            <div style={{ fontSize: 18 }}>{v}</div><div style={{ fontSize: 10.5 }}>{l}</div>
-          </button>
-        ))}
-      </div>
+      {/* [Tong gop] Thẻ tổng toàn trường: Phải thu + % đã thu + Còn nợ + số HS chưa thu */}
+      {(() => {
+        const pct = tk.ps > 0 ? Math.min(100, Math.round(tk.thu / tk.ps * 100)) : 0;
+        const soChuaThu = (tk.noList || []).filter((x) => x.chua).length;
+        return (
+          <Card style={{ marginBottom: 12, padding: "12px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: 12, color: C.sub }}>Phải thu (toàn trường)</span>
+              <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.ink }}>{fmt(tk.ps)} đ</span>
+            </div>
+            <div style={{ height: 9, borderRadius: 99, background: C.line, overflow: "hidden", margin: "9px 0 5px" }}>
+              <div style={{ width: pct + "%", height: "100%", background: pct >= 100 ? C.green : C.pine, borderRadius: 99, transition: "width .3s" }} />
+            </div>
+            <div style={{ fontSize: 12.5, color: C.green, fontWeight: 700 }}>Đã thu {pct}% · {fmt(tk.thu)} đ</div>
+            <div style={{ display: "flex", gap: 16, marginTop: 9, paddingTop: 9, borderTop: `1px solid ${C.line}`, fontSize: 12.5 }}>
+              <span style={{ color: tk.no > 0 ? C.coral : C.green, fontWeight: 700 }}>● Còn nợ: {fmt(tk.no)} đ</span>
+              <button onClick={() => setThuFilter(thuFilter === "chuaThu" ? "all" : "chuaThu")} style={{ border: "none", background: "none", color: thuFilter === "chuaThu" ? C.pine : C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: 0, textDecoration: thuFilter === "chuaThu" ? "underline" : "none" }}>● {soChuaThu} chưa thu</button>
+            </div>
+          </Card>
+        );
+      })()}
       <SearchBar value={search} onChange={setSearch} />
       <Chips items={chipsLop} val={lopFilter} set={setLopFilter} />
       <Chips items={[["all", "Tất cả"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]]} val={thuFilter} set={setThuFilter} />
-      {!locked && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-          <button onClick={() => { setFastMode((v) => !v); setBatchOpen(false); }} style={{ padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: fastMode ? C.pine : C.pineSoft, color: fastMode ? "#fff" : C.pine }}>{fastMode ? "⛔ Thoát nhanh" : "⚡ Thu nhanh"}</button>
-          {!fastMode && <button onClick={() => setBatchOpen((v) => !v)} style={{ padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: batchOpen ? C.pine : C.pineSoft, color: batchOpen ? "#fff" : C.pine }}>⚙ Hàng loạt</button>}
-          {!fastMode && batchOpen && (() => {
-            const soNo = rows.filter((r) => r.conNo > 0).length;
-            return soNo > 0
-              ? <button onClick={() => batchThuDu(true)} style={{ padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: C.green, color: "#fff" }}>✓ Thu đủ {soNo} HS còn nợ đang hiển thị</button>
-              : <span style={{ fontSize: 12.5, color: C.green, fontWeight: 700, alignSelf: "center" }}>✓ Tất cả đã thu đủ</span>;
-          })()}
+      {/* [Cấu hình] gom thao tác hàng loạt vào 1 menu */}
+      {!locked && (fastMode ? (
+        <button onClick={() => { setFastMode(false); }} style={{ width: "100%", marginBottom: 10, padding: "11px 0", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, fontFamily: font.body, background: C.pine, color: "#fff" }}>⛔ Tắt chế độ Tích thu nhanh</button>
+      ) : (
+        <div style={{ marginBottom: 10 }}>
+          <button onClick={() => setCfgOpen((v) => !v)} style={{ padding: "9px 16px", borderRadius: 10, border: `1.5px solid ${C.pine}`, cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: font.body, background: cfgOpen ? C.pine : C.pineSoft, color: cfgOpen ? "#fff" : C.pine }}>⚙️ Cấu hình {cfgOpen ? "▲" : "▼"}</button>
+          {cfgOpen && (
+            <Card style={{ marginTop: 6, padding: 6 }}>
+              <button onClick={() => setShowNgayAn((v) => !v)} style={{ ...cfgItem, color: showNgayAn ? C.pine : C.ink }}>🍽️ Áp ngày ăn hàng loạt {showNgayAn ? "▲" : "▼"}</button>
+              {showNgayAn && <div style={{ padding: "2px 2px 6px" }}><NgayAnBar onApply={setNgayAnAll} rows={rows} /></div>}
+              <button onClick={() => { setFastMode(true); setCfgOpen(false); }} style={cfgItem}>⚡ Bật chế độ Tích thu nhanh</button>
+              {(() => { const soNo = rows.filter((r) => r.conNo > 0).length; return (
+                <button onClick={() => { if (soNo > 0) { batchThuDu(true); setCfgOpen(false); } }} disabled={soNo === 0} style={{ ...cfgItem, color: soNo > 0 ? C.green : C.gray, cursor: soNo > 0 ? "pointer" : "default" }}>💵 Thu đủ {soNo} HS còn nợ đang hiển thị</button>
+              ); })()}
+            </Card>
+          )}
         </div>
-      )}
-      {!locked && !fastMode && <NgayAnBar onApply={setNgayAnAll} rows={rows} />}
+      ))}
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
       {rows.slice(0, thuLimit).map((r) => {
