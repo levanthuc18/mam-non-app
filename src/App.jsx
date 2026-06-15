@@ -2176,31 +2176,22 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             </Card>
             </>)}
 
-            {/* Search + Chọn nhiều cùng hàng */}
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <SearchBar value={hsSearch} onChange={setHsSearch} />
-              </div>
-              <button onClick={() => { setBulkMode((v) => !v); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body, flexShrink: 0, height: 40 }}>{bulkMode ? "⛔ Thoát" : "☑ Chọn nhiều"}</button>
-            </div>
-
-            {/* Chips lớp ra ngoài như cũ */}
-            <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={setHsFilter} />
-
             {/* Bulk bar */}
-            {bulkMode && selectedHS.length > 0 && (
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: C.sub }}><b>{selectedHS.length}</b></span>
-              <select value={bulkTargetLop} onChange={(e) => setBulkTargetLop(e.target.value)} style={{ ...inp, width: 110 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
-              <button onClick={() => { const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten; upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; })); logAction(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop} (từ T${ym})`); toast(`Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Chuyển</button>
-              <select value={bulkTargetTT} onChange={(e) => setBulkTargetTT(e.target.value)} style={{ ...inp, width: 120 }}>{TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}</select>
-              <button onClick={() => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, trangThai: bulkTargetTT } : s)); logAction(`Đổi trạng thái hàng loạt ${selectedHS.length} HS → ${bulkTargetTT} (T${ym})`); toast(`Đã đổi ${selectedHS.length} HS sang "${bulkTargetTT}"`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Đổi TT</button>
+              <button onClick={() => { setBulkMode((v) => !v); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>{bulkMode ? "⛔ Thoát" : "☑ Chọn nhiều"}</button>
+              {bulkMode && selectedHS.length > 0 && (<>
+                <span style={{ fontSize: 12, color: C.sub }}><b>{selectedHS.length}</b></span>
+                <select value={bulkTargetLop} onChange={(e) => setBulkTargetLop(e.target.value)} style={{ ...inp, width: 110 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
+                <button onClick={() => { const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten; upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; })); logAction(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop} (từ T${ym})`); toast(`Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Chuyển</button>
+                <select value={bulkTargetTT} onChange={(e) => setBulkTargetTT(e.target.value)} style={{ ...inp, width: 120 }}>{TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}</select>
+                <button onClick={() => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, trangThai: bulkTargetTT } : s)); logAction(`Đổi trạng thái hàng loạt ${selectedHS.length} HS → ${bulkTargetTT} (T${ym})`); toast(`Đã đổi ${selectedHS.length} HS sang "${bulkTargetTT}"`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Đổi TT</button>
+              </>)}
             </div>
-            )}
 
             <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>{bulkMode ? "Chạm để chọn/bỏ chọn nhiều em." : "Chạm HS để sửa. Chuyển lớp áp dụng từ tháng " + ym + "."}</div>
 
-            {/* Thông tin lọc + nút Bộ lọc */}
+            {/* Search + Filter */}
+            <SearchBar value={hsSearch} onChange={setHsSearch} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
               <div style={{ fontSize: 12, color: C.sub }}>
                 {(() => { const f = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)); return `${f.length} HS · ${hsFilter === "all" ? "Tất cả lớp" : meta.classes.find(c=>c.id===hsFilter)?.ten} · ${hsStatusFilter === "all" ? "Mọi TT" : hsStatusFilter}`; })()}
@@ -2209,7 +2200,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             </div>
           </div>
 
-          {/* ===== BOTTOM SHEET: FILTER (chỉ còn trạng thái) ===== */}
+          {/* ===== BOTTOM SHEET: FILTER ===== */}
           {showFilterSheet && (
             <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
               <div onClick={() => setShowFilterSheet(false)} style={{ flex: 1, background: "rgba(0,0,0,.4)" }} />
@@ -2218,7 +2209,9 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                   <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.ink }}>⚙️ Bộ lọc</div>
                   <button onClick={() => setShowFilterSheet(false)} style={{ border: "none", background: "none", fontSize: 20, color: C.sub, cursor: "pointer" }}>×</button>
                 </div>
-                <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, fontWeight: 600 }}>Trạng thái</div>
+                <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, fontWeight: 600 }}>Lớp</div>
+                <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={(v) => setHsFilter(v)} />
+                <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, marginTop: 12, fontWeight: 600 }}>Trạng thái</div>
                 <Chips items={[["all", "Mọi trạng thái"], ...TRANG_THAI.map((t) => [t, t])]} val={hsStatusFilter} set={(v) => setHsStatusFilter(v)} />
                 <button onClick={() => setShowFilterSheet(false)} style={{ width: "100%", marginTop: 16, padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Áp dụng</button>
               </div>
@@ -2238,19 +2231,17 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             return (
               <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : undefined }}>
                 <div onClick={() => { if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }} style={{ padding: "12px 14px", cursor: "pointer" }}>
-                  {/* Hàng 1: Tên + A/B + Xóa */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: C.ink, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.ten}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                      {!bulkMode && <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />}
-                      {bulkMode && <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800 }}>{isSel ? "✓" : ""}</div>}
-                      {!bulkMode && <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 16 }}>🗑</button>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{s.ten}</div>
+                      <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{meta.classes.find((c) => c.id === lh)?.ten} · {s.pl}</div>
                     </div>
+                    {!bulkMode && <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />}
+                    {bulkMode && <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0, marginLeft: 8 }}>{isSel ? "✓" : ""}</div>}
                   </div>
-                  {/* Hàng 2: Lớp · PL · Trạng thái */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, color: C.sub }}>{meta.classes.find((c) => c.id === lh)?.ten} · {s.pl}</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: TT_COLOR[s.trangThai], background: TT_COLOR[s.trangThai] + "18", padding: "3px 10px", borderRadius: 99 }}>{s.trangThai}</span>
+                    {!bulkMode && <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 16 }}>🗑</button>}
                   </div>
                 </div>
                 {edit && !bulkMode && (
