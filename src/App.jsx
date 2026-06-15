@@ -2192,6 +2192,24 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { const newGV = (meta.giaoVien || []).filter((g) => g.id !== id); upMeta({ ...meta, giaoVien: newGV }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); toast("Đã xóa giáo viên", gv ? () => upMeta({ ...meta, giaoVien: [...newGV, gv] }) : undefined); } };
   const setDK = (k, v) => upMeta({ ...meta, soDuDauKy: { ...meta.soDuDauKy, [k]: v } });
 
+  const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none" };
+
+  return (
+    <>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        {[
+          ["hs", "👶 Học sinh"],
+          ["lop", "🏫 Lớp"],
+          ["gv", "👩‍🏫 Giáo viên"],
+          ["bank", "🏦 Tài khoản"],
+          ["dk", "💰 Số dư đầu kỳ"],
+          ["backup", "💾 Sao lưu"],
+          ["log", "📋 Nhật ký"],
+          ["data", "⚠️ Dữ liệu"],
+        ].map(([k, l]) => (
+          <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
+        ))}
+      </div>
       {sec === "hs" && (
         <>
           {/* Sentinel để detect scroll */}
@@ -2311,17 +2329,6 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                   </div>
                 )}
               </Card>
-            );
-          })}
-            {filtered.length > hsLimit && (
-              <button onClick={() => setHsLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Hiện thêm 50 HS ({shown.length}/{filtered.length})</button>
-            )}
-            </>);
-          })()}
-        </>
-      )}
-
-      >
             );
           })}
             {filtered.length > hsLimit && (
