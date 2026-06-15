@@ -1033,28 +1033,29 @@ function NgayAnBar({ onApply, rows }) {
 
 // ====== Chi tiết HS trong Thu phí (UI/UX tối ưu mobile) ======
 function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, addPhuThuHS, delPhuThuHS, setPhieuId, setTab }) {
-  const [editMode, setEditMode] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetKhoan, setSheetKhoan] = useState(null);
   const [sheetVal, setSheetVal] = useState("");
+  const [sheetLabel, setSheetLabel] = useState("");
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
   const [showPtInput, setShowPtInput] = useState(false);
+  const [showChiTiet, setShowChiTiet] = useState(false);
 
-  const stepNgayAn = (delta) => {
-    if (locked) return;
-    const next = Math.max(0, (r.rec.ngayAn || 0) + delta);
-    setRec(r.hs.id, { ngayAn: next, ngayAnManual: true });
-  };
-
-  const openSheet = (k) => {
+  const openSheet = (k, label) => {
     setSheetKhoan(k);
-    setSheetVal(String(r.rec.khoan?.[k.key] ?? 0));
+    setSheetLabel(label || (k ? k.label : ""));
+    setSheetVal(String(k ? (r.rec.khoan?.[k.key] ?? 0) : (r.rec.ngayAn || 0)));
     setSheetOpen(true);
   };
 
   const saveSheet = () => {
-    if (sheetKhoan) setKhoan(r.hs.id, sheetKhoan.key, Number(sheetVal) || 0);
+    if (sheetKhoan) {
+      setKhoan(r.hs.id, sheetKhoan.key, Number(sheetVal) || 0);
+    } else {
+      // sửa ngày ăn
+      setRec(r.hs.id, { ngayAn: Number(sheetVal) || 0, ngayAnManual: true });
+    }
     setSheetOpen(false);
   };
 
@@ -1067,9 +1068,20 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
   const tienAn = r.rec.khoan?.tienAn ?? 0;
   const giaAn = r.rec.ngayAn > 0 ? Math.round(tienAn / r.rec.ngayAn) : (r.lop?.tienAn || 0);
 
+  // Các label đã hiện ở phần trên → ẩn trong chi tiết mặc định
+  const topLabels = new Set(KHOAN.map((k) => k.label));
+  const isHiddenInChiTiet = (label) => {
+    if (topLabels.has(label)) return true;
+    if (label.startsWith("Ăn (")) return true;
+    if (label.startsWith("T7 (")) return true;
+    return false;
+  };
+  const chiTietDong = r.ps.dong.filter(([l]) => !isHiddenInChiTiet(l));
+  const hasChiTietAn = chiTietDong.length > 0 || r.noTruoc !== 0;
+
   return (
     <div className="fade-in" style={{ borderTop: `1px dashed ${C.line}`, background: "#FBFDFB", animation: "fadeIn .2s ease" }}>
-      {/* HEADER: Tên + Nợ cũ + Hành động nhanh */}
+      {/* HEADER: Tên + Nợ cũ + Thu đủ */}
       <div style={{ padding: "14px 14px 10px" }}>
         <div style={{ fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 4 }}>{r.hs.ten}</div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 10 }}>{r.lop?.ten} · {r.hs.pl}{r.nghi > 0 ? ` · nghỉ ${r.nghi}` : ""}</div>
@@ -1080,43 +1092,31 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
           </div>
         )}
 
-        {/* Nút hành động nhanh */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-          {!locked && (
-            <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ flex: 7, padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
-              ✓ Thu đủ {fmt(r.tongPhaiThu)}
-            </button>
-          )}
-          <button onClick={() => setEditMode((v) => !v)} style={{ flex: 3, padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: editMode ? C.pine : C.card, color: editMode ? "#fff" : C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-            {editMode ? "✕ Xong" : "✏️ Sửa"}
+        {!locked && (
+          <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+            ✓ Thu đủ {fmt(r.tongPhaiThu)}
           </button>
-        </div>
+        )}
       </div>
 
       {/* BODY */}
       <div style={{ padding: "0 14px 14px" }}>
-        {/* Khu vực 1: Tiền ăn — Stepper */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.line}` }}>
+        {/* Ngày ăn — số trái, nhãn phải, click để sửa */}
+        <div onClick={() => !locked && openSheet(null, "Ngày ăn")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.line}`, cursor: locked ? "default" : "pointer" }}>
+          <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.ink, minWidth: 36, textAlign: "center" }}>{r.rec.ngayAn}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Ngày ăn</div>
-            <div style={{ fontSize: 11, color: C.sub }}>{fmt(tienAn)} đ</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Ngày ăn</div>
+            <div style={{ fontSize: 12, color: C.sub }}>{fmt(tienAn)} đ{r.rec.ngayAnManual && <span style={{ color: C.amber, marginLeft: 4 }}>· tay</span>}</div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button onClick={() => stepNgayAn(-1)} disabled={locked || !editMode} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: editMode && !locked ? C.pineSoft : C.graySoft, color: editMode && !locked ? C.pine : C.gray, fontSize: 18, fontWeight: 700, cursor: editMode && !locked ? "pointer" : "default" }}>−</button>
-            <div style={{ minWidth: 36, textAlign: "center", fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink }}>{r.rec.ngayAn}</div>
-            <button onClick={() => stepNgayAn(1)} disabled={locked || !editMode} style={{ width: 36, height: 36, borderRadius: 10, border: "none", background: editMode && !locked ? C.pineSoft : C.graySoft, color: editMode && !locked ? C.pine : C.gray, fontSize: 18, fontWeight: 700, cursor: editMode && !locked ? "pointer" : "default" }}>+</button>
-          </div>
-          {editMode && r.rec.ngayAnManual && !locked && (
-            <button onClick={() => setRec(r.hs.id, { ngayAnManual: false })} title="Trả về tự tính" style={{ border: "none", background: "none", color: C.pine, fontSize: 12, cursor: "pointer" }}>↺ Tự</button>
-          )}
+          {!locked && <span style={{ fontSize: 16, color: C.sub }}>✏️</span>}
         </div>
 
-        {/* Khu vực 2: Các khoản cố định — Xem sạch / BottomSheet sửa */}
+        {/* Khoản phí — icon bút cạnh tên, click mở sheet */}
         {r.hs.pl !== "GV" && r.hs.pl !== "T7" && (
           <div style={{ marginTop: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>Khoản phí</div>
-              {editMode && !locked && r.ps.suaCount > 0 && (
+              {!locked && r.ps.suaCount > 0 && (
                 <button onClick={() => resetAllKhoan(r.hs.id)} style={{ fontSize: 11, color: C.pine, border: "none", background: "none", cursor: "pointer", fontWeight: 600 }}>↺ Khôi phục</button>
               )}
             </div>
@@ -1126,29 +1126,29 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
               const sua = val !== def;
               if (val === 0 && def === 0 && k.key !== "hocPhi") return null;
               return (
-                <div key={k.key} onClick={() => editMode && !locked && openSheet(k)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.line}`, cursor: editMode && !locked ? "pointer" : "default" }}>
+                <div key={k.key} onClick={() => !locked && openSheet(k)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.line}`, cursor: locked ? "default" : "pointer" }}>
                   <span style={{ flex: 1, fontSize: 14, color: sua ? C.amber : C.ink }}>{k.label}{sua && <span style={{ fontSize: 11, color: C.amber, marginLeft: 4 }}>· đã sửa</span>}</span>
                   <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>{fmt(val)}</span>
-                  {editMode && !locked && <span style={{ fontSize: 14, color: C.sub }}>›</span>}
+                  {!locked && <span style={{ fontSize: 14, color: C.sub }}>✏️</span>}
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Khu vực 3: Khoản phát sinh (phuThu) */}
+        {/* Khoản riêng (phuThu) */}
         <div style={{ marginTop: 10 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Khoản riêng</div>
           {(r.rec.phuThu || []).map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
               <span style={{ flex: 1, fontSize: 14, color: C.ink }}>{p.ten}{p.lop && <span style={{ color: C.blueA, fontSize: 10 }}> (cả lớp)</span>}</span>
               <span style={{ fontWeight: 700 }}>{fmt(p.soTien)}</span>
-              {editMode && !locked && (
-                <button onClick={() => delPhuThuHS(r.hs.id, p.id)} style={{ border: "none", background: "none", color: C.coral, cursor: "pointer", fontSize: 14 }}>🗑</button>
+              {!locked && (
+                <button onClick={(e) => { e.stopPropagation(); delPhuThuHS(r.hs.id, p.id); }} style={{ border: "none", background: "none", color: C.coral, cursor: "pointer", fontSize: 14 }}>🗑</button>
               )}
             </div>
           ))}
-          {editMode && !locked && (
+          {!locked && (
             <>
               {!showPtInput ? (
                 <button onClick={() => setShowPtInput(true)} style={{ width: "100%", padding: "9px 0", borderRadius: 10, border: `1.5px dashed ${C.line}`, background: "none", color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 6 }}>+ Thêm khoản riêng</button>
@@ -1163,16 +1163,15 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
           )}
         </div>
 
-        {/* Breakdown tổng hợp */}
+        {/* Chi tiết — mặc định ẩn khoản trùng, nhấn mở */}
         <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: C.card, border: `1px solid ${C.line}` }}>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Chi tiết</div>
-          {r.ps.dong.map(([l, v, sua], i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: v < 0 ? C.green : C.ink }}>
-              <span style={{ color: C.sub }}>{l}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
-              <span>{fmt(v)}</span>
-            </div>
-          ))}
-          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, marginTop: 4, borderTop: `1px solid ${C.line}`, color: C.sub, fontSize: 13 }}>
+          <div onClick={() => setShowChiTiet((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>Chi tiết</div>
+            <span style={{ fontSize: 12, color: C.sub, transition: "transform .2s", transform: showChiTiet ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+          </div>
+
+          {/* Luôn hiện tổng kết */}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: C.sub, marginTop: 4 }}>
             <span>Phát sinh tháng này</span><span>{fmt(r.ps.tong)}</span>
           </div>
           {r.noTruoc !== 0 && (
@@ -1181,6 +1180,23 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
               <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : "−" + fmt(-r.noTruoc)}</span>
             </div>
           )}
+
+          {/* Khi mở chi tiết: hiện các dòng không trùng */}
+          {showChiTiet && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: `1px dashed ${C.line}` }}>
+              {chiTietDong.map(([l, v, sua], i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: v < 0 ? C.green : C.ink }}>
+                  <span style={{ color: C.sub }}>{l}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
+                  <span>{fmt(v)}</span>
+                </div>
+              ))}
+              {chiTietDong.length === 0 && r.noTruoc === 0 && (
+                <div style={{ fontSize: 12, color: C.sub, padding: "4px 0" }}>Không có khoản phát sinh thêm.</div>
+              )}
+            </div>
+          )}
+
+          {/* Tổng phải thu */}
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1.5px solid ${C.line}`, fontWeight: 800, fontSize: 16, fontFamily: font.display }}>
             <span>TỔNG PHẢI THU</span>
             <span>{fmt(r.tongPhaiThu)} đ</span>
@@ -1199,23 +1215,35 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
         </button>
       </div>
 
-      {/* BOTTOM SHEET sửa khoản */}
+      {/* BOTTOM SHEET sửa khoản / ngày ăn */}
       {sheetOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <div onClick={() => setSheetOpen(false)} style={{ flex: 1, background: "rgba(0,0,0,.4)" }} />
           <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 24px", boxShadow: "0 -4px 20px rgba(0,0,0,.15)" }}>
             <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 14 }}>
-              Sửa {sheetKhoan?.label}
+              Sửa {sheetLabel}
             </div>
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Mặc định: {fmt(r.rec.khoanDefault?.[sheetKhoan?.key] ?? 0)}</div>
+            {sheetKhoan && (
+              <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Mặc định: {fmt(r.rec.khoanDefault?.[sheetKhoan.key] ?? 0)}</div>
+            )}
+            {!sheetKhoan && (
+              <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Giá: {fmt(giaAn)} đ/ngày · Tự tính: {soNgayHoc(new Date().getFullYear(), new Date().getMonth()+1, {})} ngày</div>
+            )}
             <input type="number" inputMode="numeric" autoFocus value={sheetVal} onChange={(e) => setSheetVal(e.target.value)} placeholder="0" style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 14, outline: "none" }} />
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setSheetOpen(false)} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Hủy</button>
               <button onClick={saveSheet} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Lưu</button>
             </div>
-            <button onClick={() => { resetKhoan(r.hs.id, sheetKhoan.key); setSheetOpen(false); }} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: "none", background: "none", color: C.pine, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-              ↺ Khôi phục mặc định
-            </button>
+            {sheetKhoan && (
+              <button onClick={() => { resetKhoan(r.hs.id, sheetKhoan.key); setSheetOpen(false); }} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: "none", background: "none", color: C.pine, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                ↺ Khôi phục mặc định
+              </button>
+            )}
+            {!sheetKhoan && (
+              <button onClick={() => { setRec(r.hs.id, { ngayAnManual: false }); setSheetOpen(false); }} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: "none", background: "none", color: C.pine, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+                ↺ Trả về tự tính
+              </button>
+            )}
           </div>
         </div>
       )}
