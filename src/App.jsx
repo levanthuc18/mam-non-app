@@ -2203,20 +2203,21 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                     <div style={{ fontWeight: 600, fontSize: 13.5 }}>{!isNoAB && <span style={{ color: c.nguoiChi === "A" ? C.blueA : C.violetB, fontWeight: 800 }}>[{c.nguoiChi}]</span>} {c.noiDung}{isNoAB && <span style={{ color: C.gold, fontSize: 11, fontWeight: 700 }}> · NỢ {c.huong}</span>}{c.loai === "CO_DINH" && <span style={{ color: C.sub, fontSize: 11 }}> · cố định</span>}</div>
                     <Badge s={st} />
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
-                    {c.loai === "TRA_NO" && <span>Đã trả nợ <b style={{ color: C.ink }}>{fmt(kk)}</b></span>}
-                    {c.loai === "CO_DINH" && !locked && (
-                      <>
-                        <span>Phải trả</span>
-                        <NumInput value={c.soTien} onChange={(v) => set(c.id, { soTien: v })} w={100} />
-                        <ABBtn val={c.nguoiChi} set={(p) => set(c.id, { nguoiChi: p })} small disabled={locked} />
-                        <span>· đã trả</span>
-                      </>
-                    )}
-                    {c.loai !== "CO_DINH" && c.loai !== "TRA_NO" && <span>Phải trả <b style={{ color: C.ink }}>{fmt(e)}</b> · đã trả</span>}
-                    {c.loai !== "TRA_NO" && <NumInput value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={100} disabled={locked} />}
-                    {c.loai !== "TRA_NO" && !locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
-                    {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}>🗑</button>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {/* Dòng 1: Phải trả */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
+                      <span style={{ minWidth: 52 }}>Phải trả</span>
+                      {c.loai === "CO_DINH" && !locked
+                        ? (<><NumInput value={c.soTien} onChange={(v) => set(c.id, { soTien: v })} w={120} /><ABBtn val={c.nguoiChi} set={(p) => set(c.id, { nguoiChi: p })} small disabled={locked} /></>)
+                        : (<b style={{ color: C.ink }}>{fmt(e)}</b>)}
+                    </div>
+                    {/* Dòng 2: Đã trả (xuống dòng dưới Phải trả) */}
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
+                      <span style={{ minWidth: 52 }}>Đã trả</span>
+                      <NumInput value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={120} disabled={locked} />
+                      {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
+                      {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}>🗑</button>}
+                    </div>
                   </div>
                 </div>
               );
