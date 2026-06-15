@@ -94,7 +94,7 @@ const TRANG_THAI = ["Đang học", "Học thử", "Bảo lưu", "Nghỉ học", 
 const TT_COLOR = { "Đang học": C.green, "Học thử": C.blueA, "Bảo lưu": C.amber, "Nghỉ học": C.coral, "Ra trường": C.violetB };
 // Trang thai co phat sinh hoc phi (tao dong thu thang moi)
 const TT_THU_PHI = { "Đang học": true, "Học thử": true, "Bảo lưu": false, "Nghỉ học": false, "Ra trường": false };
-const LOAI_CHI = ["PHAT_SINH", "CO_DINH", "NO_AB", "CHUYEN"];
+const LOAI_CHI = ["PHAT_SINH", "CO_DINH", "NO_AB", "CHUYEN", "TRA_NO"];
 
 // Khoan phi co dinh trong PS (key -> nhan + lay tu dau)
 // nguon: 'lop' = gia lop * (he so cho hocPhi), 'lopFlat' = gia lop nguyen, 'an' = tinh theo ngay
@@ -884,6 +884,11 @@ export default function App() {
       const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
       if (c.loai === "CHUYEN") { if (c.huong === "A->B") { s.A -= e; s.B += e; } else { s.B -= e; s.A += e; } return; }
       if (c.loai === "NO_AB") { if (c.huong === "A->B") s.noAB_AtoB += e - kk; else s.noAB_BtoA += e - kk; return; }
+      if (c.loai === "TRA_NO") {
+        // Trả nợ NCC: không tính vào chi phí tháng, chỉ tính tiền đã ra khỏi túi
+        if (c.nguoiChi === "A") s.traA += kk; else s.traB += kk;
+        return;
+      }
       if (c.nguoiChi === "A") { s.chiA += e; s.traA += kk; } else { s.chiB += e; s.traB += kk; }
     });
     const dk = meta?.soDuDauKy || {};
@@ -1851,6 +1856,11 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
   const [nd, setNd] = useState(""); const [so, setSo] = useState(""); const [ng, setNg] = useState("A"); const [loai, setLoai] = useState("PHAT_SINH"); const [huong, setHuong] = useState("A->B");
   const [showCoDinh, setShowCoDinh] = useState(true);
   const add = () => {
+    if (loai === "TRA_NO") {
+      if (!nd.trim()) return;
+      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim(), soTien: 0, nguoiChi: ng, daTra: Number(so) || 0, loai: "TRA_NO" }] });
+      setNd(""); setSo(""); return;
+    }
     if (!so) return;
     if (loai === "CHUYEN") { upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Chuyển tiền", soTien: Number(so), loai: "CHUYEN", huong, daTra: 0 }] }); setNd(""); setSo(""); return; }
     if (!nd.trim()) return;
@@ -2142,6 +2152,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
             {cp.map((c) => {
               const e = Number(c.soTien) || 0, k = Number(c.daTra) || 0; const isNoAB = c.loai === "NO_AB"; const isCT = c.loai === "CHUYEN";
               if (c.loai === "CO_DINH" && !showCoDinh) return null;
+              if (c.loai === "TRA_NO") return (
+                <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
+                  <div style={{ fontWeight: 600 }}>💰 Trả nợ NCC · <b style={{ color: c.nguoiChi === "A" ? C.blueA : C.violetB }}>[{c.nguoiChi}]</b> {c.noiDung} · {fmt(kk)} đ</div>
+                  {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}>🗑</button>}
+                </div>
+              );
               if (isCT) return (
                 <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
                   <div style={{ fontWeight: 600 }}>🔄 Chuyển tiền <b style={{ color: c.huong === "A->B" ? C.blueA : C.violetB }}>{c.huong === "A->B" ? "A → B" : "B → A"}</b> · {fmt(e)} đ</div>
@@ -2156,6 +2172,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                     <Badge s={st} />
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
+                    {c.loai === "TRA_NO" && <span>Đã trả nợ <b style={{ color: C.ink }}>{fmt(kk)}</b></span>}
                     {c.loai === "CO_DINH" && !locked && (
                       <>
                         <span>Phải trả</span>
@@ -2164,9 +2181,9 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                         <span>· đã trả</span>
                       </>
                     )}
-                    {c.loai !== "CO_DINH" && <span>Phải trả <b style={{ color: C.ink }}>{fmt(e)}</b> · đã trả</span>}
-                    <NumInput value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={100} disabled={locked} />
-                    {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
+                    {c.loai !== "CO_DINH" && c.loai !== "TRA_NO" && <span>Phải trả <b style={{ color: C.ink }}>{fmt(e)}</b> · đã trả</span>}
+                    {c.loai !== "TRA_NO" && <NumInput value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={100} disabled={locked} />}
+                    {c.loai !== "TRA_NO" && !locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
                     {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}>🗑</button>}
                   </div>
                 </div>
@@ -2175,13 +2192,15 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
             {!locked && (
               <div style={{ marginTop: 10, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-                  <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder="Khoản chi" style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-                  <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+                  <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : "Khoản chi"} style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+                  {loai !== "TRA_NO" && (
+                    <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  <select value={loai} onChange={(e) => setLoai(e.target.value)} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: "#fff" }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{l === "PHAT_SINH" ? "Phát sinh" : l === "CO_DINH" ? "Cố định" : l === "NO_AB" ? "Nợ A↔B" : "🔄 Chuyển tiền"}</option>)}</select>
+                  <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "TRA_NO") { setSo("0"); } }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: "#fff" }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{l === "PHAT_SINH" ? "Phát sinh" : l === "CO_DINH" ? "Cố định" : l === "NO_AB" ? "Nợ A↔B" : l === "TRA_NO" ? "💰 Trả nợ NCC" : "🔄 Chuyển tiền"}</option>)}</select>
                   {(loai === "NO_AB" || loai === "CHUYEN") ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: "#fff" }}><option value="A->B">A → B</option><option value="B->A">B → A</option></select> : <ABBtn val={ng} set={setNg} small />}
-                  <button onClick={add} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", marginLeft: "auto" }}>+ Thêm</button>
+                  <button onClick={() => { if (loai === "TRA_NO" && !nd.trim()) { toast("Nhập tên nợ cần trả"); return; } add(); }} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", marginLeft: "auto" }}>+ Thêm</button>
                 </div>
               </div>
             )}
