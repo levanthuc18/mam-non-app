@@ -39,6 +39,8 @@ const SB = !!(SUPABASE_URL && SUPABASE_KEY);
 const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" };
 
 const MEM = {};
+// [FIX chot] Ghi nho trang thai chot/mo cua tung thang trong phien -> tranh ban doc cu (Supabase tre) tu mo khoa
+const CHOT_MEM = {};
 let storageOK = true;
 
 async function sGet(k) {
@@ -558,6 +560,7 @@ export default function App() {
   const reseedAll = async () => {
     const keys = await sList("mn5:");
     for (const k of keys) await sDel(k);
+    Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]);
     const r = await doSeed();
     setMeta({ ...r.m }); setStudents([...r.st]);
     setMData(null); setSeeded(true);
@@ -582,7 +585,7 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    if (d) { const { att, ...rest } = d; setMData({ ...rest, __ym: ym }); }
+    if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -706,7 +709,7 @@ export default function App() {
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
-  const upMData = (d) => { const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
+  const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
   const upDDData = (d) => { setDDData(d); flush(`mn5:dd:${ym}`, d); };
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
@@ -748,6 +751,7 @@ export default function App() {
     if (locked) { toast("Tháng đã chốt — mở khóa trước khi xóa."); return; }
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
       await sDel(`mn5:thang:${ym}`);
+      delete CHOT_MEM[ym];
       setMData(null);
       logAction(`Xóa bảng thu tháng ${month}/${year}`);
       toast(`Đã xóa bảng thu. Điểm danh tháng ${month}/${year} vẫn còn.`);
