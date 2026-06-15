@@ -1575,7 +1575,25 @@ function Donut({ pct, color, size = 76 }) {
   );
 }
 
-function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta }) {
+function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta, setTab }) {
+  // [COLLAPSE] Trang thai dong/mo cac khoi
+  const [openCards, setOpenCards] = useState(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("dashOpenCards") : null;
+    if (saved) { try { return JSON.parse(saved); } catch {} }
+    return { vanHanh: true, kd: true, tienMat: false, loiNhuan: false, lichSu: false, chiPhi: true };
+  });
+  const toggleCard = (key) => {
+    setOpenCards((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("dashOpenCards", JSON.stringify(next));
+      return next;
+    });
+  };
+  // [DELETE PROTECT] Bao ve nut xoa bang thu
+  const [showDelConfirm, setShowDelConfirm] = useState(false);
+  const [delConfirmText, setDelConfirmText] = useState("");
+  // [TOP NO] Thu gon top HS no
+  const [topNoLimit, setTopNoLimit] = useState(3);
   // [DU NO] Luy ke "dang giu" + lich su lai theo tung thang
   const [luyKe, setLuyKe] = useState(null); // { giuA, giuB }
   const [lichSu, setLichSu] = useState(null); // [{ thang, laiKeToan, laiTienMat, psThang, chiThang }]
@@ -1665,7 +1683,21 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
-  return (
+    // [CARD HEADER] Helper
+  const CardHeader = ({ icon, title, cardKey, children }) => (
+    <div onClick={() => toggleCard(cardKey)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "12px 14px", borderBottom: openCards[cardKey] ? `1px solid ${C.line}` : "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>{title}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {children}
+        <span style={{ fontSize: 14, color: C.sub, transition: "transform .2s", transform: openCards[cardKey] ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+      </div>
+    </div>
+  );
+
+return (
     <>
       {/* ===== DASHBOARD VAN HANH ===== */}
       {(() => {
@@ -1681,11 +1713,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         const canThu = recRows.reduce((a, r) => a + r.tongPhaiThu, 0);
         const daThu = recRows.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
         const tyLe = canThu > 0 ? Math.round(daThu / canThu * 100) : 100;
-        const topNo = recRows.filter((r) => r.conNo > 0).sort((a, b) => b.conNo - a.conNo).slice(0, 10);
+        const topNo = recRows.filter((r) => r.conNo > 0).sort((a, b) => b.conNo - a.conNo);
+        const topNoShow = topNo.slice(0, topNoLimit);
         const cell = (lb, v, col) => <div style={{ flex: 1, textAlign: "center", padding: "8px 2px", background: "#FAFCFA", borderRadius: 10 }}><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: col }}>{v}</div><div style={{ fontSize: 10.5, color: C.sub }}>{lb}</div></div>;
         return (
-          <Card style={{ marginBottom: 12 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.pine, marginBottom: 10 }}>🏫 Tổng quan vận hành — T{month}/{year}</div>
+          <Card style={{ marginBottom: 12, padding: 0 }}>
+            <CardHeader icon="🏫" title={`Tổng quan vận hành — T${month}/${year}`} cardKey="vanHanh" />
             <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
               {cell("Tổng HS", cnt.tong, C.ink)}
               {cell("Đang học", cnt.dangHoc, C.green)}
@@ -1701,11 +1734,18 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                 <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Tỷ lệ thu tháng này</div>
               </div>
             </div>
-            {topNo.length > 0 && (
+            {topNoShow.length > 0 && (
               <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 4 }}>🔴 Top {topNo.length} HS còn nợ</div>
-                {topNo.map((r, i) => (
-                  <div key={r.hs.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderBottom: i < topNo.length - 1 ? `1px dotted ${C.line}` : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.sub }}>🔴 Top {topNoShow.length} HS còn nợ</div>
+                  {topNo.length > topNoLimit && (
+                    <button onClick={() => setTab("no")} style={{ fontSize: 11.5, color: C.blueA, background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>
+                      Xem tất cả ({topNo.length}) →
+                    </button>
+                  )}
+                </div>
+                {topNoShow.map((r, i) => (
+                  <div key={r.hs.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "3px 0", borderBottom: i < topNoShow.length - 1 ? `1px dotted ${C.line}` : "none" }}>
                     <span>{i + 1}. {r.hs.ten} <span style={{ color: C.sub, fontSize: 11 }}>· {r.lop?.ten}</span></span>
                     <b style={{ color: C.coral }}>{fmt(r.conNo)}</b>
                   </div>
@@ -1715,6 +1755,10 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           </Card>
         );
       })()}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ===== CANH BAO BAT THUONG ===== */}
       {(() => {
@@ -1739,10 +1783,16 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           </Card>
         );
       })()}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ===== KET QUA KINH DOANH ===== */}
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.pine, marginBottom: 10 }}>📊 Kết quả kinh doanh — T{month}/{year}</div>
+      <Card style={{ marginBottom: 12, padding: 0 }}>
+        <CardHeader icon="💰" title={`Kết quả kinh doanh — T${month}/${year}`} cardKey="kd" />
+        {openCards.kd && (
+          <div style={{ padding: "10px 14px 14px" }}>
         <div style={{ display: "grid", gap: 6 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5 }}><span style={{ color: C.sub }}>Doanh thu (phải thu)</span><b style={{ color: C.ink }}>{fmt(tk.ps)} đ</b></div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}><span style={{ color: C.sub }}>— đã thu</span><b style={{ color: C.green }}>{fmt(tk.thu)} đ</b></div>
@@ -1756,8 +1806,10 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       </Card>
 
       {/* ===== TIEN DANG GIU ===== */}
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, marginBottom: 4 }}>💰 Tiền mặt đang giữ hộ trường</div>
+      <Card style={{ marginBottom: 12, padding: 0 }}>
+        <CardHeader icon="🏦" title="Tiền mặt đang giữ hộ trường" cardKey="tienMat" />
+        {openCards.tienMat && (
+          <div style={{ padding: "10px 14px 14px" }}>
         <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 10 }}>Tiền của trường mà A/B đang cầm (lũy kế đến T{month}). Âm = đang ứng tiền túi → trường nợ lại.</div>
         <div style={{ display: "flex", gap: 10 }}>
           {[["A", C.blueA, giuThangA, luyKe?.giuA], ["B", C.violetB, giuThangB, luyKe?.giuB]].map(([p, col, giuT, lk]) => (
@@ -1773,9 +1825,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       </Card>
 
       {/* ===== CHIA LOI NHUAN ===== */}
-      <Card style={{ marginBottom: 12, background: C.greenSoft, borderColor: "#BFE3CC" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.green }}>🤝 Chia lợi nhuận — T{month}</div>
+      <Card style={{ marginBottom: 12, background: C.greenSoft, borderColor: "#BFE3CC", padding: 0 }}>
+        <CardHeader icon="🤝" title={`Chia lợi nhuận — T${month}`} cardKey="loiNhuan" />
+        {openCards.loiNhuan && (
+          <div style={{ padding: "10px 14px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.green }}>🤝 Chia lợi nhuận — T{month}</div>
           {!locked && <div style={{ fontSize: 12, color: C.sub, display: "flex", alignItems: "center", gap: 4 }}>A nhận <input type="number" value={tyLeA} onChange={(e) => upMeta({ ...meta, tyLeLaiA: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} style={{ width: 46, padding: "5px 6px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, textAlign: "center", fontFamily: font.body, background: "#fff" }} /> %</div>}
         </div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 8 }}>Lợi nhuận kế toán tháng: <b style={{ color: lnKeToan < 0 ? C.coral : C.green, fontSize: 15 }}>{fmt(lnKeToan)} đ</b></div>
@@ -1796,7 +1851,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       )}
 
       {/* ===== LICH SU THEO THANG ===== */}
-      {lichSu && lichSu.length > 0 && (() => {
+      {lichSu && lichSu.length > 0 && (
+        <Card style={{ marginBottom: 12, padding: 0 }}>
+          <CardHeader icon="📈" title="Lịch sử theo tháng" cardKey="lichSu" />
+          {openCards.lichSu && (
+            <div style={{ padding: "10px 14px 14px" }}>
+              {(() => {
         const tongLKT = lichSu.reduce((a, r) => a + r.laiKeToan, 0);
         const tongLTM = lichSu.reduce((a, r) => a + r.laiTienMat, 0);
         const splitA = (v) => Math.round(v * tyLeA / 100);
@@ -1844,10 +1904,16 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         </Card>
         );
       })()}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ===== CHI PHI THANG ===== */}
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Chi phí tháng {month}</div>
+      <Card style={{ marginBottom: 12, padding: 0 }}>
+        <CardHeader icon="💸" title={`Chi phí tháng ${month}`} cardKey="chiPhi" />
+        {openCards.chiPhi && (
+          <div style={{ padding: "10px 14px 0" }}>
         <div style={{ display: "flex", gap: 14, fontSize: 12.5, color: C.sub, marginBottom: 10, flexWrap: "wrap" }}>
           <span>Tổng chi <b style={{ color: C.ink }}>{fmt(tongChi)}</b></span>
           <span>Đã trả <b style={{ color: C.green }}>{fmt(tongTra)}</b></span>
@@ -1893,10 +1959,35 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         )}
       </Card>
 
+      {/* Sticky footer tong hop chi phi */}
+      {openCards.chiPhi && (
+        <div style={{ position: "sticky", bottom: 0, background: "#fff", borderTop: `1px solid ${C.line}`, padding: "10px 14px", margin: "0 -14px", borderRadius: "0 0 16px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.sub, marginBottom: 8 }}>
+            <span>Tổng chi <b style={{ color: C.ink }}>{fmt(tongChi)}</b></span>
+            <span>Đã trả <b style={{ color: C.green }}>{fmt(tongTra)}</b></span>
+            <span>Nợ NCC <b style={{ color: noNCC > 0 ? C.coral : C.green }}>{fmt(noNCC)}</b></span>
+          </div>
+        </div>
+      )}
       {!locked
         ? <button onClick={chotThang} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.gold}`, background: C.goldSoft, color: "#7A5E12", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>🔒 Chốt tháng {month}/{year}</button>
         : <button onClick={moChot} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>🔓 Mở khóa tháng {month}/{year}</button>}
-      {!locked && <button onClick={delThang} style={{ width: "100%", marginTop: 8, padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.coralSoft}`, background: C.card, color: C.coral, fontFamily: font.body, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🗑 Xóa bảng thu tháng này (tạo lại)</button>}
+      {!locked && (
+        <div style={{ marginTop: 8 }}>
+          {!showDelConfirm ? (
+            <button onClick={() => setShowDelConfirm(true)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.coralSoft}`, background: C.card, color: C.coral, fontFamily: font.body, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>🗑 Xóa bảng thu tháng này (tạo lại)</button>
+          ) : (
+            <div style={{ background: C.coralSoft, borderRadius: 12, padding: 12, border: `1.5px solid ${C.coral}` }}>
+              <div style={{ fontSize: 13, color: C.coral, fontWeight: 700, marginBottom: 8 }}>⚠️ Nhập "XOA" để xác nhận xóa bảng thu tháng {month}/{year}</div>
+              <input value={delConfirmText} onChange={(e) => setDelConfirmText(e.target.value)} placeholder="Nhập XOA" style={{ width: "100%", padding: "10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 14, marginBottom: 8, textAlign: "center", fontWeight: 700, textTransform: "uppercase" }} />
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setShowDelConfirm(false); setDelConfirmText(""); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Hủy</button>
+                <button onClick={() => { if (delConfirmText.trim().toUpperCase() === "XOA") { delThang(); setShowDelConfirm(false); setDelConfirmText(""); } else { toast("Nhập sai — gõ XOA để xác nhận"); } }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: delConfirmText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 13, cursor: delConfirmText.trim().toUpperCase() === "XOA" ? "pointer" : "default" }}>🗑 Xóa</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
