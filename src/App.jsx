@@ -92,6 +92,9 @@ async function sDel(k) {
 
 const PHAN_LOAI = ["Bthg", "AE", "GV", "T7"];
 const PL_LABEL = { Bthg: "Bình thường", AE: "Anh em (−50%)", GV: "Con GV (miễn)", T7: "Chỉ thứ 7" };
+// [PLBadge] Mau vien phan loai dung chung (Thu phi + Cai dat)
+const PL_COLOR = { Bthg: { bg: C.greenSoft, fg: C.green }, AE: { bg: C.blueASoft, fg: C.blueA }, GV: { bg: C.violetBSoft, fg: C.violetB }, T7: { bg: C.amberSoft, fg: C.amber } };
+function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 const PL_HE = { Bthg: 1, AE: 0.5, GV: 0, T7: 0 };
 const TRANG_THAI = ["Đang học", "Học thử", "Bảo lưu", "Nghỉ học", "Ra trường"];
 const TT_COLOR = { "Đang học": C.green, "Học thử": C.blueA, "Bảo lưu": C.amber, "Nghỉ học": C.coral, "Ra trường": C.violetB };
@@ -1034,11 +1037,12 @@ function NgayAnBar({ onApply, rows }) {
   return (
     <Card style={{ marginBottom: 10, background: C.pineSoft, borderColor: "#BFE0D4", padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine }}>Ngày ăn:</span>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine }}>🍽️ Số ngày ăn trong tháng:</span>
         <NumInput value={v} onChange={setV} w={62} />
-        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp cho {rows.length} HS đang hiện</button>
-        <span style={{ fontSize: 11, color: C.sub }}>(theo bộ lọc; HS sửa tay giữ riêng)</span>
+        <span style={{ fontSize: 12.5, color: C.pine }}>ngày</span>
+        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp dụng cho {rows.length} HS đang hiển thị</button>
       </div>
+      <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>Tiền ăn = số ngày ăn × đơn giá. Chỉ áp cho HS đang lọc; HS đã sửa tay vẫn giữ riêng.</div>
     </Card>
   );
 }
@@ -1135,8 +1139,14 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
         )}
 
         {/* Khoản riêng (phuThu) */}
-        <div style={{ marginTop: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, marginBottom: 6 }}>Khoản riêng</div>
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.sub, whiteSpace: "nowrap" }}>Khoản riêng</span>
+            <div style={{ flex: 1, height: 1, background: C.line }} />
+            {!locked && !showPtInput && (
+              <button onClick={() => setShowPtInput(true)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 9, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>➕ Thêm</button>
+            )}
+          </div>
           {(r.rec.phuThu || []).map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
               <span style={{ flex: 1, fontSize: 14, color: C.ink }}>{p.ten}{p.lop && <span style={{ color: C.blueA, fontSize: 10 }}> (cả lớp)</span>}</span>
@@ -1146,18 +1156,14 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
               )}
             </div>
           ))}
-          {!locked && (
-            <>
-              {!showPtInput ? (
-                <button onClick={() => setShowPtInput(true)} style={{ width: "100%", padding: "9px 0", borderRadius: 10, border: `1.5px dashed ${C.line}`, background: "none", color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", marginTop: 6 }}>+ Thêm khoản riêng</button>
-              ) : (
-                <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                  <input value={ptTen} onChange={(e) => setPtTen(e.target.value)} placeholder="Tên khoản" style={{ flex: 2, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body }} />
-                  <input type="number" value={ptSo} onChange={(e) => setPtSo(e.target.value)} placeholder="Số tiền" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body }} />
-                  <button onClick={addPT} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Thêm</button>
-                </div>
-              )}
-            </>
+          {(r.rec.phuThu || []).length === 0 && !showPtInput && <div style={{ fontSize: 12, color: C.gray, padding: "2px 0 4px" }}>Chưa có khoản riêng.</div>}
+          {!locked && showPtInput && (
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              <input value={ptTen} onChange={(e) => setPtTen(e.target.value)} placeholder="Tên khoản" style={{ flex: 2, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body }} />
+              <input type="number" value={ptSo} onChange={(e) => setPtSo(e.target.value)} placeholder="Số tiền" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body }} />
+              <button onClick={addPT} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Thêm</button>
+              <button onClick={() => { setShowPtInput(false); setPtTen(""); setPtSo(""); }} style={{ background: "none", color: C.sub, fontWeight: 700, fontSize: 12, padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, cursor: "pointer" }}>Hủy</button>
+            </div>
           )}
         </div>
 
@@ -1283,6 +1289,12 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
           <Card key={l} style={{ flex: 1, padding: "10px 12px" }}><div style={{ fontSize: 11, color: C.sub }}>{l}</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: col }}>{fmt(v)}</div></Card>
         ))}
       </div>
+      {tk.ps > 0 && (() => { const pct = Math.min(100, Math.round(tk.thu / tk.ps * 100)); return (
+        <div style={{ marginTop: -4, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.sub, marginBottom: 4 }}>Đã thu {pct}% phải thu toàn trường</div>
+          <div style={{ height: 7, borderRadius: 99, background: C.line, overflow: "hidden" }}><div style={{ width: pct + "%", height: "100%", background: pct >= 100 ? C.green : C.pine, borderRadius: 99, transition: "width .3s" }} /></div>
+        </div>
+      ); })()}
       {/* [UX-I] StatCards bam de loc */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         {[["chuaThu", "Chưa thu", cnt.chuaThu, C.coral, C.coralSoft], ["thieu", "Thiếu", cnt.thieu, C.amber, C.amberSoft], ["xong", "Hoàn thành", cnt.xong, C.green, C.greenSoft]].map(([k, l, v, c, bg]) => (
@@ -1338,7 +1350,7 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{r.hs.ten}{r.ps.suaCount > 0 && <span title="có khoản đã sửa" style={{ color: C.amber, fontSize: 12 }}> ⚠</span>}</div>
-                <div style={{ fontSize: 11.5, color: C.sub }}>{r.lop?.ten} · {r.hs.pl}{r.nghi > 0 ? ` · nghỉ ${r.nghi}` : ""}</div>
+                <div style={{ fontSize: 11.5, color: C.sub, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 1 }}><span>{r.lop?.ten}</span><PLBadge pl={r.hs.pl} />{r.nghi > 0 ? <span>· nghỉ {r.nghi}</span> : null}</div>
                 {r.noTruoc !== 0 && <div style={{ fontSize: 11, fontWeight: 700, marginTop: 1, color: r.noTruoc > 0 ? C.coral : C.green }}>{r.noTruoc > 0 ? `🔴 Nợ cũ ${fmt(r.noTruoc)}` : `🟢 Dư cũ ${fmt(-r.noTruoc)}`}</div>}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2521,6 +2533,17 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             </div>
 
             {showImport && <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />}
+
+            {/* [Cong cu 1 lan] Dat ngay nhap hoc dong loat */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={async () => {
+                if (await ask("Đặt NGÀY NHẬP HỌC = 01/01/2026 cho TẤT CẢ học sinh?\nSẽ GHI ĐÈ ngày nhập học hiện tại của mọi em (kể cả em đang có ngày khác). Không hoàn tác được.", { danger: true, okText: "Ghi đè tất cả" })) {
+                  upStudents(students.map((s) => ({ ...s, ngayNhapHoc: "2026-01-01" })));
+                  logAction(`Đặt ngày nhập học = 01/01/2026 cho tất cả HS (${students.length} em)`);
+                  toast(`Đã đặt ngày nhập học 01/01/2026 cho ${students.length} HS.`);
+                }
+              }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.amber}`, background: C.amberSoft, color: C.amber, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}>🗓️ Đặt ngày nhập học = 01/01/2026 cho tất cả HS</button>
+            </div>
             {showAddHS && (<>
             <Card style={{ marginBottom: 12 }}>
               <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>+ Thêm học sinh</div>
@@ -2563,50 +2586,54 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
               </div>
             )}
 
-            <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>{bulkMode ? "Chạm để chọn/bỏ chọn nhiều em." : "Chạm HS để sửa. Chuyển lớp áp dụng từ tháng " + ym + "."}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>{reorderMode ? "Dùng ▲ ▼ để xê dịch, ⤒ đưa lên đầu (theo danh sách đang lọc). Máy tính vẫn kéo-thả được." : bulkMode ? "Chạm để chọn/bỏ chọn nhiều em." : "Chạm HS để sửa. Chuyển lớp áp dụng từ tháng " + ym + "."}</div>
 
-            {/* Lọc Lớp ra ngoài */}
-            <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={setHsFilter} />
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-              <div style={{ fontSize: 12, color: C.sub }}>
-                {(() => { const f = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)); return `${f.length} HS · ${hsFilter === "all" ? "Tất cả lớp" : meta.classes.find(c=>c.id===hsFilter)?.ten} · ${hsStatusFilter === "all" ? "Mọi TT" : hsStatusFilter}`; })()}
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => { setReorderMode((v) => !v); setDragId(null); }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
-                <button onClick={() => setShowFilterSheet(true)} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>⚙️ Bộ lọc</button>
-              </div>
+            {/* Lọc gọn: 2 dropdown 1 hàng [Lớp ▼][Trạng thái ▼] + nút Sắp xếp */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
+              <select value={hsFilter} onChange={(e) => setHsFilter(e.target.value)} style={{ ...inp, flex: "1 1 130px", minWidth: 0 }}>
+                <option value="all">Tất cả lớp</option>
+                {meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}
+              </select>
+              <select value={hsStatusFilter} onChange={(e) => setHsStatusFilter(e.target.value)} style={{ ...inp, flex: "1 1 130px", minWidth: 0 }}>
+                <option value="all">Mọi trạng thái</option>
+                {TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <button onClick={() => { setReorderMode((v) => !v); setDragId(null); }} style={{ flexShrink: 0, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
+            </div>
+            <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 4 }}>
+              {(() => { const f = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)); return `${f.length} HS đang hiển thị`; })()}
             </div>
 
           </div>
-          {/* ===== BOTTOM SHEET: FILTER ===== */}
-          {showFilterSheet && (
-            <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-              <div onClick={() => setShowFilterSheet(false)} style={{ flex: 1, background: "rgba(0,0,0,.4)" }} />
-              <div style={{ background: C.card, borderRadius: "20px 20px 0 0", padding: "16px 16px 24px", maxHeight: "70vh", overflowY: "auto", boxShadow: "0 -4px 20px rgba(0,0,0,.15)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.ink }}>⚙️ Bộ lọc</div>
-                  <button onClick={() => setShowFilterSheet(false)} style={{ border: "none", background: "none", fontSize: 20, color: C.sub, cursor: "pointer" }}>×</button>
-                </div>
-                <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, marginTop: 12, fontWeight: 600 }}>Trạng thái</div>
-                <Chips items={[["all", "Mọi trạng thái"], ...TRANG_THAI.map((t) => [t, t])]} val={hsStatusFilter} set={(v) => setHsStatusFilter(v)} />
-                <button onClick={() => setShowFilterSheet(false)} style={{ width: "100%", marginTop: 16, padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Áp dụng</button>
-              </div>
-            </div>
-          )}
 
           {/* ===== STUDENT LIST ===== */}
           {(() => {
             const filtered = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter));
             const shown = filtered.slice(0, hsLimit);
+            // [Sap xep] di chuyen 1 HS theo danh sach DANG LOC (vi tri tuong doi giua cac em cung lop)
+            const ordBtn = { border: `1px solid ${C.line}`, background: C.card, color: C.pine, cursor: "pointer", padding: "4px 7px", fontSize: 13, borderRadius: 7, lineHeight: 1 };
+            const moveHS = (sid, dir) => {
+              const fIdx = filtered.findIndex((x) => x.id === sid);
+              if (fIdx < 0) return;
+              let anchorId = null, after = false;
+              if (dir === "up") { if (fIdx === 0) return; anchorId = filtered[fIdx - 1].id; }
+              else if (dir === "down") { if (fIdx >= filtered.length - 1) return; anchorId = filtered[fIdx + 1].id; after = true; }
+              else if (dir === "top") { if (fIdx === 0) return; anchorId = filtered[0].id; }
+              const moved = students.find((x) => x.id === sid);
+              if (!moved) return;
+              const rest = students.filter((x) => x.id !== sid);
+              let insertIdx = rest.findIndex((x) => x.id === anchorId);
+              if (insertIdx < 0) insertIdx = rest.length;
+              if (after) insertIdx += 1;
+              rest.splice(insertIdx, 0, moved);
+              upStudents(rest);
+            };
             return (<>
             {filtered.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh phù hợp.</div>}
             {shown.map((s, idx) => {
             const edit = editHS === s.id;
             const lh = lopHienTai(s);
             const isSel = selectedHS.includes(s.id);
-            const plColor = s.pl === "GV" ? { bg: C.violetBSoft, fg: C.violetB } : s.pl === "AE" ? { bg: C.blueASoft, fg: C.blueA } : s.pl === "T7" ? { bg: C.amberSoft, fg: C.amber } : { bg: C.greenSoft, fg: C.green };
-            const plLabel = PL_LABEL[s.pl] || s.pl;
             const isDragging = dragId === s.id;
             return (
               <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : isDragging ? `2px dashed ${C.pine}` : undefined, opacity: isDragging ? 0.6 : 1, transition: "margin .2s ease" }}>
@@ -2646,10 +2673,10 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                   onDragEnd={() => { setDragId(null); setDragOverId(null); setDragOverPos(null); }}
                   onDragLeave={() => { setDragOverId(null); setDragOverPos(null); }}
                   onClick={() => { if (reorderMode) return; if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }}
-                  onMouseDown={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 800); }}
+                  onMouseDown={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 2000); }}
                   onMouseUp={() => { clearTimeout(longPressRef.current); }}
                   onMouseLeave={() => { clearTimeout(longPressRef.current); }}
-                  onTouchStart={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 800); }}
+                  onTouchStart={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 2000); }}
                   onTouchEnd={() => { clearTimeout(longPressRef.current); }}
                   style={{ padding: "12px 14px", cursor: reorderMode ? "grab" : "pointer" }}
                 >
@@ -2660,7 +2687,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                         <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{s.ten}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
                           <span style={{ fontSize: 11.5, color: C.sub }}>{meta.classes.find((c) => c.id === lh)?.ten}</span>
-                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: plColor.bg, color: plColor.fg }}>{s.pl}</span>
+                          <PLBadge pl={s.pl} />
                           <span style={{ fontSize: 11, fontWeight: 600, color: TT_COLOR[s.trangThai], background: TT_COLOR[s.trangThai] + "18", padding: "2px 8px", borderRadius: 99 }}>{s.trangThai}</span>
                         </div>
                       </div>
@@ -2668,7 +2695,12 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                     {!bulkMode && !reorderMode && <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />}
                     {bulkMode && <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{isSel ? "✓" : ""}</div>}
                     {reorderMode && (
-                      <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 18, flexShrink: 0 }}>🗑</button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={(e) => { e.stopPropagation(); moveHS(s.id, "top"); }} title="Lên đầu" style={ordBtn}>⤒</button>
+                        <button onClick={(e) => { e.stopPropagation(); moveHS(s.id, "up"); }} title="Lên" style={ordBtn}>▲</button>
+                        <button onClick={(e) => { e.stopPropagation(); moveHS(s.id, "down"); }} title="Xuống" style={ordBtn}>▼</button>
+                        <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} title="Xóa" style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 18 }}>🗑</button>
+                      </div>
                     )}
                   </div>
                 </div>
