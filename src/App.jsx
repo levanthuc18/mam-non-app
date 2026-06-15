@@ -2174,6 +2174,9 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [bulkTargetTT, setBulkTargetTT] = useState("Đang học");
   const [hsLimit, setHsLimit] = useState(50);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [dragId, setDragId] = useState(null);
+  const longPressRef = useRef(null);
   const sentinelRef = useRef(null);
   const [headerShrunk, setHeaderShrunk] = useState(false);
   useEffect(() => {
@@ -2311,7 +2314,10 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
               <div style={{ fontSize: 12, color: C.sub }}>
                 {(() => { const f = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)); return `${f.length} HS · ${hsFilter === "all" ? "Tất cả lớp" : meta.classes.find(c=>c.id===hsFilter)?.ten} · ${hsStatusFilter === "all" ? "Mọi TT" : hsStatusFilter}`; })()}
               </div>
-              <button onClick={() => setShowFilterSheet(true)} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>⚙️ Bộ lọc</button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => { setReorderMode((v) => !v); setDragId(null); }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
+                <button onClick={() => setShowFilterSheet(true)} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>⚙️ Bộ lọc</button>
+              </div>
             </div>
 
           </div>
@@ -2337,27 +2343,62 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             const shown = filtered.slice(0, hsLimit);
             return (<>
             {filtered.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh phù hợp.</div>}
-            {shown.map((s) => {
+            {shown.map((s, idx) => {
             const edit = editHS === s.id;
             const lh = lopHienTai(s);
             const isSel = selectedHS.includes(s.id);
+            const plColor = s.pl === "GV" ? { bg: C.violetBSoft, fg: C.violetB } : s.pl === "AE" ? { bg: C.blueASoft, fg: C.blueA } : { bg: C.greenSoft, fg: C.green };
+            const plLabel = PL_LABEL[s.pl] || s.pl;
+            const isDragging = dragId === s.id;
             return (
-              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : undefined }}>
-                <div onClick={() => { if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }} style={{ padding: "12px 14px", cursor: "pointer" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{s.ten}</div>
-                      <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{meta.classes.find((c) => c.id === lh)?.ten} · {s.pl}</div>
+              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : isDragging ? `2px dashed ${C.pine}` : undefined, opacity: isDragging ? 0.6 : 1 }}>
+                <div
+                  draggable={reorderMode}
+                  onDragStart={(e) => { if (!reorderMode) return; e.dataTransfer.setData("text/plain", s.id); setDragId(s.id); }}
+                  onDragOver={(e) => { if (!reorderMode) return; e.preventDefault(); }}
+                  onDrop={(e) => {
+                    if (!reorderMode) return;
+                    e.preventDefault();
+                    const sourceId = e.dataTransfer.getData("text/plain");
+                    if (sourceId === s.id) return;
+                    const sourceIdx = students.findIndex((x) => x.id === sourceId);
+                    const targetIdx = students.findIndex((x) => x.id === s.id);
+                    if (sourceIdx < 0 || targetIdx < 0) return;
+                    const next = [...students];
+                    const [moved] = next.splice(sourceIdx, 1);
+                    next.splice(targetIdx, 0, moved);
+                    upStudents(next);
+                    setDragId(null);
+                  }}
+                  onDragEnd={() => setDragId(null)}
+                  onClick={() => { if (reorderMode) return; if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }}
+                  onMouseDown={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 800); }}
+                  onMouseUp={() => { clearTimeout(longPressRef.current); }}
+                  onMouseLeave={() => { clearTimeout(longPressRef.current); }}
+                  onTouchStart={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 800); }}
+                  onTouchEnd={() => { clearTimeout(longPressRef.current); }}
+                  style={{ padding: "12px 14px", cursor: reorderMode ? "grab" : "pointer" }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      {reorderMode && <span style={{ fontSize: 16, color: C.gray, userSelect: "none" }}>⋮⋮</span>}
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{s.ten}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
+                          <span style={{ fontSize: 11.5, color: C.sub }}>{meta.classes.find((c) => c.id === lh)?.ten}</span>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: plColor.bg, color: plColor.fg }}>{plLabel}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: TT_COLOR[s.trangThai], background: TT_COLOR[s.trangThai] + "18", padding: "2px 8px", borderRadius: 99 }}>{s.trangThai}</span>
+                        </div>
+                      </div>
                     </div>
-                    {!bulkMode && <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />}
-                    {bulkMode && <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0, marginLeft: 8 }}>{isSel ? "✓" : ""}</div>}
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: TT_COLOR[s.trangThai], background: TT_COLOR[s.trangThai] + "18", padding: "3px 10px", borderRadius: 99 }}>{s.trangThai}</span>
-                    {!bulkMode && <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 16 }}>🗑</button>}
+                    {!bulkMode && !reorderMode && <ABBtn val={s.nguoiThu} set={(p) => setHS(s.id, { nguoiThu: p })} small />}
+                    {bulkMode && <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${isSel ? C.pine : C.line}`, background: isSel ? C.pine : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{isSel ? "✓" : ""}</div>}
+                    {reorderMode && (
+                      <button onClick={(e) => { e.stopPropagation(); delHS(s.id); }} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 18, flexShrink: 0 }}>🗑</button>
+                    )}
                   </div>
                 </div>
-                {edit && !bulkMode && (
+                {edit && !bulkMode && !reorderMode && (
                   <div style={{ borderTop: `1px dashed ${C.line}`, padding: "12px", background: "#FBFDFB" }}>
                     <HSDetail s={s} meta={meta} ym={ym} setHS={setHS} chuyenLop={chuyenLop} inp={inp} />
                   </div>
