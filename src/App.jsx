@@ -573,7 +573,7 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    if (d) { const { att, ...rest } = d; setMData({ ...rest, __ym: ym }); }
+    if (d) { const { att, ...rest } = d; setMData((cur) => ({ ...(cur || {}), ...rest, __ym: ym })); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -582,8 +582,8 @@ export default function App() {
     if (!SB || !metaReady) return;
     const t = setInterval(async () => {
       delete MEM[`mn5:dd:${ym}`]; const dd = await sGet(`mn5:dd:${ym}`); setDDData(dd || {});
-      delete MEM[`mn5:thang:${ym}`]; const th = await sGet(`mn5:thang:${ym}`);
-      if (th) { const { att, ...rest } = th; setMData((cur) => (cur && cur.__ym === ym ? { ...cur, ...rest, __ym: ym } : cur)); }
+      // [FIX] Không tự động sync mData (thu phí/chốt tháng) mỗi 10s để tránh ghi đè daChot từ server cũ hơn
+      // Nếu cần cập nhật từ máy khác, người dùng đổi tháng hoặc refresh
     }, 10000);
     return () => clearInterval(t);
   }, [ym, metaReady]);
