@@ -573,7 +573,7 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    if (d) { const { att, ...rest } = d; setMData({ thuNgoai: [], chiPhi: [], khoanThuLop: [], daChot: false, ...rest, __ym: ym }); }
+    if (d) { const { att, ...rest } = d; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -583,7 +583,7 @@ export default function App() {
     const t = setInterval(async () => {
       delete MEM[`mn5:dd:${ym}`]; const dd = await sGet(`mn5:dd:${ym}`); setDDData(dd || {});
       delete MEM[`mn5:thang:${ym}`]; const th = await sGet(`mn5:thang:${ym}`);
-      if (th) { const { att, ...rest } = th; setMData((cur) => (cur && cur.__ym === ym ? { thuNgoai: [], chiPhi: [], khoanThuLop: [], daChot: false, ...rest, __ym: ym } : cur)); }
+      if (th) { const { att, ...rest } = th; setMData((cur) => (cur && cur.__ym === ym ? { ...cur, ...rest, __ym: ym } : cur)); }
     }, 10000);
     return () => clearInterval(t);
   }, [ym, metaReady]);
@@ -2176,6 +2176,8 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [dragOverPos, setDragOverPos] = useState(null);
   const longPressRef = useRef(null);
   const sentinelRef = useRef(null);
   const [headerShrunk, setHeaderShrunk] = useState(false);
@@ -2347,30 +2349,46 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             const edit = editHS === s.id;
             const lh = lopHienTai(s);
             const isSel = selectedHS.includes(s.id);
-            const plColor = s.pl === "GV" ? { bg: C.violetBSoft, fg: C.violetB } : s.pl === "AE" ? { bg: C.blueASoft, fg: C.blueA } : { bg: C.greenSoft, fg: C.green };
+            const plColor = s.pl === "GV" ? { bg: C.violetBSoft, fg: C.violetB } : s.pl === "AE" ? { bg: C.blueASoft, fg: C.blueA } : s.pl === "T7" ? { bg: C.amberSoft, fg: C.amber } : { bg: C.greenSoft, fg: C.green };
             const plLabel = PL_LABEL[s.pl] || s.pl;
             const isDragging = dragId === s.id;
             return (
-              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : isDragging ? `2px dashed ${C.pine}` : undefined, opacity: isDragging ? 0.6 : 1 }}>
+              <Card key={s.id} style={{ marginBottom: 8, padding: 0, overflow: "hidden", border: bulkMode && isSel ? `2px solid ${C.pine}` : isDragging ? `2px dashed ${C.pine}` : undefined, opacity: isDragging ? 0.6 : 1, transition: "margin .2s ease" }}>
+                {dragOverId === s.id && dragOverPos === "before" && (
+                  <div style={{ height: 4, background: C.pine, borderRadius: 2, margin: "2px 8px", boxShadow: "0 1px 4px rgba(23,107,91,.35)" }} />
+                )}
                 <div
                   draggable={reorderMode}
                   onDragStart={(e) => { if (!reorderMode) return; e.dataTransfer.setData("text/plain", s.id); setDragId(s.id); }}
-                  onDragOver={(e) => { if (!reorderMode) return; e.preventDefault(); }}
+                  onDragOver={(e) => {
+                    if (!reorderMode) return;
+                    e.preventDefault();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    setDragOverId(s.id);
+                    setDragOverPos(e.clientY < midY ? "before" : "after");
+                  }}
                   onDrop={(e) => {
                     if (!reorderMode) return;
                     e.preventDefault();
                     const sourceId = e.dataTransfer.getData("text/plain");
-                    if (sourceId === s.id) return;
+                    if (sourceId === s.id) { setDragOverId(null); setDragOverPos(null); return; }
                     const sourceIdx = students.findIndex((x) => x.id === sourceId);
                     const targetIdx = students.findIndex((x) => x.id === s.id);
                     if (sourceIdx < 0 || targetIdx < 0) return;
                     const next = [...students];
                     const [moved] = next.splice(sourceIdx, 1);
-                    next.splice(targetIdx, 0, moved);
+                    let insertIdx = targetIdx;
+                    if (sourceIdx < targetIdx) insertIdx = targetIdx - 1;
+                    if (dragOverPos === "after") insertIdx++;
+                    next.splice(insertIdx, 0, moved);
                     upStudents(next);
                     setDragId(null);
+                    setDragOverId(null);
+                    setDragOverPos(null);
                   }}
-                  onDragEnd={() => setDragId(null)}
+                  onDragEnd={() => { setDragId(null); setDragOverId(null); setDragOverPos(null); }}
+                  onDragLeave={() => { setDragOverId(null); setDragOverPos(null); }}
                   onClick={() => { if (reorderMode) return; if (bulkMode) setSelectedHS((prev) => isSel ? prev.filter((id) => id !== s.id) : [...prev, s.id]); else setEditHS(edit ? null : s.id); }}
                   onMouseDown={() => { if (reorderMode || bulkMode) return; longPressRef.current = setTimeout(() => { setReorderMode(true); setDragId(s.id); }, 800); }}
                   onMouseUp={() => { clearTimeout(longPressRef.current); }}
@@ -2386,7 +2404,7 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                         <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{s.ten}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
                           <span style={{ fontSize: 11.5, color: C.sub }}>{meta.classes.find((c) => c.id === lh)?.ten}</span>
-                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: plColor.bg, color: plColor.fg }}>{plLabel}</span>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: plColor.bg, color: plColor.fg }}>{s.pl}</span>
                           <span style={{ fontSize: 11, fontWeight: 600, color: TT_COLOR[s.trangThai], background: TT_COLOR[s.trangThai] + "18", padding: "2px 8px", borderRadius: 99 }}>{s.trangThai}</span>
                         </div>
                       </div>
@@ -2398,6 +2416,9 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                     )}
                   </div>
                 </div>
+                {dragOverId === s.id && dragOverPos === "after" && (
+                  <div style={{ height: 4, background: C.pine, borderRadius: 2, margin: "2px 8px", boxShadow: "0 1px 4px rgba(23,107,91,.35)" }} />
+                )}
                 {edit && !bulkMode && !reorderMode && (
                   <div style={{ borderTop: `1px dashed ${C.line}`, padding: "12px", background: "#FBFDFB" }}>
                     <HSDetail s={s} meta={meta} ym={ym} setHS={setHS} chuyenLop={chuyenLop} inp={inp} />
