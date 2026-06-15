@@ -1266,13 +1266,52 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
 
 // ===== Bottom Sheet cơ sở =====
 function BottomSheet({ open, onClose, title, children }) {
-  if (!open) return null;
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startYRef = useRef(null);
+  const startTimeRef = useRef(null);
+
+  if (!open) { if (dragY !== 0) setDragY(0); return null; }
+
+  const onStart = (y) => { startYRef.current = y; startTimeRef.current = Date.now(); setDragging(true); };
+  const onMove = (y) => {
+    if (startYRef.current == null) return;
+    const dy = Math.max(0, y - startYRef.current);
+    setDragY(dy);
+  };
+  const onEnd = () => {
+    if (startYRef.current == null) return;
+    const dy = dragY;
+    const dt = Date.now() - (startTimeRef.current || 0);
+    const velocity = dy / (dt || 1);
+    setDragging(false);
+    if (dy > 120 || (dy > 60 && velocity > 0.5)) { setDragY(0); onClose(); }
+    else setDragY(0);
+    startYRef.current = null;
+    startTimeRef.current = null;
+  };
+
+  const dragProps = {
+    onTouchStart: (e) => { e.preventDefault(); onStart(e.touches[0].clientY); },
+    onTouchMove: (e) => { e.preventDefault(); onMove(e.touches[0].clientY); },
+    onTouchEnd: (e) => { e.preventDefault(); onEnd(); },
+    onMouseDown: (e) => { e.preventDefault(); onStart(e.clientY); },
+    onMouseMove: (e) => { if (e.buttons === 1) { e.preventDefault(); onMove(e.clientY); } },
+    onMouseUp: (e) => { e.preventDefault(); onEnd(); },
+    onMouseLeave: (e) => { if (e.buttons === 1) { e.preventDefault(); onEnd(); } },
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "8px 16px 24px", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", animation: "slideUp .22s ease" }}>
-        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.line, margin: "0 auto 14px" }} />
-        {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 14 }}>{title}</div>}
+      <div style={{
+        background: "#fff", borderRadius: "20px 20px 0 0", padding: "8px 16px 24px",
+        maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)",
+        transform: `translateY(${dragY}px)`,
+        transition: dragging ? "none" : "transform .25s cubic-bezier(.32,.72,.35,1)",
+      }}>
+        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.line, margin: "0 auto 14px", touchAction: "none", cursor: "grab" }} {...dragProps} />
+        {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 14, touchAction: "none", cursor: "grab" }} {...dragProps}>{title}</div>}
         {children}
       </div>
     </div>
