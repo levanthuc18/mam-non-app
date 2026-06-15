@@ -696,7 +696,7 @@ export default function App() {
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
-  const upMData = (d) => { const dd = { ...d, __ym: ym }; setMData(dd); flush(`mn5:thang:${ym}`, stripYm(dd)); };
+  const upMData = (d) => { const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
   const upDDData = (d) => { setDDData(d); flush(`mn5:dd:${ym}`, d); };
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
@@ -1676,14 +1676,12 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
     if (await ask(msg, { okText: "Chốt tháng" })) {
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
-      const nextChot = { ...mData, daChot: true, noLuyKe };
-      setMData({ ...nextChot, __ym: ym });
-      await flush(`mn5:thang:${ym}`, stripYm(nextChot));
+      await upMData({ ...mData, daChot: true, noLuyKe });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
