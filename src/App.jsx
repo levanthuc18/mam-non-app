@@ -1285,6 +1285,7 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
     toast(onlyNo ? `Đã thu đủ ${pairs.length} HS còn nợ.` : `Đã thu đủ ${pairs.length} HS đang hiển thị.`);
   };
   const cfgItem = { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 9, border: "none", background: "none", color: C.ink, fontWeight: 700, fontSize: 13.5, fontFamily: font.body, cursor: "pointer" };
+  const selStyle = { padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
   return (
     <>
       {/* [Tong gop] Thẻ tổng toàn trường: Phải thu + % đã thu + Còn nợ + số HS chưa thu */}
@@ -1309,26 +1310,32 @@ function ThuPhiTab({ rows, tk, chipsLop, lopFilter, setLopFilter, thuFilter, set
         );
       })()}
       <SearchBar value={search} onChange={setSearch} />
-      <Chips items={chipsLop} val={lopFilter} set={setLopFilter} />
-      <Chips items={[["all", "Tất cả"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]]} val={thuFilter} set={setThuFilter} />
+      {/* Lọc gọn: [Lớp ▼] [Tình trạng thu ▼] + ⚙️ Cấu hình cùng 1 hàng */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+        <select value={lopFilter} onChange={(e) => setLopFilter(e.target.value)} style={{ ...selStyle, flex: "1 1 110px" }}>
+          {chipsLop.map(([id, ten]) => <option key={id} value={id}>{id === "all" ? "Tất cả lớp" : ten}</option>)}
+        </select>
+        <select value={thuFilter} onChange={(e) => setThuFilter(e.target.value)} style={{ ...selStyle, flex: "1 1 110px" }}>
+          {[["all", "Mọi tình trạng"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        {!locked && !fastMode && (
+          <button onClick={() => setCfgOpen((v) => !v)} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.pine}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: cfgOpen ? C.pine : C.pineSoft, color: cfgOpen ? "#fff" : C.pine }}>⚙️ Cấu hình</button>
+        )}
+      </div>
       {/* [Cấu hình] gom thao tác hàng loạt vào 1 menu */}
-      {!locked && (fastMode ? (
+      {!locked && fastMode && (
         <button onClick={() => { setFastMode(false); }} style={{ width: "100%", marginBottom: 10, padding: "11px 0", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, fontFamily: font.body, background: C.pine, color: "#fff" }}>⛔ Tắt chế độ Tích thu nhanh</button>
-      ) : (
-        <div style={{ marginBottom: 10 }}>
-          <button onClick={() => setCfgOpen((v) => !v)} style={{ padding: "9px 16px", borderRadius: 10, border: `1.5px solid ${C.pine}`, cursor: "pointer", fontWeight: 700, fontSize: 13, fontFamily: font.body, background: cfgOpen ? C.pine : C.pineSoft, color: cfgOpen ? "#fff" : C.pine }}>⚙️ Cấu hình {cfgOpen ? "▲" : "▼"}</button>
-          {cfgOpen && (
-            <Card style={{ marginTop: 6, padding: 6 }}>
-              <button onClick={() => setShowNgayAn((v) => !v)} style={{ ...cfgItem, color: showNgayAn ? C.pine : C.ink }}>🍽️ Áp ngày ăn hàng loạt {showNgayAn ? "▲" : "▼"}</button>
-              {showNgayAn && <div style={{ padding: "2px 2px 6px" }}><NgayAnBar onApply={setNgayAnAll} rows={rows} /></div>}
-              <button onClick={() => { setFastMode(true); setCfgOpen(false); }} style={cfgItem}>⚡ Bật chế độ Tích thu nhanh</button>
-              {(() => { const soNo = rows.filter((r) => r.conNo > 0).length; return (
-                <button onClick={() => { if (soNo > 0) { batchThuDu(true); setCfgOpen(false); } }} disabled={soNo === 0} style={{ ...cfgItem, color: soNo > 0 ? C.green : C.gray, cursor: soNo > 0 ? "pointer" : "default" }}>💵 Thu đủ {soNo} HS còn nợ đang hiển thị</button>
-              ); })()}
-            </Card>
-          )}
-        </div>
-      ))}
+      )}
+      {!locked && !fastMode && cfgOpen && (
+        <Card style={{ marginBottom: 10, padding: 6 }}>
+          <button onClick={() => setShowNgayAn((v) => !v)} style={{ ...cfgItem, color: showNgayAn ? C.pine : C.ink }}>🍽️ Áp ngày ăn hàng loạt {showNgayAn ? "▲" : "▼"}</button>
+          {showNgayAn && <div style={{ padding: "2px 2px 6px" }}><NgayAnBar onApply={setNgayAnAll} rows={rows} /></div>}
+          <button onClick={() => { setFastMode(true); setCfgOpen(false); }} style={cfgItem}>⚡ Bật chế độ Tích thu nhanh</button>
+          {(() => { const soNo = rows.filter((r) => r.conNo > 0).length; return (
+            <button onClick={() => { if (soNo > 0) { batchThuDu(true); setCfgOpen(false); } }} disabled={soNo === 0} style={{ ...cfgItem, color: soNo > 0 ? C.green : C.gray, cursor: soNo > 0 ? "pointer" : "default" }}>💵 Thu đủ {soNo} HS còn nợ đang hiển thị</button>
+          ); })()}
+        </Card>
+      )}
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
       {rows.slice(0, thuLimit).map((r) => {
