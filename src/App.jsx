@@ -2196,18 +2196,18 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
 
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
         {[
-          ["hs", "👶 Học sinh"],
-          ["lop", "🏫 Lớp"],
-          ["gv", "👩‍🏫 Giáo viên"],
-          ["bank", "🏦 Tài khoản"],
-          ["dk", "💰 Số dư đầu kỳ"],
-          ["backup", "💾 Sao lưu"],
-          ["log", "📋 Nhật ký"],
-          ["data", "⚠️ Dữ liệu"],
+          ["hs", "Học sinh"],
+          ["lop", "Lớp"],
+          ["gv", "Giáo viên"],
+          ["bank", "Tài khoản"],
+          ["dk", "Số dư đầu kỳ"],
+          ["backup", "Sao lưu"],
+          ["log", "Nhật ký"],
+          ["data", "Dữ liệu"],
         ].map(([k, l]) => (
-          <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
+          <button key={k} onClick={() => setSec(k)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 10, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>
         ))}
       </div>
       {sec === "hs" && (
@@ -2255,30 +2255,43 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
             </Card>
             </>)}
 
-            {/* Bulk bar */}
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-              <button onClick={() => { setBulkMode((v) => !v); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>{bulkMode ? "⛔ Thoát" : "☑ Chọn nhiều"}</button>
-              {bulkMode && selectedHS.length > 0 && (<>
-                <span style={{ fontSize: 12, color: C.sub }}><b>{selectedHS.length}</b></span>
+            {/* Search + Bulk cùng hàng */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.gray, fontSize: 14 }}>🔍</span>
+                  <input value={hsSearch} onChange={(e) => setHsSearch(e.target.value)} placeholder="Tìm tên học sinh…"
+                    style={{ width: "100%", padding: "10px 12px 10px 34px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: C.card, outline: "none" }}
+                    onFocus={(e) => (e.target.style.borderColor = C.pine)} onBlur={(e) => (e.target.style.borderColor = C.line)} />
+                  {hsSearch && <button onClick={() => setHsSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "none", color: C.gray, cursor: "pointer", fontSize: 16 }}>×</button>}
+                </div>
+              </div>
+              <button onClick={() => { setBulkMode((v) => !v); setSelectedHS([]); }} style={{ flexShrink: 0, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>{bulkMode ? "⛔ Thoát" : "☑ Chọn nhiều"}</button>
+            </div>
+
+            {bulkMode && selectedHS.length > 0 && (
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, color: C.sub }}><b>{selectedHS.length}</b> đã chọn</span>
                 <select value={bulkTargetLop} onChange={(e) => setBulkTargetLop(e.target.value)} style={{ ...inp, width: 110 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
                 <button onClick={() => { const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten; upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; })); logAction(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop} (từ T${ym})`); toast(`Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Chuyển</button>
                 <select value={bulkTargetTT} onChange={(e) => setBulkTargetTT(e.target.value)} style={{ ...inp, width: 120 }}>{TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}</select>
                 <button onClick={() => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, trangThai: bulkTargetTT } : s)); logAction(`Đổi trạng thái hàng loạt ${selectedHS.length} HS → ${bulkTargetTT} (T${ym})`); toast(`Đã đổi ${selectedHS.length} HS sang "${bulkTargetTT}"`); setSelectedHS([]); }} style={{ padding: "7px 12px", borderRadius: 8, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Đổi TT</button>
-              </>)}
-            </div>
+              </div>
+            )}
 
             <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>{bulkMode ? "Chạm để chọn/bỏ chọn nhiều em." : "Chạm HS để sửa. Chuyển lớp áp dụng từ tháng " + ym + "."}</div>
 
-            {/* Search + Filter */}
-            <SearchBar value={hsSearch} onChange={setHsSearch} />
+            {/* Lọc Lớp ra ngoài */}
+            <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={setHsFilter} />
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
               <div style={{ fontSize: 12, color: C.sub }}>
                 {(() => { const f = students.filter((s) => (hsFilter === "all" || lopHienTai(s) === hsFilter) && (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)); return `${f.length} HS · ${hsFilter === "all" ? "Tất cả lớp" : meta.classes.find(c=>c.id===hsFilter)?.ten} · ${hsStatusFilter === "all" ? "Mọi TT" : hsStatusFilter}`; })()}
               </div>
               <button onClick={() => setShowFilterSheet(true)} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>⚙️ Bộ lọc</button>
             </div>
-          </div>
 
+          </div>
           {/* ===== BOTTOM SHEET: FILTER ===== */}
           {showFilterSheet && (
             <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -2288,8 +2301,6 @@ function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll }) {
                   <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.ink }}>⚙️ Bộ lọc</div>
                   <button onClick={() => setShowFilterSheet(false)} style={{ border: "none", background: "none", fontSize: 20, color: C.sub, cursor: "pointer" }}>×</button>
                 </div>
-                <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, fontWeight: 600 }}>Lớp</div>
-                <Chips items={[["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])]} val={hsFilter} set={(v) => setHsFilter(v)} />
                 <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, marginTop: 12, fontWeight: 600 }}>Trạng thái</div>
                 <Chips items={[["all", "Mọi trạng thái"], ...TRANG_THAI.map((t) => [t, t])]} val={hsStatusFilter} set={(v) => setHsStatusFilter(v)} />
                 <button onClick={() => setShowFilterSheet(false)} style={{ width: "100%", marginTop: 16, padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Áp dụng</button>
