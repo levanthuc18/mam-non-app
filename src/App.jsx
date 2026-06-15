@@ -1069,17 +1069,19 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
 
   return (
     <div className="fade-in" style={{ borderTop: `1px dashed ${C.line}`, background: "#FBFDFB", animation: "fadeIn .2s ease" }}>
-      {/* Nút thu đủ + Thực thu */}
+      {/* Thực thu + Thu đủ cùng hàng */}
       <div style={{ padding: "14px 14px 10px" }}>
-        {!locked && (
-          <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
-            ✓ Thu đủ {fmt(r.tongPhaiThu)}
-          </button>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Thực thu</span>
-          <div style={{ flex: 1 }} />
-          <NumInput value={r.rec.thucThu} onChange={(v) => setRec(r.hs.id, { thucThu: v })} w={130} disabled={locked} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.ink, whiteSpace: "nowrap" }}>Thực thu:</span>
+          <NumInput value={r.rec.thucThu} onChange={(v) => setRec(r.hs.id, { thucThu: v })} w={140} disabled={locked} />
+          {!locked && (r.rec.thucThu || 0) < r.tongPhaiThu && (
+            <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap" }}>
+              ✓ Thu đủ
+            </button>
+          )}
+          {!locked && (r.rec.thucThu || 0) >= r.tongPhaiThu && r.tongPhaiThu > 0 && (
+            <span style={{ padding: "10px 14px", borderRadius: 10, background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap" }}>✓ Đã thu đủ</span>
+          )}
         </div>
       </div>
 
