@@ -561,6 +561,8 @@ export default function App() {
     const keys = await sList("mn5:");
     for (const k of keys) await sDel(k);
     Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]);
+    const chotKeys = await sList("mn5:chot:");
+    for (const k of chotKeys) await sDel(k);
     const r = await doSeed();
     setMeta({ ...r.m }); setStudents([...r.st]);
     setMData(null); setSeeded(true);
@@ -585,7 +587,8 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; setMData({ ...rest, __ym: ym }); }
+    const chotFlag = await sGet(`mn5:chot:${ym}`);
+    if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; else if (chotFlag != null) rest.daChot = chotFlag; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -709,7 +712,7 @@ export default function App() {
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
-  const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
+  const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; const dd = { ...d, __ym: ym }; setMData(dd); flush(`mn5:chot:${ym}`, !!d.daChot); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
   const upDDData = (d) => { setDDData(d); flush(`mn5:dd:${ym}`, d); };
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
@@ -751,6 +754,7 @@ export default function App() {
     if (locked) { toast("Tháng đã chốt — mở khóa trước khi xóa."); return; }
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
       await sDel(`mn5:thang:${ym}`);
+      await sDel(`mn5:chot:${ym}`);
       delete CHOT_MEM[ym];
       setMData(null);
       logAction(`Xóa bảng thu tháng ${month}/${year}`);
@@ -1894,12 +1898,13 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
     if (await ask(msg, { okText: "Chốt tháng" })) {
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
+      await flush(`mn5:chot:${ym}`, true);
       await upMData({ ...mData, daChot: true, noLuyKe });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await sDel(`mn5:chot:${ym}`); await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
