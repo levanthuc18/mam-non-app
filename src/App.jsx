@@ -45,12 +45,12 @@ async function sGet(k) {
   if (SB) {
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: SB_H });
-      if (r.ok) { const d = await r.json(); const v = d?.[0] ? d[0].value : null; MEM[k] = v; return v; }
+      if (r.ok) { const d = await r.json(); const v = d?.[0] ? d[0].value : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
     } catch {}
     return MEM[k] ?? null;
   }
   if (k in MEM) return MEM[k];
-  try { const r = await window.storage.get(k); const v = r ? JSON.parse(r.value) : null; MEM[k] = v; return v; }
+  try { const r = await window.storage.get(k); const v = r ? JSON.parse(r.value) : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
   catch { storageOK = false; return MEM[k] ?? null; }
 }
 async function sSet(k, v) {
@@ -573,7 +573,7 @@ export default function App() {
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
     const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
     setNextChot(!!nd?.daChot);
-    if (d) { const { att, ...rest } = d; setMData((cur) => ({ ...(cur || {}), ...rest, __ym: ym })); }
+    if (d) { const { att, ...rest } = d; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); setOpenId(null); setPhieuId(null); }, [ym, metaReady]);
 
@@ -692,7 +692,7 @@ export default function App() {
 
   // Luu co debounce, nhung luu THANG ngay lap tuc de tranh mat du lieu khi doi thang
   const q = (k, v) => { clearTimeout(saveT.current[k]); saveT.current[k] = setTimeout(() => sSet(k, v), 400); };
-  const flush = (k, v) => { clearTimeout(saveT.current[k]); sSet(k, v); };
+  const flush = (k, v) => { clearTimeout(saveT.current[k]); return sSet(k, v); };
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
@@ -1676,7 +1676,9 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
     if (await ask(msg, { okText: "Chốt tháng" })) {
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
-      upMData({ ...mData, daChot: true, noLuyKe });
+      const nextChot = { ...mData, daChot: true, noLuyKe };
+      setMData({ ...nextChot, __ym: ym });
+      await flush(`mn5:thang:${ym}`, stripYm(nextChot));
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
