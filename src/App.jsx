@@ -1851,42 +1851,54 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       )}
 
       {/* ===== LICH SU THEO THANG ===== */}
-      {lichSu && lichSu.length > 0 && (
-        <Card style={{ marginBottom: 12, padding: 0 }}>
-          <CardHeader icon="📈" title="Lịch sử theo tháng" cardKey="lichSu" />
-          {openCards.lichSu && (
-            <div style={{ padding: "10px 14px 14px" }}>
-              {(() => {
-                const tongLKT = lichSu.reduce((a, r) => a + r.laiKeToan, 0);
-                const tongLTM = lichSu.reduce((a, r) => a + r.laiTienMat, 0);
-                const splitA = (v) => Math.round(v * tyLeA / 100);
+      {lichSu && lichSu.length > 0 && (() => {
+        const tongLKT = lichSu.reduce((a, r) => a + r.laiKeToan, 0);
+        const tongLTM = lichSu.reduce((a, r) => a + r.laiTienMat, 0);
+        const splitA = (v) => Math.round(v * tyLeA / 100);
+        return (
+        <Card style={{ marginBottom: 12, overflowX: "auto" }}>
+          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>📈 Lịch sử theo tháng</div>
+          <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 520, fontFamily: font.body }}>
+            <thead>
+              <tr style={{ color: C.sub, textAlign: "right" }}>
+                <th style={{ textAlign: "left", padding: "4px 6px" }}>Tháng</th>
+                <th style={{ padding: "4px 6px" }}>Phải thu</th>
+                <th style={{ padding: "4px 6px" }}>Chi phí</th>
+                <th style={{ padding: "4px 6px", color: C.green }}>LN kế toán</th>
+                <th style={{ padding: "4px 6px", color: C.blueA }}>LN tiền mặt</th>
+                <th style={{ padding: "4px 6px", color: C.blueA }}>A ({tyLeA}%)</th>
+                <th style={{ padding: "4px 6px", color: C.violetB }}>B ({100 - tyLeA}%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lichSu.map((r, i) => {
+                const aKT = splitA(r.laiKeToan), bKT = r.laiKeToan - aKT;
                 return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {lichSu.map((r) => (
-                    <div key={r.thang} style={{ background: "#FAFCFA", borderRadius: 10, padding: "10px 12px", border: `1px solid ${C.line}` }}>
-                      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: C.ink, marginBottom: 6 }}>{r.thang}</div>
-                      <div style={{ display: "grid", gap: 4, fontSize: 12.5 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: C.sub }}>Phải thu</span><b>{fmt(r.psThang)}</b></div>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: C.sub }}>Chi phí</span><b>{fmt(r.chiThang)}</b></div>
-                        <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 3, borderTop: `1px dashed ${C.line}` }}><span style={{ color: C.green }}>LN kế toán</span><b style={{ color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)}</b></div>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: C.blueA }}>LN tiền mặt</span><b style={{ color: r.laiTienMat < 0 ? C.coral : C.blueA }}>{fmt(r.laiTienMat)}</b></div>
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ borderTop: `2px solid ${C.line}`, paddingTop: 8, marginTop: 4 }}>
-                    <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: C.ink, marginBottom: 4 }}>Cộng</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}><span style={{ color: C.sub }}>Tổng phải thu</span><b>{fmt(lichSu.reduce((a, r) => a + r.psThang, 0))}</b></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}><span style={{ color: C.sub }}>Tổng chi phí</span><b>{fmt(lichSu.reduce((a, r) => a + r.chiThang, 0))}</b></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700 }}><span style={{ color: C.green }}>LN kế toán</span><b style={{ color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)}</b></div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700 }}><span style={{ color: C.blueA }}>LN tiền mặt</span><b style={{ color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)}</b></div>
-                  </div>
-                </div>
-                );
-              })()}
-            </div>
-          )}
+                <tr key={r.thang} style={{ background: i % 2 ? "#FAFCFA" : "#fff", textAlign: "right" }}>
+                  <td style={{ textAlign: "left", padding: "5px 6px", fontWeight: 600 }}>{r.thang}</td>
+                  <td style={{ padding: "5px 6px" }}>{fmt(r.psThang)}</td>
+                  <td style={{ padding: "5px 6px" }}>{fmt(r.chiThang)}</td>
+                  <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)}</td>
+                  <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiTienMat < 0 ? C.coral : C.blueA }}>{fmt(r.laiTienMat)}</td>
+                  <td style={{ padding: "5px 6px", color: aKT < 0 ? C.coral : C.blueA }}>{fmt(aKT)}</td>
+                  <td style={{ padding: "5px 6px", color: bKT < 0 ? C.coral : C.violetB }}>{fmt(bKT)}</td>
+                </tr>
+              ); })}
+              <tr style={{ borderTop: `2px solid ${C.line}`, textAlign: "right", fontFamily: font.display }}>
+                <td style={{ textAlign: "left", padding: "6px", fontWeight: 800 }}>Cộng</td>
+                <td style={{ padding: "6px", fontWeight: 800 }}>{fmt(lichSu.reduce((a, r) => a + r.psThang, 0))}</td>
+                <td style={{ padding: "6px", fontWeight: 800 }}>{fmt(lichSu.reduce((a, r) => a + r.chiThang, 0))}</td>
+                <td style={{ padding: "6px", fontWeight: 800, color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)}</td>
+                <td style={{ padding: "6px", fontWeight: 800, color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)}</td>
+                <td style={{ padding: "6px", fontWeight: 800, color: C.blueA }}>{fmt(splitA(tongLKT))}</td>
+                <td style={{ padding: "6px", fontWeight: 800, color: C.violetB }}>{fmt(tongLKT - splitA(tongLKT))}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>LN kế toán = Phải thu − Chi phí · LN tiền mặt = Đã thu − Đã trả. Chia A/B theo tỷ lệ góp vốn.</div>
         </Card>
-      )}
+        );
+      })()}
 
       {/* ===== CHI PHI THANG ===== */}
       <Card style={{ marginBottom: 12, padding: 0 }}>
