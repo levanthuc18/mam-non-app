@@ -1053,7 +1053,6 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
     if (sheetKhoan) {
       setKhoan(r.hs.id, sheetKhoan.key, Number(sheetVal) || 0);
     } else {
-      // sửa ngày ăn
       setRec(r.hs.id, { ngayAn: Number(sheetVal) || 0, ngayAnManual: true });
     }
     setSheetOpen(false);
@@ -1068,35 +1067,20 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
   const tienAn = r.rec.khoan?.tienAn ?? 0;
   const giaAn = r.rec.ngayAn > 0 ? Math.round(tienAn / r.rec.ngayAn) : (r.lop?.tienAn || 0);
 
-  // Các label đã hiện ở phần trên → ẩn trong chi tiết mặc định
-  const topLabels = new Set(KHOAN.map((k) => k.label));
-  const isHiddenInChiTiet = (label) => {
-    if (topLabels.has(label)) return true;
-    if (label.startsWith("Ăn (")) return true;
-    if (label.startsWith("T7 (")) return true;
-    return false;
-  };
-  const chiTietDong = r.ps.dong.filter(([l]) => !isHiddenInChiTiet(l));
-  const hasChiTietAn = chiTietDong.length > 0 || r.noTruoc !== 0;
-
   return (
     <div className="fade-in" style={{ borderTop: `1px dashed ${C.line}`, background: "#FBFDFB", animation: "fadeIn .2s ease" }}>
-      {/* HEADER: Tên + Nợ cũ + Thu đủ */}
+      {/* Nút thu đủ + Thực thu */}
       <div style={{ padding: "14px 14px 10px" }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 4 }}>{r.hs.ten}</div>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 10 }}>{r.lop?.ten} · {r.hs.pl}{r.nghi > 0 ? ` · nghỉ ${r.nghi}` : ""}</div>
-
-        {r.noTruoc !== 0 && (
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: r.noTruoc > 0 ? C.coral : C.green }}>
-            {r.noTruoc > 0 ? `🔴 Nợ cũ ${fmt(r.noTruoc)}` : `🟢 Dư cũ ${fmt(-r.noTruoc)}`}
-          </div>
-        )}
-
         {!locked && (
-          <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
+          <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.green, color: "#fff", fontFamily: font.display, fontWeight: 800, fontSize: 15, cursor: "pointer", marginBottom: 10 }}>
             ✓ Thu đủ {fmt(r.tongPhaiThu)}
           </button>
         )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Thực thu</span>
+          <div style={{ flex: 1 }} />
+          <NumInput value={r.rec.thucThu} onChange={(v) => setRec(r.hs.id, { thucThu: v })} w={130} disabled={locked} />
+        </div>
       </div>
 
       {/* BODY */}
@@ -1163,35 +1147,43 @@ function HSCardDetail({ r, locked, setRec, setKhoan, resetKhoan, resetAllKhoan, 
           )}
         </div>
 
-        {/* Chi tiết — mặc định ẩn khoản trùng, nhấn mở */}
+        {/* Chi tiết — nhấn vào mở ra hiện tất cả khoản */}
         <div style={{ marginTop: 14, padding: 12, borderRadius: 12, background: C.card, border: `1px solid ${C.line}` }}>
           <div onClick={() => setShowChiTiet((v) => !v)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.sub }}>Chi tiết</div>
             <span style={{ fontSize: 12, color: C.sub, transition: "transform .2s", transform: showChiTiet ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
           </div>
 
-          {/* Luôn hiện tổng kết */}
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: C.sub, marginTop: 4 }}>
-            <span>Phát sinh tháng này</span><span>{fmt(r.ps.tong)}</span>
-          </div>
-          {r.noTruoc !== 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
-              <span>{r.noTruoc > 0 ? "+ Nợ tháng trước" : "− Dư tháng trước"}</span>
-              <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : "−" + fmt(-r.noTruoc)}</span>
-            </div>
-          )}
-
-          {/* Khi mở chi tiết: hiện các dòng không trùng */}
           {showChiTiet && (
-            <div style={{ marginTop: 6, paddingTop: 6, borderTop: `1px dashed ${C.line}` }}>
-              {chiTietDong.map(([l, v, sua], i) => (
+            <div style={{ marginTop: 8 }}>
+              {r.ps.dong.map(([l, v, sua], i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: v < 0 ? C.green : C.ink }}>
                   <span style={{ color: C.sub }}>{l}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
                   <span>{fmt(v)}</span>
                 </div>
               ))}
-              {chiTietDong.length === 0 && r.noTruoc === 0 && (
-                <div style={{ fontSize: 12, color: C.sub, padding: "4px 0" }}>Không có khoản phát sinh thêm.</div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: C.sub, marginTop: 4, borderTop: `1px dashed ${C.line}` }}>
+                <span>Phát sinh tháng này</span><span>{fmt(r.ps.tong)}</span>
+              </div>
+              {r.noTruoc !== 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
+                  <span>{r.noTruoc > 0 ? "+ Nợ tháng trước" : "− Dư tháng trước"}</span>
+                  <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : "−" + fmt(-r.noTruoc)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!showChiTiet && (
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: C.sub }}>
+                <span>Phát sinh tháng này</span><span>{fmt(r.ps.tong)}</span>
+              </div>
+              {r.noTruoc !== 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
+                  <span>{r.noTruoc > 0 ? "+ Nợ tháng trước" : "− Dư tháng trước"}</span>
+                  <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : "−" + fmt(-r.noTruoc)}</span>
+                </div>
               )}
             </div>
           )}
