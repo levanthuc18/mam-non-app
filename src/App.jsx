@@ -1395,18 +1395,49 @@ function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFi
         );
       })()}
       <SearchBar value={search} onChange={setSearch} />
-      {/* Lọc gọn: [Lớp ▼] [Tình trạng thu ▼] + ⚙️ Cấu hình cùng 1 hàng */}
+      {/* Lọc gọn: Bottom Sheet Lớp + Tình trạng thu */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-        <select value={lopFilter} onChange={(e) => setLopFilter(e.target.value)} style={{ ...selStyle, flex: "1 1 110px" }}>
-          {chipsLop.map(([id, ten]) => <option key={id} value={id}>{id === "all" ? "Tất cả lớp" : ten}</option>)}
-        </select>
-        <select value={thuFilter} onChange={(e) => setThuFilter(e.target.value)} style={{ ...selStyle, flex: "1 1 110px" }}>
-          {[["all", "Mọi tình trạng"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-        </select>
+        <button onClick={() => setLopSheetOpen(true)} style={{ ...selStyle, flex: "1 1 110px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lopFilter === "all" ? "Tất cả lớp" : getLop(lopFilter)?.ten}
+          </span>
+          <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+        </button>
+        <button onClick={() => setThuSheetOpen(true)} style={{ ...selStyle, flex: "1 1 110px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {thuFilter === "all" ? "Mọi tình trạng" : thuFilter === "chuaThu" ? "Chưa thu" : thuFilter === "thieu" ? "Thiếu" : thuFilter === "noCu" ? "Nợ cũ" : thuFilter === "thuThua" ? "Thu thừa" : "Mọi tình trạng"}
+          </span>
+          <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+        </button>
         {!locked && !fastMode && (
           <button onClick={() => setCfgOpen((v) => !v)} style={{ flexShrink: 0, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.pine}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: cfgOpen ? C.pine : C.pineSoft, color: cfgOpen ? "#fff" : C.pine }}>⚙️ Cấu hình</button>
         )}
       </div>
+
+      {/* Bottom Sheet Lớp */}
+      <LopFilterSheet
+        open={lopSheetOpen}
+        onClose={() => setLopSheetOpen(false)}
+        chipsLop={chipsLop}
+        lopFilter={lopFilter}
+        setLopFilter={setLopFilter}
+        allRows={allRows}
+      />
+
+      {/* Bottom Sheet Tình trạng thu */}
+      <BottomSheet open={thuSheetOpen} onClose={() => setThuSheetOpen(false)} title="Tình trạng thu">
+        {[["all", "Mọi tình trạng"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]].map(([v, l]) => {
+          const active = thuFilter === v;
+          return (
+            <div key={v} onClick={() => { setThuFilter(v); setThuSheetOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink }}>{l}</div>
+            </div>
+          );
+        })}
+      </BottomSheet>
       {/* [Cấu hình] gom thao tác hàng loạt vào 1 menu */}
       {!locked && fastMode && (
         <button onClick={() => { setFastMode(false); }} style={{ width: "100%", marginBottom: 10, padding: "11px 0", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, fontFamily: font.body, background: C.pine, color: "#fff" }}>⛔ Tắt chế độ Tích thu nhanh</button>
