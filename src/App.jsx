@@ -1806,6 +1806,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
     (async () => {
       const dk = meta?.soDuDauKy || {};
       let giuA = dk.tienMatA || 0, giuB = dk.tienMatB || 0;
+      let noNCC = 0; // luy ke no nha cung cap
       const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort();
       const ls = [];
       for (const m of keys) {
@@ -1814,6 +1815,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
         const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
         let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
+        let thangNoNCC = 0;
         Object.entries(td.fees || {}).forEach(([sid, rec]) => {
           const hs = students.find((s) => s.id === sid); if (!hs) return;
           const tt = Number(rec.thucThu) || 0;
@@ -1832,13 +1834,15 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           if (c.loai === "CHUYEN") { if (c.huong === "A->B") { thuA -= e; thuB += e; } else { thuB -= e; thuA += e; } return; }
           if (c.loai === "NO_AB") return;
           if (c.nguoiChi === "A") { chiA += e; traA += kk; } else { chiB += e; traB += kk; }
+          thangNoNCC += (e - kk); // chi chua tra
         });
+        noNCC += thangNoNCC;
         giuA += thuA - traA; giuB += thuB - traB;
         const [yy, mm] = m.split("-");
         const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuA + thuB, traThang = traA + traB;
-        ls.push({ thang: `T${Number(mm)}/${yy}`, laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang });
+        ls.push({ thang: `T${Number(mm)}/${yy}`, laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC });
       }
-      if (!huy) { setLuyKe({ giuA, giuB }); setLichSu(ls); }
+      if (!huy) { setLuyKe({ giuA, giuB, noNCC }); setLichSu(ls); }
     })();
     return () => { huy = true; };
   }, [meta, students, ym, mData]);
@@ -1966,6 +1970,23 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         );
       })()}
 
+      {/* ===== NỢ NCC LŨY KẾ ===== */}
+      {luyKe && (
+        <Card style={{ marginBottom: 12, background: C.coralSoft, borderColor: "#EFC9BF", padding: 0 }}>
+          <CardHeader icon="🏪" title={`Nợ nhà cung cấp lũy kế — T${month}`} cardKey="noNCC" />
+          {openCards.noNCC && (
+            <div style={{ padding: "10px 14px 14px" }}>
+              <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Tổng các khoản chi phí chưa trả, tích lũy từ đầu kỳ đến tháng {month}/{year}.</div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "4px 0" }}>
+                <span style={{ color: C.sub }}>Nợ NCC lũy kế</span>
+                <b style={{ fontFamily: font.display, fontSize: 18, color: luyKe.noNCC > 0 ? C.coral : C.green }}>{fmt(luyKe.noNCC)} đ</b>
+              </div>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>{luyKe.noNCC > 0 ? "Cần trả NCC" : "Không còn nợ NCC / đã trả dư"}</div>
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* ===== CANH BAO BAT THUONG ===== */}
       {(() => {
         const recRows = allRows.filter((r) => r.coRec);
@@ -2070,6 +2091,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                 <th style={{ padding: "4px 6px" }}>Chi phí</th>
                 <th style={{ padding: "4px 6px", color: C.green }}>LN kế toán</th>
                 <th style={{ padding: "4px 6px", color: C.blueA }}>LN tiền mặt</th>
+                <th style={{ padding: "4px 6px", color: C.coral }}>Nợ NCC</th>
                 <th style={{ padding: "4px 6px", color: C.blueA }}>A ({tyLeA}%)</th>
                 <th style={{ padding: "4px 6px", color: C.violetB }}>B ({100 - tyLeA}%)</th>
               </tr>
@@ -2084,6 +2106,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                   <td style={{ padding: "5px 6px" }}>{fmt(r.chiThang)}</td>
                   <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)}</td>
                   <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiTienMat < 0 ? C.coral : C.blueA }}>{fmt(r.laiTienMat)}</td>
+                  <td style={{ padding: "5px 6px", fontWeight: 600, color: r.noNCC > 0 ? C.coral : C.green }}>{fmt(r.noNCC)}</td>
                   <td style={{ padding: "5px 6px", color: aKT < 0 ? C.coral : C.blueA }}>{fmt(aKT)}</td>
                   <td style={{ padding: "5px 6px", color: bKT < 0 ? C.coral : C.violetB }}>{fmt(bKT)}</td>
                 </tr>
@@ -2094,12 +2117,13 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                 <td style={{ padding: "6px", fontWeight: 800 }}>{fmt(lichSu.reduce((a, r) => a + r.chiThang, 0))}</td>
                 <td style={{ padding: "6px", fontWeight: 800, color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)}</td>
                 <td style={{ padding: "6px", fontWeight: 800, color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)}</td>
+                <td style={{ padding: "6px", fontWeight: 800, color: luyKe?.noNCC > 0 ? C.coral : C.green }}>{fmt(luyKe?.noNCC || 0)}</td>
                 <td style={{ padding: "6px", fontWeight: 800, color: C.blueA }}>{fmt(splitA(tongLKT))}</td>
                 <td style={{ padding: "6px", fontWeight: 800, color: C.violetB }}>{fmt(tongLKT - splitA(tongLKT))}</td>
               </tr>
             </tbody>
           </table>
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>LN kế toán = Phải thu − Chi phí · LN tiền mặt = Đã thu − Đã trả. Chia A/B theo tỷ lệ góp vốn.</div>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>LN kế toán = Phải thu − Chi phí · LN tiền mặt = Đã thu − Đã trả · Nợ NCC = chi chưa trả lũy kế. Chia A/B theo tỷ lệ góp vốn.</div>
         </Card>
         );
       })()}
@@ -2166,8 +2190,14 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.sub }}>
                 <span>Tổng chi <b style={{ color: C.ink }}>{fmt(tongChi)}</b></span>
                 <span>Đã trả <b style={{ color: C.green }}>{fmt(tongTra)}</b></span>
-                <span>Nợ NCC <b style={{ color: noNCC > 0 ? C.coral : C.green }}>{fmt(noNCC)}</b></span>
+                <span>Nợ NCC tháng <b style={{ color: noNCC > 0 ? C.coral : C.green }}>{fmt(noNCC)}</b></span>
               </div>
+              {luyKe && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.sub, marginTop: 4, paddingTop: 4, borderTop: `1px dashed ${C.line}` }}>
+                  <span>Nợ NCC lũy kế đến T{month}</span>
+                  <b style={{ color: luyKe.noNCC > 0 ? C.coral : C.green }}>{fmt(luyKe.noNCC)} đ</b>
+                </div>
+              )}
             </div>
           </div>
         )}
