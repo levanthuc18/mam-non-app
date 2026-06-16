@@ -535,6 +535,7 @@ export default function App() {
   const [students, setStudents] = useState(null);
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [mData, setMData] = useState(null);
   const [ddData, setDDData] = useState(null); // [UX-V] diem danh rieng { [hsId]: { [day]: true } }
   const [leData, setLeData] = useState(null); // [UX-W] ngay le chung { [day]: true }
@@ -959,7 +960,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,.16)", borderRadius: 999, padding: "4px 4px" }}>
               <button onClick={prevM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
-              <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center" }}>Th{month}/{year}</span>
+              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center", color: "#fff", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{month}/{year} <span style={{ fontSize: 9, opacity: 0.8 }}>▾</span></button>
               <button onClick={nextM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>›</button>
             </div>
             <button onClick={logout} title="Đăng xuất" style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>↩</button>
@@ -1012,6 +1013,26 @@ export default function App() {
           ))}
         </div>
       </div>
+      <BottomSheet open={monthPickerOpen} onClose={() => setMonthPickerOpen(false)} title="Chọn tháng xem báo cáo">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {(() => {
+            const base = new Date();
+            const items = [];
+            for (let i = -1; i <= 17; i++) { const d = new Date(base.getFullYear(), base.getMonth() - i, 1); items.push({ m: d.getMonth() + 1, y: d.getFullYear() }); }
+            return items.map(({ m, y }) => {
+              const active = m === month && y === year;
+              const isNow = m === base.getMonth() + 1 && y === base.getFullYear();
+              return (
+                <button key={`${y}-${m}`} onClick={() => { setMonth(m); setYear(y); setMonthPickerOpen(false); }} style={{ flex: "1 1 28%", minWidth: 96, padding: "11px 6px", borderRadius: 11, border: `1.5px solid ${active ? C.pine : C.line}`, background: active ? C.pine : C.card, color: active ? "#fff" : C.ink, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                  Th{m}/{y}
+                  {isNow && <span style={{ fontSize: 9.5, fontWeight: 600, color: active ? "#fff" : C.green }}>● hiện tại</span>}
+                </button>
+              );
+            });
+          })()}
+        </div>
+        <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Xong</button>
+      </BottomSheet>
       <ConfirmHost />
       <ToastHost />
     </div>
@@ -2092,7 +2113,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
         giuA += thuA - traA; giuB += thuB - traB;
         const [yy, mm] = m.split("-");
         const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuA + thuB, traThang = traA + traB;
-        ls.push({ thang: `T${Number(mm)}/${yy}`, laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC });
+        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA, thuB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA: thuA - traA, deltaB: thuB - traB });
       }
       if (!huy) { setLuyKe({ giuA, giuB, noNCC }); setLichSu(ls); }
     })();
@@ -2449,55 +2470,63 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
       {/* Sheet lịch sử các tháng */}
       <BottomSheet open={sheetLS} onClose={() => setSheetLS(false)} title="Lịch sử các tháng trước">
         {!lichSu || lichSu.length === 0 ? <div style={{ color: C.sub, fontSize: 14, padding: 10, textAlign: "center" }}>Chưa có dữ liệu các tháng.</div> : (() => {
+          const splitA = (v) => Math.round(v * tyLeA / 100);
+          const rev = [...lichSu].reverse(); // moi nhat len dau
           const tongLKT = lichSu.reduce((a, r) => a + r.laiKeToan, 0);
           const tongLTM = lichSu.reduce((a, r) => a + r.laiTienMat, 0);
-          const splitA = (v) => Math.round(v * tyLeA / 100);
+          const rowLine = { display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "1px 0" };
+          const sub2 = (la, va, lb, vb) => (
+            <div style={{ display: "flex", gap: 10, marginTop: 3, fontSize: 12 }}>
+              <span style={{ flex: 1, color: C.sub }}>{la} <b style={{ color: C.blueA }}>{fmt(va)}</b></span>
+              <span style={{ flex: 1, color: C.sub }}>{lb} <b style={{ color: C.violetB }}>{fmt(vb)}</b></span>
+            </div>
+          );
           return (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 520, fontFamily: font.body }}>
-              <thead>
-                <tr style={{ color: C.sub, textAlign: "right" }}>
-                  <th style={{ textAlign: "left", padding: "4px 6px" }}>Tháng</th>
-                  <th style={{ padding: "4px 6px" }}>Phải thu</th>
-                  <th style={{ padding: "4px 6px" }}>Chi phí</th>
-                  <th style={{ padding: "4px 6px", color: C.green }}>LN kế toán</th>
-                  <th style={{ padding: "4px 6px", color: C.blueA }}>LN tiền mặt</th>
-                  <th style={{ padding: "4px 6px", color: C.coral }}>Nợ NCC</th>
-                  <th style={{ padding: "4px 6px", color: C.blueA }}>A ({tyLeA}%)</th>
-                  <th style={{ padding: "4px 6px", color: C.violetB }}>B ({100 - tyLeA}%)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lichSu.map((r, i) => {
-                  const aKT = splitA(r.laiKeToan), bKT = r.laiKeToan - aKT;
-                  return (
-                  <tr key={r.thang} style={{ background: i % 2 ? "#FAFCFA" : "#fff", textAlign: "right" }}>
-                    <td style={{ textAlign: "left", padding: "5px 6px", fontWeight: 600 }}>{r.thang}</td>
-                    <td style={{ padding: "5px 6px" }}>{fmt(r.psThang)}</td>
-                    <td style={{ padding: "5px 6px" }}>{fmt(r.chiThang)}</td>
-                    <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)}</td>
-                    <td style={{ padding: "5px 6px", fontWeight: 600, color: r.laiTienMat < 0 ? C.coral : C.blueA }}>{fmt(r.laiTienMat)}</td>
-                    <td style={{ padding: "5px 6px", fontWeight: 600, color: r.noNCC > 0 ? C.coral : C.green }}>{fmt(r.noNCC)}</td>
-                    <td style={{ padding: "5px 6px", color: aKT < 0 ? C.coral : C.blueA }}>{fmt(aKT)}</td>
-                    <td style={{ padding: "5px 6px", color: bKT < 0 ? C.coral : C.violetB }}>{fmt(bKT)}</td>
-                  </tr>
-                ); })}
-                <tr style={{ borderTop: `2px solid ${C.line}`, textAlign: "right", fontFamily: font.display }}>
-                  <td style={{ textAlign: "left", padding: "6px", fontWeight: 800 }}>Cộng</td>
-                  <td style={{ padding: "6px", fontWeight: 800 }}>{fmt(lichSu.reduce((a, r) => a + r.psThang, 0))}</td>
-                  <td style={{ padding: "6px", fontWeight: 800 }}>{fmt(lichSu.reduce((a, r) => a + r.chiThang, 0))}</td>
-                  <td style={{ padding: "6px", fontWeight: 800, color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)}</td>
-                  <td style={{ padding: "6px", fontWeight: 800, color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)}</td>
-                  <td style={{ padding: "6px", fontWeight: 800, color: luyKe?.noNCC > 0 ? C.coral : C.green }}>{fmt(luyKe?.noNCC || 0)}</td>
-                  <td style={{ padding: "6px", fontWeight: 800, color: C.blueA }}>{fmt(splitA(tongLKT))}</td>
-                  <td style={{ padding: "6px", fontWeight: 800, color: C.violetB }}>{fmt(tongLKT - splitA(tongLKT))}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>LN kế toán = Phải thu − Chi phí · LN tiền mặt = Đã thu − Đã trả · Nợ NCC = chi chưa trả lũy kế.</div>
+          <div>
+            {rev.map((r) => {
+              const aKT = splitA(r.laiKeToan), bKT = r.laiKeToan - aKT;
+              return (
+              <div key={r.thang} style={{ border: `1px solid ${C.line}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
+                <div style={{ background: C.pineSoft, padding: "8px 12px", fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: C.pine }}>📅 Tháng {r.mm}/{r.yy}</div>
+                <div style={{ padding: "10px 12px" }}>
+                  <div style={rowLine}><span style={{ color: C.sub, fontWeight: 600 }}>🧾 Doanh thu (thực thu)</span><b style={{ color: C.ink }}>{fmt(r.thuThang)} đ</b></div>
+                  {sub2("A thu:", r.thuA, "B thu:", r.thuB)}
+                  <div style={{ ...rowLine, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}><span style={{ color: C.sub, fontWeight: 600 }}>💸 Chi phí xử lý (đã chi)</span><b style={{ color: C.ink }}>{fmt(r.traThang)} đ</b></div>
+                  {sub2("A chi:", r.traA, "B chi:", r.traB)}
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}>
+                    <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginBottom: 6 }}>📊 Phân chia tài chính · LN kế toán: <b style={{ color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)} đ</b></div>
+                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 9, overflow: "hidden" }}>
+                      <div style={{ display: "flex", background: "#FAFCFA", fontSize: 11, color: C.sub, fontWeight: 700, padding: "5px 9px" }}>
+                        <span style={{ flex: 1.5 }}>Nội dung</span>
+                        <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Người A</span>
+                        <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Người B</span>
+                      </div>
+                      <div style={{ display: "flex", fontSize: 12, padding: "6px 9px", borderTop: `1px solid ${C.line}` }}>
+                        <span style={{ flex: 1.5 }}>💰 Lãi chia ({tyLeA}/{100 - tyLeA})</span>
+                        <b style={{ flex: 1, textAlign: "right", color: C.blueA }}>{fmt(aKT)}</b>
+                        <b style={{ flex: 1, textAlign: "right", color: C.violetB }}>{fmt(bKT)}</b>
+                      </div>
+                      <div style={{ display: "flex", fontSize: 12, padding: "6px 9px", borderTop: `1px solid ${C.line}` }}>
+                        <div style={{ flex: 1.5 }}>🏦 Quỹ trường giữ<div style={{ fontSize: 9.5, color: C.sub }}>(lũy kế)</div></div>
+                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuACum < 0 ? C.coral : C.blueA }}>{fmt(r.giuACum)}</b><div style={{ fontSize: 9.5, color: r.deltaA < 0 ? C.coral : C.sub }}>T{r.mm}: {fmt(r.deltaA)}</div></div>
+                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuBCum < 0 ? C.coral : C.violetB }}>{fmt(r.giuBCum)}</b><div style={{ fontSize: 9.5, color: r.deltaB < 0 ? C.coral : C.sub }}>T{r.mm}: {fmt(r.deltaB)}</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              );
+            })}
+            <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
+              <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 13.5, color: "#7A5E12", marginBottom: 4 }}>Σ Cộng tất cả các tháng</div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN kế toán</span><b style={{ color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)} đ</b></div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN tiền mặt</span><b style={{ color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)} đ</b></div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Chia lãi · A {tyLeA}% / B {100 - tyLeA}%</span><b><span style={{ color: C.blueA }}>{fmt(splitA(tongLKT))}</span> / <span style={{ color: C.violetB }}>{fmt(tongLKT - splitA(tongLKT))}</span></b></div>
+            </div>
           </div>
           );
         })()}
+        <button onClick={() => setSheetLS(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
       </BottomSheet>
     </>
   );
