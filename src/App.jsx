@@ -2101,6 +2101,16 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
   };
   const set = (id, p) => upMData({ ...mData, chiPhi: cp.map((c) => (c.id === id ? { ...c, ...p } : c)) });
   const del = (id) => upMData({ ...mData, chiPhi: cp.filter((c) => c.id !== id) });
+  // [Dot2] tra du tat ca khoan co dinh + phat sinh dang con thieu
+  const traDuTatCa = async () => {
+    const targets = cp.filter((c) => (c.loai === "CO_DINH" || c.loai === "PHAT_SINH") && (Number(c.soTien) || 0) > 0 && (Number(c.daTra) || 0) < (Number(c.soTien) || 0));
+    if (targets.length === 0) { toast("Không còn khoản nào cần trả đủ."); return; }
+    if (!(await ask(`Đánh "đã trả đủ" cho ${targets.length} khoản đang còn thiếu?\n(chỉ áp khoản Cố định + Phát sinh đã nhập số tiền)`, { okText: "Trả đủ hết" }))) return;
+    const ids = new Set(targets.map((c) => c.id));
+    upMData({ ...mData, chiPhi: cp.map((c) => ids.has(c.id) ? { ...c, daTra: Number(c.soTien) || 0 } : c) });
+    logAction(`Trả đủ hàng loạt ${targets.length} khoản chi (T${ym})`);
+    toast(`Đã đánh trả đủ ${targets.length} khoản.`);
+  };
   const themCoDinhMau = () => {
     const co = ["Lương giáo viên", "Thực phẩm 1", "Thực phẩm 2", "Tiền điện", "Tiền nước"].filter((t) => !cp.some((c) => c.noiDung === t && c.loai === "CO_DINH"));
     if (!co.length) { setShowCoDinh((v) => !v); return; }
@@ -2288,6 +2298,9 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           <span>Nợ NCC <b style={{ color: noNCC > 0 ? C.coral : C.green }}>{fmt(noNCC)}</b></span>
           {!locked && <button onClick={themCoDinhMau} style={{ marginLeft: "auto", background: C.pineSoft, color: C.pine, border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{cp.filter((c) => c.loai === "CO_DINH").length === 5 ? (showCoDinh ? "Ẩn" : "Hiện") + " 5 cố định" : "+ 5 khoản cố định"}</button>}
         </div>
+        {!locked && (
+          <button onClick={traDuTatCa} style={{ width: "100%", marginBottom: 10, padding: "9px 0", borderRadius: 9, border: `1.5px solid ${C.green}`, background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>✓ Trả đủ tất cả khoản còn thiếu</button>
+        )}
         {cp.map((c) => {
           const e = Number(c.soTien) || 0, k = Number(c.daTra) || 0; const isNoAB = c.loai === "NO_AB"; const isCT = c.loai === "CHUYEN";
           if (c.loai === "CO_DINH" && !showCoDinh) return null;
@@ -2323,6 +2336,7 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
                   {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
                   {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}>🗑</button>}
                 </div>
+                {k > e && <div style={{ fontSize: 11.5, color: C.amber, background: C.amberSoft, borderRadius: 7, padding: "4px 8px" }}>⚠️ Đã trả nhiều hơn phải trả {fmt(k - e)} đ</div>}
               </div>
             </div>
           );
@@ -2343,41 +2357,69 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           </div>
         )}
         {locked && <div style={{ fontSize: 12.5, color: C.sub, marginTop: 10, textAlign: "center" }}>🔒 Tháng đã chốt — chỉ xem.</div>}
+        <button onClick={() => setSheetCP(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
       </BottomSheet>
 
       {/* Sheet lợi nhuận & chia quỹ chi tiết */}
       <BottomSheet open={sheetLN} onClose={() => setSheetLN(false)} title={`Lợi nhuận & chia quỹ — T${month}/${year}`}>
-        <div style={sheetTitle}>💰 Kết quả kinh doanh</div>
-        <div style={{ display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5 }}><span style={{ color: C.sub }}>Doanh thu (phải thu)</span><b style={{ color: C.ink }}>{fmt(tk.ps)} đ</b></div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}><span style={{ color: C.sub }}>— đã thu</span><b style={{ color: C.green }}>{fmt(tk.thu)} đ</b></div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}><span style={{ color: C.sub }}>— phụ huynh còn nợ</span><b style={{ color: tk.no > 0 ? C.coral : C.green }}>{fmt(tk.no)} đ</b></div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, paddingTop: 4, borderTop: `1px solid ${C.line}` }}><span style={{ color: C.sub }}>Chi phí</span><b style={{ color: C.ink }}>{fmt(tongChi)} đ</b></div>
+        {/* Thực thu A/B */}
+        <div style={{ background: "#FAFCFA", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>🧾 Doanh thu (thực thu)</span>
+            <b style={{ fontFamily: font.display, fontSize: 17, color: C.ink }}>{fmt(tk.thu)} đ</b>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12.5 }}>
+            <span style={{ flex: 1 }}>A thu: <b style={{ color: C.blueA }}>{fmt(tk.A)}</b></span>
+            <span style={{ flex: 1 }}>B thu: <b style={{ color: C.violetB }}>{fmt(tk.B)}</b></span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>Lợi nhuận kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnKeToan < 0 ? C.coral : C.green }}>{fmt(lnKeToan)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Phải thu − Chi phí</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.blueASoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.blueA, fontWeight: 600 }}>Lợi nhuận tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnTienMat < 0 ? C.coral : C.blueA }}>{fmt(lnTienMat)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Đã thu − Đã trả</div></div>
+        {/* Đã chi A/B */}
+        <div style={{ background: "#FAFCFA", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>💸 Đã chi (tiền mặt ra)</span>
+            <b style={{ fontFamily: font.display, fontSize: 17, color: C.ink }}>{fmt(tongTra)} đ</b>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12.5 }}>
+            <span style={{ flex: 1 }}>A chi: <b style={{ color: C.blueA }}>{fmt(tk.traA)}</b></span>
+            <span style={{ flex: 1 }}>B chi: <b style={{ color: C.violetB }}>{fmt(tk.traB)}</b></span>
+          </div>
+        </div>
+        {/* LN kế toán / tiền mặt */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>LN kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnKeToan < 0 ? C.coral : C.green }}>{fmt(lnKeToan)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Phải thu − Chi phí</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.blueASoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.blueA, fontWeight: 600 }}>LN tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnTienMat < 0 ? C.coral : C.blueA }}>{fmt(lnTienMat)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Đã thu − Đã trả</div></div>
         </div>
 
-        <div style={sheetTitle}>🏦 Tiền mặt đang giữ hộ trường</div>
-        <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Tiền của trường mà A/B đang cầm (lũy kế đến T{month}). Âm = đang ứng tiền túi → trường nợ lại.</div>
-        <div style={{ display: "flex", gap: 10 }}>
-          {[["A", C.blueA, giuThangA, luyKe?.giuA], ["B", C.violetB, giuThangB, luyKe?.giuB]].map((row) => { const p = row[0], col = row[1], giuT = row[2], lk = row[3]; return (
-            <div key={p} style={{ flex: 1, background: lk < 0 ? C.coralSoft : "#FAFCFA", borderRadius: 10, padding: "10px 12px" }}>
-              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: col }}>Người {p}</div>
-              <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: lk < 0 ? C.coral : col, marginTop: 2 }}>{lk != null ? fmt(lk) : "…"}</div>
-              <div style={{ fontSize: 11, color: C.sub }}>{lk < 0 ? "trường nợ lại" : "đang giữ hộ"}</div>
-              <div style={{ fontSize: 11, color: C.sub, marginTop: 4, paddingTop: 4, borderTop: `1px dashed ${C.line}` }}>Riêng T{month}: <b style={{ color: giuT < 0 ? C.coral : C.ink }}>{fmt(giuT)}</b></div>
-            </div>
-          ); })}
+        {/* Phân chia tài chính + tỷ lệ */}
+        <div style={sheetTitle}>📊 Phân chia tài chính T{month}</div>
+        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 8 }}>Tổng LN kế toán toàn trường: <b style={{ color: lnKeToan < 0 ? C.coral : C.green, fontSize: 14 }}>{fmt(lnKeToan)} đ</b></div>
+        {!locked && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, background: C.goldSoft, borderRadius: 10, padding: "8px 10px" }}>
+            <span style={{ fontSize: 12, color: "#7A5E12", fontWeight: 600 }}>Tỷ lệ chia</span>
+            <button onClick={() => upMeta({ ...meta, tyLeLaiA: Math.max(0, tyLeA - 5) })} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${C.line}`, background: "#fff", color: C.ink, fontWeight: 800, fontSize: 17, cursor: "pointer", lineHeight: 1 }}>−</button>
+            <span style={{ minWidth: 92, textAlign: "center", fontSize: 13, fontWeight: 700 }}>A {tyLeA}% / B {100 - tyLeA}%</span>
+            <button onClick={() => upMeta({ ...meta, tyLeLaiA: Math.min(100, tyLeA + 5) })} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${C.line}`, background: "#fff", color: C.ink, fontWeight: 800, fontSize: 17, cursor: "pointer", lineHeight: 1 }}>+</button>
+          </div>
+        )}
+        <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", marginBottom: 6 }}>
+          <div style={{ display: "flex", background: "#FAFCFA", fontSize: 11.5, color: C.sub, fontWeight: 700, padding: "7px 10px" }}>
+            <span style={{ flex: 1.5 }}>Nội dung</span>
+            <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Người A</span>
+            <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Người B</span>
+          </div>
+          <div style={{ display: "flex", fontSize: 12.5, padding: "8px 10px", borderTop: `1px solid ${C.line}` }}>
+            <span style={{ flex: 1.5 }}>💰 Lãi được chia</span>
+            <b style={{ flex: 1, textAlign: "right", color: C.blueA }}>{fmt(Math.round(lnKeToan * tyLeA / 100))}</b>
+            <b style={{ flex: 1, textAlign: "right", color: C.violetB }}>{fmt(lnKeToan - Math.round(lnKeToan * tyLeA / 100))}</b>
+          </div>
+          <div style={{ display: "flex", fontSize: 12.5, padding: "8px 10px", borderTop: `1px solid ${C.line}` }}>
+            <div style={{ flex: 1.5 }}>🏦 Quỹ trường đang giữ<div style={{ fontSize: 10, color: C.sub }}>(lũy kế đến hết tháng)</div></div>
+            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuA ?? 0) < 0 ? C.coral : C.blueA }}>{luyKe ? fmt(luyKe.giuA) : "…"}</b><div style={{ fontSize: 10, color: giuThangA < 0 ? C.coral : C.sub }}>T{month}: {fmt(giuThangA)}</div></div>
+            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuB ?? 0) < 0 ? C.coral : C.violetB }}>{luyKe ? fmt(luyKe.giuB) : "…"}</b><div style={{ fontSize: 10, color: giuThangB < 0 ? C.coral : C.sub }}>T{month}: {fmt(giuThangB)}</div></div>
+          </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.line}`, fontSize: 14 }}><b style={{ color: C.ink }}>Tổng tiền mặt</b><b style={{ fontFamily: font.display, color: tongTienMat < 0 ? C.coral : C.pine }}>{fmt(tongTienMat)} đ</b></div>
-
-        <div style={sheetTitle}>🤝 Chia lợi nhuận tháng (A {tyLeA}% / B {100 - tyLeA}%)</div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11.5, color: C.blueA, fontWeight: 600 }}>A hưởng {tyLeA}%</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.blueA }}>{fmt(Math.round(lnKeToan * tyLeA / 100))}</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11.5, color: C.violetB, fontWeight: 600 }}>B hưởng {100 - tyLeA}%</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.violetB }}>{fmt(lnKeToan - Math.round(lnKeToan * tyLeA / 100))}</div></div>
-        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingTop: 2 }}><span style={{ color: C.sub }}>Tổng quỹ trường đang giữ</span><b style={{ color: tongTienMat < 0 ? C.coral : C.pine }}>{fmt(tongTienMat)} đ</b></div>
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Quỹ âm = A/B đang ứng tiền túi, trường nợ lại.</div>
 
         {(tk.noAB_AtoB > 0 || tk.noAB_BtoA > 0) && (<>
           <div style={sheetTitle}>Nợ nội bộ A ↔ B</div>
@@ -2385,6 +2427,8 @@ function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delTh
           {noAB < 0 && <div style={{ fontSize: 13.5 }}>B đang nợ A: <b style={{ color: C.gold }}>{fmt(-noAB)} đ</b></div>}
           {noAB === 0 && <div style={{ fontSize: 13.5, color: C.green }}>Đã cấn trừ xong.</div>}
         </>)}
+
+        <button onClick={() => setSheetLN(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
       </BottomSheet>
 
       {/* Sheet lịch sử các tháng */}
