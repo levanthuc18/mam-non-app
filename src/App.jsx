@@ -754,7 +754,7 @@ export default function App() {
   const q = (k, v) => { clearTimeout(saveT.current[k]); saveT.current[k] = setTimeout(() => sSet(k, v), 400); };
   const flush = (k, v) => { clearTimeout(saveT.current[k]); return sSet(k, v); };
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
-  const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
+  const upStudents = (s, now) => { setStudents(s); return (now ? flush : q)("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
   const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; saveChotMem(); const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
   const upDDData = (d) => { setDDData(d); return flush(`mn5:dd:${ym}`, d); };
@@ -1590,5 +1590,4 @@ function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFi
                 defaultValue={r.rec.thucThu ? Number(r.rec.thucThu).toLocaleString("vi-VN") : ""}
                 onFocus={(e) => { e.target.value = r.rec.thucThu ? String(r.rec.thucThu) : ""; e.target.select(); }}
                 onBlur={(e) => { const d = e.target.value.replace(/[^\d]/g, ""); setRec(r.hs.id, { thucThu: d === "" ? 0 : Number(d) }); e.target.value = d ? Number(d).toLocaleString("vi-VN") : ""; }}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.target.blur(); const next = rows[idx + 1]; if (next) setTimeout(() => inputRefs.current[next.hs.id]?.focus(), 30); } }}
-                placehold
+                onKeyDown={(e) => { if (e.key === "Enter") { e.target.blur(); const next = rows[idx + 1]; if (next) setTimeout(() => inputRefs.current[next.hs.id]?.focus(), 30); } 
