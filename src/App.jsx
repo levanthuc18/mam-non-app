@@ -61,16 +61,19 @@ async function sGet(k) {
 async function sSet(k, v) {
   MEM[k] = v;
   if (SB) {
+    // [FIX ghi] UPSERT ATOMIC 1 lenh (POST on_conflict=key, merge-duplicates) thay PATCH-roi-POST
+    // -> het race khi dat-roi-bo nhanh (vd ngay le) + tra ve true/false thay vi nuot loi
     try {
-      const p = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "PATCH", headers: { ...SB_H, Prefer: "return=representation" }, body: JSON.stringify({ value: v, updated_at: new Date().toISOString() }) });
-      const txt = await p.text();
-      if (p.status === 404 || txt === "[]") {
-        await fetch(`${SUPABASE_URL}/rest/v1/data`, { method: "POST", headers: { ...SB_H, Prefer: "return=minimal,resolution=merge-duplicates" }, body: JSON.stringify({ key: k, value: v }) });
-      }
-    } catch {}
-    return;
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
+        method: "POST",
+        headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ key: k, value: v, updated_at: new Date().toISOString() }),
+      });
+      if (!r.ok) storageOK = false;
+      return r.ok;
+    } catch { storageOK = false; return false; }
   }
-  try { await window.storage.set(k, JSON.stringify(v)); } catch (e) { storageOK = false; }
+  try { await window.storage.set(k, JSON.stringify(v)); return true; } catch (e) { storageOK = false; return false; }
 }
 async function sList(prefix) {
   const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
@@ -744,7 +747,7 @@ export default function App() {
   const upStudents = (s) => { setStudents(s); q("mn5:students", s); };
   // Thang: luu NGAY (khong debounce) -> khong bao gio mat khi chuyen thang
   const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; saveChotMem(); const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
-  const upDDData = (d) => { setDDData(d); flush(`mn5:dd:${ym}`, d); };
+  const upDDData = (d) => { setDDData(d); return flush(`mn5:dd:${ym}`, d); };
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
   const getLop = (id) => meta?.classes.find((c) => c.id === id);
@@ -1705,6 +1708,14 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
   const [mode, setMode] = useState(isWide ? "thang" : "ngay");
   const att = ddData || {};
   const { sentinelRef, shrunk } = useStickyShrink();
+  // [BAO LUU] Trang thai luu khi GV bam "Xac nhan da diem danh": null | saving | ok | err
+  const [saveState, setSaveState] = useState(null);
+  const xacNhanDD = async () => {
+    setSaveState("saving");
+    const ok = await upDDData(att); // ghi lai diem danh hien tai + cho biet thanh/bai
+    setSaveState(ok ? "ok" : "err");
+  };
+  useEffect(() => { setSaveState(null); }, [viewDay]); // doi ngay -> xoa trang thai cu
 
   const studentRows = useMemo(() => {
     const s = noDau(search);
@@ -1719,6 +1730,7 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
     if (nhap !== 1 && d < nhap) return; // chưa nhập học
     if (nhap === 99) return;             // chưa nhập học trong tháng
     const cur = { ...(att[sid] || {}) }; if (cur[d]) delete cur[d]; else cur[d] = true; upDDData({ ...att, [sid]: cur });
+    setSaveState(null); // co thay doi moi -> can xac nhan lai
   };
   // [PQ] GV khong dat ngay le (anh huong tien an) -> chi Admin
     const toggleLe = (d) => {
@@ -1793,6 +1805,20 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
                 </div>
               );
             })
+          )}
+          {!locked && dow !== 0 && !isLeNgay && studentRows.length > 0 && (
+            <div style={{ marginTop: 4, marginBottom: 8 }}>
+              {saveState === "err" ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: C.coralSoft, border: `1.5px solid ${C.coral}`, color: C.coral, fontSize: 13.5, fontWeight: 600, fontFamily: font.body }}>
+                  <span style={{ flex: 1 }}>⚠️ Chưa lưu được — kiểm tra mạng rồi thử lại</span>
+                  <button onClick={xacNhanDD} style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: C.coral, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, flexShrink: 0 }}>Thử lại</button>
+                </div>
+              ) : saveState === "ok" ? (
+                <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>✓ Đã lưu điểm danh {dowLabel}, {viewDay}/{month}</div>
+              ) : (
+                <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body }}>{saveState === "saving" ? "💾 Đang lưu…" : "✓ Xác nhận đã điểm danh"}</button>
+              )}
+            </div>
           )}
         </>
       ) : (
