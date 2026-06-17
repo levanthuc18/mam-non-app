@@ -60,10 +60,17 @@ async function sGet(k) {
 }
 async function sSet(k, v) {
   MEM[k] = v;
+  // [FIX rong] value la object rong {} (vd bo het ngay le) -> XOA han dong thay vi ghi rong
+  // (Supabase khong nhan ghi {} de "lam rong" -> doc lai khong co dong => tra ve {})
+  const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
   if (SB) {
-    // [FIX ghi] UPSERT ATOMIC 1 lenh (POST on_conflict=key, merge-duplicates) thay PATCH-roi-POST
-    // -> het race khi dat-roi-bo nhanh (vd ngay le) + tra ve true/false thay vi nuot loi
     try {
+      if (emptyObj) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
+        if (!r.ok) storageOK = false;
+        return r.ok;
+      }
+      // UPSERT ATOMIC 1 lenh -> het race khi dat-roi-bo nhanh; tra ve true/false
       const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
         method: "POST",
         headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=minimal" },
@@ -73,7 +80,10 @@ async function sSet(k, v) {
       return r.ok;
     } catch { storageOK = false; return false; }
   }
-  try { await window.storage.set(k, JSON.stringify(v)); return true; } catch (e) { storageOK = false; return false; }
+  try {
+    if (emptyObj) { await window.storage.delete(k); return true; }
+    await window.storage.set(k, JSON.stringify(v)); return true;
+  } catch (e) { storageOK = false; return false; }
 }
 async function sList(prefix) {
   const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
@@ -1807,7 +1817,7 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
             })
           )}
           {!locked && dow !== 0 && !isLeNgay && studentRows.length > 0 && (
-            <div style={{ marginTop: 4, marginBottom: 8 }}>
+            <div style={{ position: "sticky", bottom: 0, zIndex: 5, marginTop: 8, paddingTop: 8, paddingBottom: 8, background: "linear-gradient(to top, " + C.bg + " 72%, rgba(245,247,243,0))" }}>
               {saveState === "err" ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: C.coralSoft, border: `1.5px solid ${C.coral}`, color: C.coral, fontSize: 13.5, fontWeight: 600, fontFamily: font.body }}>
                   <span style={{ flex: 1 }}>⚠️ Chưa lưu được — kiểm tra mạng rồi thử lại</span>
@@ -1816,7 +1826,7 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
               ) : saveState === "ok" ? (
                 <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>✓ Đã lưu điểm danh {dowLabel}, {viewDay}/{month}</div>
               ) : (
-                <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body }}>{saveState === "saving" ? "💾 Đang lưu…" : "✓ Xác nhận đã điểm danh"}</button>
+                <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>{saveState === "saving" ? "💾 Đang lưu…" : "✓ Xác nhận đã điểm danh"}</button>
               )}
             </div>
           )}
