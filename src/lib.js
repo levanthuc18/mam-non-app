@@ -16,13 +16,16 @@ export const stripYm = (d) => { if (!d) return d; const { __ym, ...rest } = d; r
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const noDau = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
-// ===== Storage =====
-export const SUPABASE_URL = "https://seflblpxqvedpjpqphet.supabase.co";
+// ===== Storage: Supabase (neu da cau hinh) HOAC window.storage + mirror RAM =====
+// [ONLINE] Dien URL + anon key cua Supabase de dong bo nhieu may. De trong "" => chay local nhu cu.
+export const SUPABASE_URL = "https://seflblpxqvedpjpqphet.supabase.co";  // URL lấy ở trên
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZmxibHB4cXZlZHBqcHFwaGV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNjI1MTYsImV4cCI6MjA5NjkzODUxNn0.SVGFvNbhaEGVsE4bSrdz2hubgTAH-LkIS-EqVMzUu9Q";
 export const SB = !!(SUPABASE_URL && SUPABASE_KEY);
 export const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" };
 
 export const MEM = {};
+// [FIX chot] Ghi nho trang thai chot/mo cua tung thang trong phien -> tranh ban doc cu (Supabase tre) tu mo khoa
+// [FIX chot F5] Luu CHOT_MEM xuong localStorage de song sot qua F5 (RAM bi xoa khi reload)
 export const CHOT_MEM = {};
 try { const _cm = (typeof localStorage !== "undefined") && localStorage.getItem("mn5:chotmem"); if (_cm) Object.assign(CHOT_MEM, JSON.parse(_cm)); } catch {}
 export function saveChotMem() { try { if (typeof localStorage !== "undefined") localStorage.setItem("mn5:chotmem", JSON.stringify(CHOT_MEM)); } catch {} }
@@ -31,7 +34,7 @@ export let storageOK = true;
 export async function sGet(k) {
   if (SB) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+      export const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); const v = d?.[0] ? d[0].value : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
     } catch {}
     return MEM[k] ?? null;
@@ -42,11 +45,18 @@ export async function sGet(k) {
 }
 export async function sSet(k, v) {
   MEM[k] = v;
-  const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
+  // [FIX rong] value la object rong {} (vd bo het ngay le) -> XOA han dong thay vi ghi rong
+  // (Supabase khong nhan ghi {} de "lam rong" -> doc lai khong co dong => tra ve {})
+  export const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
   if (SB) {
     try {
-      if (emptyObj) { const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H }); if (!r.ok) storageOK = false; return r.ok; }
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
+      if (emptyObj) {
+        export const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
+        if (!r.ok) storageOK = false;
+        return r.ok;
+      }
+      // UPSERT ATOMIC 1 lenh -> het race khi dat-roi-bo nhanh; tra ve true/false
+      export const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
         method: "POST",
         headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({ key: k, value: v, updated_at: new Date().toISOString() }),
@@ -61,10 +71,10 @@ export async function sSet(k, v) {
   } catch (e) { storageOK = false; return false; }
 }
 export async function sList(prefix) {
-  const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
+  export const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
   if (SB) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+      export const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); return Array.from(new Set([...memKeys, ...d.map((x) => x.key)])); }
     } catch {}
     return memKeys;
@@ -80,13 +90,18 @@ export async function sDel(k) {
 
 export const PHAN_LOAI = ["Bthg", "AE", "GV", "T7"];
 export const PL_LABEL = { Bthg: "Bình thường", AE: "Anh em (−50%)", GV: "Con GV (miễn)", T7: "Chỉ thứ 7" };
+// [PLBadge] Mau vien phan loai dung chung (Thu phi + Cai dat)
 export const PL_COLOR = { Bthg: { bg: C.greenSoft, fg: C.green }, AE: { bg: C.blueASoft, fg: C.blueA }, GV: { bg: C.violetBSoft, fg: C.violetB }, T7: { bg: C.amberSoft, fg: C.amber } };
+export function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 export const PL_HE = { Bthg: 1, AE: 0.5, GV: 0, T7: 0 };
 export const TRANG_THAI = ["Đang học", "Học thử", "Bảo lưu", "Nghỉ học", "Ra trường"];
 export const TT_COLOR = { "Đang học": C.green, "Học thử": C.blueA, "Bảo lưu": C.amber, "Nghỉ học": C.coral, "Ra trường": C.violetB };
+// Trang thai co phat sinh hoc phi (tao dong thu thang moi)
 export const TT_THU_PHI = { "Đang học": true, "Học thử": true, "Bảo lưu": false, "Nghỉ học": false, "Ra trường": false };
 export const LOAI_CHI = ["PHAT_SINH", "CO_DINH", "NO_AB", "CHUYEN", "TRA_NO"];
 
+// Khoan phi co dinh trong PS (key -> nhan + lay tu dau)
+// nguon: 'lop' = gia lop * (he so cho hocPhi), 'lopFlat' = gia lop nguyen, 'an' = tinh theo ngay
 export const KHOAN = [
   { key: "hocPhi", label: "Học phí", src: "hocPhi" },
   { key: "banTru", label: "Bán trú", src: "lopFlat" },
@@ -97,7 +112,18 @@ export const KHOAN = [
   { key: "dongPhuc", label: "Đồng phục", src: "zero" },
   { key: "dauNam", label: "Đầu năm", src: "zero" },
 ];
+// Trang thai khoan thu theo lop: "thu" (co thu) | "khong" (khong thu). Mac dinh: thu
+export const khoanMode = (lop, key) => {
+  export const m = lop?.lapLai;
+  if (!m || m[key] === undefined) return "thu";
+  // tuong thich du lieu cu: true/"thang"/"motlan" -> thu ; false/"khong" -> khong
+  export const v = m[key];
+  if (v === false || v === "khong") return "khong";
+  return "thu";
+};
+export const isKhongThu = (lop, key) => khoanMode(lop, key) === "khong";
 
+// ===== SEED: 2 lop, 20 HS, 3 thang =====
 export const SEED_META = {
   tenTruong: "Mầm Non Tuổi Thần Tiên",
   classes: [
@@ -121,15 +147,8 @@ export const SEED_META = {
   ],
 };
 
-export const khoanMode = (lop, key) => {
-  const m = lop?.lapLai;
-  if (!m || m[key] === undefined) return "thu";
-  const v = m[key];
-  if (v === false || v === "khong") return "khong";
-  return "thu";
-};
-export const isKhongThu = (lop, key) => khoanMode(lop, key) === "khong";
 
+// Tinh gia mac dinh 1 khoan cho HS theo lop + phan loai
 export function defaultKhoan(key, lop, hs, ngayAn) {
   if (!lop) return 0;
   switch (key) {
@@ -146,21 +165,22 @@ export function defaultKhoan(key, lop, hs, ngayAn) {
 }
 
 export function seedThangData(ym, students, meta) {
-  const fees = {};
+  export const fees = {};
   students.forEach((hs) => {
-    const lopId = lopOfMonth(hs, ym);
-    const lop = meta.classes.find((c) => c.id === lopId);
-    if (!TT_THU_PHI[hs.trangThai]) return;
-    const nhap = ngayNhapHocTrongThang(hs, Number(ym.slice(0,4)), Number(ym.slice(5,7)));
-    const ngayAn = nhap <= 26 ? soNgayHoc(Number(ym.slice(0,4)), Number(ym.slice(5,7)), {}, nhap) : 0;
-    const rec = { ngayAn, buoiT7: hs.pl === "T7" ? 4 : 0, thucThu: 0, khoan: {}, khoanDefault: {}, phuThu: [] };
+    export const lopId = lopOfMonth(hs, ym);
+    export const lop = meta.classes.find((c) => c.id === lopId);
+    if (!TT_THU_PHI[hs.trangThai]) return; // hs nghi tu T6 khong tao
+    export const nhap = ngayNhapHocTrongThang(hs, Number(ym.slice(0,4)), Number(ym.slice(5,7)));
+    export const ngayAn = nhap <= 26 ? soNgayHoc(Number(ym.slice(0,4)), Number(ym.slice(5,7)), {}, nhap) : 0;
+    export const rec = { ngayAn, buoiT7: hs.pl === "T7" ? 4 : 0, thucThu: 0, khoan: {}, khoanDefault: {}, phuThu: [] };
     KHOAN.forEach((k) => {
-      const d = isKhongThu(lop, k.key) ? 0 : defaultKhoan(k.key, lop, hs, ngayAn);
+      export const d = isKhongThu(lop, k.key) ? 0 : defaultKhoan(k.key, lop, hs, ngayAn);
       rec.khoan[k.key] = d; rec.khoanDefault[k.key] = d;
     });
     fees[hs.id] = rec;
   });
-  const chiPhi = [
+  // [CHI CO DINH] Mau 5 khoan co dinh moi thang
+  export const chiPhi = [
     { id: uid(), noiDung: "Lương giáo viên", soTien: 0, nguoiChi: "A", loai: "CO_DINH", daTra: 0 },
     { id: uid(), noiDung: "Thực phẩm 1", soTien: 0, nguoiChi: "A", loai: "CO_DINH", daTra: 0 },
     { id: uid(), noiDung: "Thực phẩm 2", soTien: 0, nguoiChi: "A", loai: "CO_DINH", daTra: 0 },
@@ -170,67 +190,85 @@ export function seedThangData(ym, students, meta) {
   return { fees, thuNgoai: [], chiPhi, daChot: false, khoanThuLop: [] };
 }
 
+// Lop hieu luc cua HS tai thang ym
 export function lopOfMonth(hs, ym) {
-  const hist = (hs.lopHistory || []).filter((h) => h.tuThang <= ym).sort((a, b) => a.tuThang.localeCompare(b.tuThang));
+  export const hist = (hs.lopHistory || []).filter((h) => h.tuThang <= ym).sort((a, b) => a.tuThang.localeCompare(b.tuThang));
   return hist.length ? hist[hist.length - 1].lop : (hs.lopHistory?.[0]?.lop || null);
 }
 export function lopHienTai(hs) {
-  const h = (hs.lopHistory || []).slice().sort((a, b) => a.tuThang.localeCompare(b.tuThang));
+  export const h = (hs.lopHistory || []).slice().sort((a, b) => a.tuThang.localeCompare(b.tuThang));
   return h.length ? h[h.length - 1].lop : null;
 }
+// Dem so thu 7 trong thang ma HS KHONG danh nghi = so buoi T7 di hoc
 export function soBuoiT7Auto(year, month, attHS) {
-  const days = new Date(year, month, 0).getDate();
-  let n = 0;
+  export const days = new Date(year, month, 0).getDate();
+  export let n = 0;
   for (let d = 1; d <= days; d++) {
     if (new Date(year, month - 1, d).getDay() === 6 && !(attHS && attHS[d])) n++;
   }
   return n;
 }
+// [UX-W] So ngay hoc trong thang = tong ngay - CN - ngay le (le = { [day]: true })
 export function soNgayHoc(year, month, le, tuNgay = 1) {
-  const days = new Date(year, month, 0).getDate();
-  let n = 0;
+  export const days = new Date(year, month, 0).getDate();
+  export let n = 0;
   for (let d = Math.max(1, tuNgay); d <= days; d++) {
-    const dw = new Date(year, month - 1, d).getDay();
-    if (dw === 0) continue;
-    if (le && le[d]) continue;
+    export const dw = new Date(year, month - 1, d).getDay();
+    if (dw === 0) continue;        // CN nghi
+    if (le && le[d]) continue;     // ngay le nghi
     n++;
   }
   return n;
 }
+// Ngày nhập học trong tháng đang xem (1 = đã nhập từ đầu, 99 = chưa nhập)
 export function ngayNhapHocTrongThang(hs, year, month) {
   if (!hs || !hs.ngayNhapHoc) return 1;
-  const [y, m, d] = hs.ngayNhapHoc.split("-").map(Number);
-  if (y > year || (y === year && m > month)) return 99;
-  if (y < year || (y === year && m < month)) return 1;
-  return d;
+  export const [y, m, d] = hs.ngayNhapHoc.split("-").map(Number);
+  if (y > year || (y === year && m > month)) return 99; // chưa nhập học
+  if (y < year || (y === year && m < month)) return 1;  // đã nhập từ trước
+  return d; // nhập giữa tháng
 }
 export const TUAN = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
+// Tong PS tu rec (khoan + phu thu - khong tru ngay nghi rieng vi tienAn da theo ngayAn;
+// nghi -> giam ngayAn KHI tinh; o day ta tru nghi qua tienAn = (ngayAn-nghi)*gia)
 export function tinhPSFromRec(hs, rec, lop, soNghi) {
   if (!rec) return { tong: 0, dong: [], suaCount: 0 };
-  const dong = []; let tong = 0, suaCount = 0;
+  export const dong = []; let tong = 0, suaCount = 0;
   if (hs.pl === "GV") return { tong: 0, dong: [["Miễn phí (con GV)", 0, false]], suaCount: 0 };
+
   if (hs.pl === "T7") {
-    const tienT7 = (rec.buoiT7 || 0) * (lop?.t7 || 0);
+    export const tienT7 = (rec.buoiT7 || 0) * (lop?.t7 || 0);
     if (tienT7) { dong.push([`T7 (${rec.buoiT7} buổi)`, tienT7, false]); tong += tienT7; }
     (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
     return { tong, dong, suaCount: 0 };
   }
+
   KHOAN.forEach((k) => {
-    let val = rec.khoan?.[k.key] ?? 0;
-    let def = rec.khoanDefault?.[k.key] ?? 0;
+    export let val = rec.khoan?.[k.key] ?? 0;
+    export let def = rec.khoanDefault?.[k.key] ?? 0;
+    // tien an: tru ngay nghi -> hien rieng dong
     if (k.key === "tienAn") {
-      const sua = val !== def;
-      if (val !== 0 || def !== 0) { dong.push([`Ăn (${rec.ngayAn || 0} ngày)`, val, sua]); tong += val; if (sua) suaCount++; }
-      if (soNghi > 0) { const tru = -soNghi * (lop?.tienAn || 0); dong.push([`Trừ nghỉ tháng trước (${soNghi})`, tru, false]); tong += tru; }
+      export const sua = val !== def;
+      if (val !== 0 || def !== 0) {
+        dong.push([`Ăn (${rec.ngayAn || 0} ngày)`, val, sua]);
+        tong += val; if (sua) suaCount++;
+      }
+      if (soNghi > 0) {
+        export const tru = -soNghi * (lop?.tienAn || 0);
+        dong.push([`Trừ nghỉ tháng trước (${soNghi})`, tru, false]);
+        tong += tru;
+      }
       return;
     }
     if (val === 0 && def === 0) return;
-    const sua = val !== def;
+    export const sua = val !== def;
     dong.push([k.label, val, sua]);
     tong += val; if (sua) suaCount++;
   });
+  // buoi T7 le (Bthg co hoc T7)
   if (rec.buoiT7 > 0) { const t = rec.buoiT7 * (lop?.t7 || 0); dong.push([`T7 (${rec.buoiT7} buổi)`, t, false]); tong += t; }
+  // phu thu dong
   (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
   return { tong, dong, suaCount };
 }
@@ -243,21 +281,22 @@ export function trangThaiThu(ps, thucThu) {
   return { t: "Thiếu", c: C.coral, bg: C.coralSoft };
 }
 
-export const BANK_BIN = { "vietcombank": "970436", "vcb": "970436", "techcombank": "970407", "tcb": "970407", "bidv": "970418", "vietinbank": "970415", "ctg": "970415", "agribank": "970405", "mbbank": "970422", "mb": "970422", "acb": "970416", "vpbank": "970432", "vpb": "970432", "tpbank": "970423", "tpb": "970423", "sacombank": "970403", "stb": "970403", "hdbank": "970437", "vib": "970441", "shb": "970443", "ocb": "970448", "msb": "970426", "scb": "970429", "eximbank": "970431", "lienvietpostbank": "970449", "lpbank": "970449", "seabank": "970440", "bacabank": "970409", "vietabank": "970427", "namabank": "970428", "pgbank": "970430", "vietbank": "970433", "baovietbank": "970438", "kienlongbank": "970452", "abbank": "970425", "dongabank": "970406", "gpbank": "970408", "ncb": "970419", "saigonbank": "970400", "pvcombank": "970412" };
-export function binOf(nh) { const k = noDau(nh || "").replace(/[^a-z]/g, ""); return BANK_BIN[k] || null; }
 
-// ===== GLOBAL REFS (Toast/Ask/Actor) =====
-let _ask = null, _toast = null;
-export const setAskRef = (fn) => { _ask = fn; };
-export const setToastRef = (fn) => { _toast = fn; };
-export const setCurrentActor = (who) => { CURRENT_ACTOR = who; };
-export const ask = (msg, opts) => new Promise((res) => { _ask && _ask({ msg, opts: opts || {}, res }); });
-export const toast = (msg, undo) => _toast && _toast({ msg, undo });
+export let _ask = null, _toast = null;
+export function ask(msg, opts) { return new Promise((res) => { _ask && _ask({ msg, opts: opts || {}, res }); }); }
+export function toast(msg, undo) { _toast && _toast({ msg, undo }); }
+
+// ===== [AUDIT] Nhat ky thao tac =====
+export let CURRENT_ACTOR = "Admin";
 export async function logAction(act) {
   try {
-    const log = (await sGet("mn5:log")) || [];
+    export const log = (await sGet("mn5:log")) || [];
     log.unshift({ t: new Date().toISOString(), who: CURRENT_ACTOR, act });
     if (log.length > 800) log.length = 800;
     await sSet("mn5:log", log);
   } catch {}
 }
+
+
+export const BANK_BIN = { "vietcombank": "970436", "vcb": "970436", "techcombank": "970407", "tcb": "970407", "bidv": "970418", "vietinbank": "970415", "ctg": "970415", "agribank": "970405", "mbbank": "970422", "mb": "970422", "acb": "970416", "vpbank": "970432", "vpb": "970432", "tpbank": "970423", "tpb": "970423", "sacombank": "970403", "stb": "970403", "hdbank": "970437", "vib": "970441", "shb": "970443", "ocb": "970448", "msb": "970426", "scb": "970429", "eximbank": "970431", "lienvietpostbank": "970449", "lpbank": "970449", "seabank": "970440", "bacabank": "970409", "vietabank": "970427", "namabank": "970428", "pgbank": "970430", "vietbank": "970433", "baovietbank": "970438", "kienlongbank": "970452", "abbank": "970425", "dongabank": "970406", "gpbank": "970408", "ncb": "970419", "saigonbank": "970400", "pvcombank": "970412" };
+export function binOf(nh) { const k = noDau(nh || "").replace(/[^a-z]/g, ""); return BANK_BIN[k] || null; }
