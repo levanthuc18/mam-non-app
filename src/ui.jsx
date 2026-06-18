@@ -1,15 +1,10 @@
-import { useState, useEffect, useRef, memo } from "react";
-import { C, font, noDau, PL_COLOR } from "./lib.js";
+// ui.jsx - Giao dien dung chung
+import { useState, useEffect, useRef, useMemo, memo } from "react";
+import { C, font, PL_COLOR } from "./lib.js";
 
-// ===== Badge phân loại =====
-export function PLBadge({ pl }) {
-  const c = PL_COLOR[pl] || PL_COLOR.Bthg;
-  return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>;
-}
+export function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 
-export function Badge({ s }) {
-  return <span style={{ background: s.bg, color: s.c, fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap" }}>{s.t}</span>;
-}
+export function Badge({ s }) { return <span style={{ background: s.bg, color: s.c, fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap" }}>{s.t}</span>; }
 
 export function NumInput({ value, onChange, w = 70, disabled, warn }) {
   const [focused, setFocused] = useState(false);
@@ -85,10 +80,96 @@ export function StickyBar({ shrunk, children }) {
   );
 }
 
-export function Card({ children, style }) {
-  return <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.line}`, padding: 14, ...style }}>{children}</div>;
+export function Card({ children, style }) { return <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.line}`, padding: 14, ...style }}>{children}</div>; }
+
+export function LockNote() { return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>; }
+
+export function EmptyState({ search, onClear }) {
+  return (
+    <div style={{ textAlign: "center", padding: "36px 20px", color: C.sub }}>
+      <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+      <div style={{ fontSize: 14, marginBottom: 12 }}>{search ? "Không tìm thấy học sinh phù hợp" : "Không có học sinh trong bộ lọc này"}</div>
+      <button onClick={onClear} style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Xóa bộ lọc</button>
+    </div>
+  );
 }
 
-export function LockNote() {
-  return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>;
+// ===== Bottom Sheet cơ sở =====
+export function BottomSheet({ open, onClose, title, children }) {
+  const sheetRef = useRef(null);
+  const startYRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const dyRef = useRef(0);
+  const draggingRef = useRef(false);
+
+  const setT = (y, anim) => {
+    const el = sheetRef.current; if (!el) return;
+    el.style.transition = anim ? "transform .22s cubic-bezier(.32,.72,.35,1)" : "none";
+    el.style.transform = `translateY(${y}px)`;
+  };
+
+  useEffect(() => { if (open) { dyRef.current = 0; draggingRef.current = false; requestAnimationFrame(() => setT(0, false)); } }, [open]);
+
+  if (!open) return null;
+
+  const onStart = (y) => { startYRef.current = y; startTimeRef.current = Date.now(); dyRef.current = 0; draggingRef.current = true; setT(0, false); };
+  const onMove = (y) => {
+    if (startYRef.current == null) return;
+    const dy = Math.max(0, y - startYRef.current);
+    dyRef.current = dy;
+    setT(dy, false);
+  };
+  const onEnd = () => {
+    if (startYRef.current == null) return;
+    const dy = dyRef.current;
+    const dt = Date.now() - (startTimeRef.current || 0);
+    const velocity = dy / (dt || 1);
+    startYRef.current = null; startTimeRef.current = null; draggingRef.current = false;
+    if (dy > 90 || (dy > 30 && velocity > 0.35)) {
+      setT((typeof window !== "undefined" ? window.innerHeight : 800), true);
+      setTimeout(onClose, 160);
+    } else {
+      setT(0, true);
+    }
+  };
+
+  const dragProps = {
+    onTouchStart: (e) => onStart(e.touches[0].clientY),
+    onTouchMove: (e) => onMove(e.touches[0].clientY),
+    onTouchEnd: () => onEnd(),
+    onMouseDown: (e) => onStart(e.clientY),
+    onMouseMove: (e) => { if (e.buttons === 1) onMove(e.clientY); },
+    onMouseUp: () => onEnd(),
+    onMouseLeave: (e) => { if (draggingRef.current && e.buttons === 1) onEnd(); },
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
+      <div ref={sheetRef} style={{
+        background: "#fff", borderRadius: "20px 20px 0 0", padding: "0 16px 24px",
+        maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", willChange: "transform",
+      }}>
+        <div {...dragProps} style={{ touchAction: "none", cursor: "grab", margin: "0 -16px", padding: "10px 16px 2px", position: "sticky", top: 0, background: "#fff", zIndex: 2 }}>
+          <div style={{ width: 44, height: 5, borderRadius: 99, background: C.line, margin: "0 auto 12px" }} />
+          {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 8 }}>{title}</div>}
+          <button onClick={onClose} aria-label="Đóng" style={{ position: "absolute", top: 8, right: 10, width: 32, height: 32, borderRadius: 99, border: "none", background: C.graySoft, color: C.sub, fontSize: 17, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ paddingTop: 8 }}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// [UX-R] Donut chart SVG
+export function Donut({ pct, color, size = 76 }) {
+  const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
+  const dash = circ * Math.min(100, pct) / 100;
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={8} />
+      <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={8} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
+      <text x={c} y={c + 5} textAnchor="middle" fontSize={16} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
+    </svg>
+  );
 }
