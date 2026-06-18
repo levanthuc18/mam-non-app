@@ -1721,6 +1721,20 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
   // [BAO LUU] Trang thai luu khi GV bam "Xac nhan da diem danh": null | saving | ok | err
   const [saveState, setSaveState] = useState(null);
   const [chiVang, setChiVang] = useState(false); // [Loc vang] chi hien cac chau nghi ngay dang xem
+  const baoLops = chipsLop.filter(([id]) => id !== "all");
+  const [baoOpen, setBaoOpen] = useState(false);
+  const [baoView, setBaoView] = useState("menu");
+  const [baoHs, setBaoHs] = useState(null);
+  const [baoLop, setBaoLop] = useState("");
+  const [baoNote, setBaoNote] = useState("");
+  const [baoMoiTen, setBaoMoiTen] = useState("");
+  const guiBao = async (bao) => {
+    const cur = (await sGet("mn5:bao")) || [];
+    await sSet("mn5:bao", [...cur, { id: "b" + uid(), ts: Date.now(), gv: gvTen || "Giáo viên", done: false, ...bao }]);
+    setBaoOpen(false); setBaoView("menu"); setBaoNote(""); setBaoMoiTen("");
+    toast("Đã gửi báo cho quản lý.");
+  };
+  const openBao = (hs) => { setBaoHs({ id: hs.id, ten: hs.ten }); setBaoLop(baoLops[0]?.[0] || ""); setBaoNote(""); setBaoView("menu"); setBaoOpen(true); };
   const xacNhanDD = async () => {
     setSaveState("saving");
     const ok = await upDDData(att); // ghi lai diem danh hien tai + cho biet thanh/bai
@@ -1797,6 +1811,7 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
           </Card>
 
           {dow === 0 || isLeNgay ? (
+          {isGV && dow !== 0 && !isLeNgay && <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ width: "100%", marginBottom: 10, padding: "10px 0", borderRadius: 11, border: `1.5px dashed ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body }}>➕ Báo cháu mới (chưa có trong danh sách)</button>}
             <div style={{ textAlign: "center", color: isLeNgay ? C.amber : C.gray, fontSize: 13.5, padding: 24 }}>{isLeNgay ? "Ngày lễ — cả trường nghỉ, không điểm danh." : "Chủ nhật — không điểm danh."}</div>
           ) : studentRows.length === 0 ? (
             <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh.</div>
@@ -1815,6 +1830,7 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
                     <div style={{ fontSize: 12, color: C.sub }}>{r.lop?.ten}{chuaNhap && <span style={{ color: C.amber, marginLeft: 4 }}>· nhập {nhap}</span>}{chuaNhapThang && <span style={{ color: C.amber, marginLeft: 4 }}>· chưa nhập</span>}</div>
                   </div>
                   <Badge s={disabled ? { t: "—", c: C.gray, bg: C.graySoft } : nghi ? { t: "Nghỉ", c: C.coral, bg: C.coralSoft } : { t: "Đi học", c: C.green, bg: C.greenSoft }} />
+                  {isGV && <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: "none", background: "none", color: C.gray, fontSize: 20, fontWeight: 700, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>⋮</button>}
                 </div>
               );
             })
@@ -1837,6 +1853,25 @@ function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSe
           )}
         </div>
       )}
+      <BottomSheet open={baoOpen} onClose={() => { setBaoOpen(false); setBaoView("menu"); }} title={baoView === "moi" ? "Báo cháu mới" : baoView === "chuyenlop" ? `Báo chuyển lớp: ${baoHs?.ten || ""}` : `Báo về: ${baoHs?.ten || ""}`}>
+        {baoView === "menu" && (<div>
+          <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>🏫</span><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.gray }}>›</span></button>
+          <button onClick={async () => { if (await ask(`Báo cho quản lý: cháu "${baoHs.ten}" thôi học (nghỉ hẳn)?`, { okText: "Gửi báo" })) guiBao({ type: "thoihoc", hsId: baoHs.id, hsTen: baoHs.ten }); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, textAlign: "left" }}><span style={{ fontSize: 18 }}>🚪</span><span style={{ flex: 1 }}>Báo thôi học (nghỉ hẳn)</span></button>
+        </div>)}
+        {baoView === "chuyenlop" && (<div>
+          <button onClick={() => setBaoView("menu")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8, padding: 0 }}>‹ Quay lại</button>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6 }}>Chuyển sang lớp:</div>
+          {baoLops.map(([id, ten]) => (<button key={id} onClick={() => setBaoLop(id)} style={{ display: "block", width: "100%", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${baoLop === id ? C.pine : C.line}`, background: baoLop === id ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{baoLop === id ? "● " : "○ "}{ten}</button>))}
+          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (không bắt buộc)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <button onClick={() => guiBao({ type: "chuyenlop", hsId: baoHs.id, hsTen: baoHs.ten, lop: baoLop, lopTen: baoLops.find(([i]) => i === baoLop)?.[1], note: baoNote })} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
+        </div>)}
+        {baoView === "moi" && (<div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6 }}>Tên cháu mới:</div>
+          <input value={baoMoiTen} onChange={(e) => setBaoMoiTen(e.target.value)} placeholder="Họ tên cháu" style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 14, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (lớp, ngày bắt đầu...)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <button onClick={() => { if (!baoMoiTen.trim()) { toast("Nhập tên cháu đã."); return; } guiBao({ type: "moi", hsTen: baoMoiTen.trim(), note: baoNote }); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
+        </div>)}
+      </BottomSheet>
     </>
   );
 }
