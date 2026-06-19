@@ -288,8 +288,8 @@ export function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilte
   );
 }
 
-export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
-  const [fastMode, setFastMode] = useState(false);
+export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, openId, setOpenId, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide, onSelectStudent }) {
+const [fastMode, setFastMode] = useState(false);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
   const [thuSheetOpen, setThuSheetOpen] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
