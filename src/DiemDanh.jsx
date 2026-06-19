@@ -7,7 +7,7 @@ import {
   Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
 } from "./ui.jsx";
 
-// Component Donut mini
+// Component Donut (tùy chỉnh kích thước)
 function Donut({ pct, color, size = 60 }) {
   const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
   const dash = circ * Math.min(100, pct) / 100;
@@ -15,13 +15,15 @@ function Donut({ pct, color, size = 60 }) {
     <svg width={size} height={size} style={{ flexShrink: 0 }}>
       <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={6} />
       <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={6} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
-      <text x={c} y={c + 4} textAnchor="middle" fontSize={12} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
+      <text x={c} y={c + 4} textAnchor="middle" fontSize={size > 60 ? 14 : 11} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
     </svg>
   );
 }
 
-// Bảng tổng hợp điểm danh các lớp
-function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId }) {
+// Bảng tổng hợp điểm danh các lớp (Đã sửa lại theo yêu cầu)
+function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter }) {
+  const [open, setOpen] = useState(isGV); // GV auto mở, Admin auto đóng
+  
   const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
   const stats = effClasses.map(c => {
     const hsInClass = students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === c.id && TT_THU_PHI[s.trangThai]);
@@ -36,32 +38,53 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
   const totalNghi = stats.reduce((a, c) => a + c.nghi, 0);
   const totalDiHoc = totalHS - totalNghi;
   const pct = totalHS > 0 ? Math.round(totalDiHoc / totalHS * 100) : 100;
+  const daDD = lastSaved ? effClasses.length : stats.filter(c => c.nghi > 0).length;
+  const tongLop = effClasses.length;
+
+  const fmtTime = (d) => d ? `Lúc ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : "Chưa xác nhận";
 
   return (
-    <Card style={{ marginBottom: 12, padding: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={64} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Tổng quan ngày {viewDay}/{month}</div>
-          <div style={{ display: "flex", gap: 12, fontSize: 12.5 }}>
-            <span style={{ color: C.green }}>● Đi học: <b>{totalDiHoc}</b></span>
-            <span style={{ color: C.coral }}>● Nghỉ: <b>{totalNghi}</b></span>
-            <span style={{ color: C.sub }}>Tổng: <b>{totalHS}</b></span>
-          </div>
+    <Card style={{ marginBottom: 12, padding: 0, overflow: "hidden" }}>
+      {/* Header có thể bấm để mở/đóng */}
+      <div onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}>
+        <div>
+          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>Tổng quan ngày {viewDay}/{month}</div>
+          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>Đã điểm danh {daDD}/{tongLop} lớp · {fmtTime(lastSaved)}</div>
         </div>
+        <span style={{ fontSize: 14, color: C.sub, transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
       </div>
-      
-      {!isGV && stats.length > 1 && (
-        <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
-          {stats.map(c => (
-            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", fontSize: 12.5 }}>
-              <span style={{ color: C.ink, fontWeight: 600 }}>{c.ten}</span>
-              <div style={{ display: "flex", gap: 8 }}>
-                <span style={{ color: C.coral, fontWeight: 700 }}>Nghỉ {c.nghi}</span>
-                <span style={{ color: C.sub }}>/ {c.siSo} HS</span>
+
+      {/* Body: Biểu đồ + Tên lớp */}
+      {open && (
+        <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0" }}>
+            <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={isGV ? 50 : 80} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", gap: 12, fontSize: 13, flexWrap: "wrap" }}>
+                <span style={{ color: C.green, fontWeight: 700 }}>● Đi học: {totalDiHoc}</span>
+                <span style={{ color: C.coral, fontWeight: 700 }}>● Nghỉ: {totalNghi}</span>
+                <span style={{ color: C.sub }}>Tổng: {totalHS}</span>
               </div>
             </div>
-          ))}
+          </div>
+          
+          {/* Danh sách lớp: Bấm để lọc */}
+          {!isGV && stats.length > 1 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+              {stats.map(c => (
+                <div 
+                  key={c.id} 
+                  onClick={(e) => { e.stopPropagation(); setLopFilter(c.id); }} 
+                  style={{ flex: "1 1 45%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, background: C.graySoft, cursor: "pointer" }}
+                >
+                  <span style={{ fontSize: 14, color: C.ink, fontWeight: 700 }}>{c.ten}</span>
+                  <span style={{ fontSize: 12, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700 }}>
+                    {c.nghi > 0 ? `Nghỉ ${c.nghi}` : "Đủ"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </Card>
@@ -77,6 +100,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const att = ddData || {};
   const { sentinelRef, shrunk } = useStickyShrink();
   const [saveState, setSaveState] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null); // State lưu thời gian xác nhận
   const [chiVang, setChiVang] = useState(false); 
   const baoLops = chipsLop.filter(([id]) => id !== "all");
   const [baoOpen, setBaoOpen] = useState(false);
@@ -97,9 +121,14 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const xacNhanDD = async () => {
     setSaveState("saving");
     const ok = await upDDData(att); 
-    setSaveState(ok ? "ok" : "err");
+    if (ok) {
+      setSaveState("ok");
+      setLastSaved(new Date()); // Cập nhật thời gian xác nhận
+    } else {
+      setSaveState("err");
+    }
   };
-  useEffect(() => { setSaveState(null); setChiVang(false); }, [viewDay, mode]); 
+  useEffect(() => { setSaveState(null); setLastSaved(null); setChiVang(false); }, [viewDay, mode]); 
 
   const studentRows = useMemo(() => {
     const s = noDau(search);
@@ -155,7 +184,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       {mode === "ngay" ? (
         <>
-          {/* CARD TỔNG HỢP ĐIỂM DANH NGÀY */}
+          {/* CARD TỔNG HỢP ĐIỂM DANH NGÀY (MỚI) */}
           <DiemDanhTongHop 
             students={students} 
             classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
@@ -163,6 +192,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
             year={year} month={month} 
             viewDay={viewDay} 
             isGV={isGV} gvLopId={gvLopId} 
+            lastSaved={lastSaved}
+            setLopFilter={setLopFilter}
           />
 
           <Card style={{ marginBottom: 12, padding: "16px 14px", border: `1.5px solid ${C.pineSoft}` }}>
