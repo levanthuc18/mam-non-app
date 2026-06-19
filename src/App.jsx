@@ -8,6 +8,7 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
+import { HocSinhTab } from "./HocSinh.jsx"; // THÊM DÒNG NÀY
 import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 
@@ -212,6 +213,15 @@ export default function App() {
         {tab === "caidat" && (
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
         )}
+        {tab === "hs" && (
+          <HocSinhTab 
+            meta={meta} 
+            students={students} 
+            upStudents={store.upStudents} 
+            ym={store.ym} 
+            openStudentProfile={setViewStudentId} 
+          />
+        )}
 
         {tab === "more" && (
           <MoreMenu setTab={setTab} onLogout={logout} />
@@ -233,11 +243,11 @@ export default function App() {
         )}
       </div>
 
-      <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
+           <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
-            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
-            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
+            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
+            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
           ).map(([id, lb, ic]) => (
             <button 
               key={id} 
