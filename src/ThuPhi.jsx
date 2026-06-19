@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo } from "react";
 import {
   C, font, fmt, soNgayHoc, ask, toast, uid, noDau,
   KHOAN
@@ -89,14 +89,11 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 }
 
 /* ============================================================
-   2. BOTTOM SHEET THU TIỀN — FIX: useEffect thay useMemo
+   2. BOTTOM SHEET THU TIỀN — PHƯƠNG ÁN B (TĨNH, DISMISSIBLE)
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
-
-  // FIX: dùng useEffect thay vì useMemo để set state
-  useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -148,33 +145,23 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — FIX: reset state khi đổi sid
+   3. QUICK EDIT SHEET — TẤT CẢ KHOẢN MỞ KHÓA
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
-
-  // Khởi tạo state rỗng, sẽ được fill bởi useEffect
-  const [localKhoan, setLocalKhoan] = useState({});
-  const [localNgayAn, setLocalNgayAn] = useState(0);
-  const [localPhuThu, setLocalPhuThu] = useState([]);
-
-  // FIX: reset toàn bộ local state mỗi khi đổi học sinh
-  useEffect(() => {
-    if (!r) return;
+  const [localKhoan, setLocalKhoan] = useState(() => {
     const init = {};
     KHOAN.forEach(k => {
       if (k.key !== "tienAn") {
-        init[k.key] = r?.rec?.khoan?.[k.key] ?? 0;
+        init[k.key] = r?.rec?.khoan?.[k.key] ?? r?.rec?.khoanDefault?.[k.key] ?? 0;
       }
     });
-    setLocalKhoan(init);
-    setLocalNgayAn(r?.rec?.ngayAn ?? 0);
-    setLocalPhuThu(r?.rec?.phuThu ?? []);
-    setPtTen("");
-    setPtSo("");
-  }, [sid]);
+    return init;
+  });
+  const [localNgayAn, setLocalNgayAn] = useState(() => r?.rec?.ngayAn ?? r?.rec?.ngayAnDefault ?? 0);
+  const [localPhuThu, setLocalPhuThu] = useState(() => r?.rec?.phuThu ?? []);
 
   if (!r) return null;
 
@@ -209,7 +196,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
           const val = isNgayAn ? localNgayAn : (localKhoan?.[k.key] ?? 0);
           const def = isNgayAn ? (r.rec.ngayAnDefault ?? 0) : (r.rec.khoanDefault?.[k.key] ?? 0);
           const isEdited = val !== def;
-
           return (
             <div key={k.key} style={{ display: "flex", alignItems: "center", gap: C.sm }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -253,53 +239,36 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — FIX: optional chaining r.rec?.khoan
+   4. THẺ HỌC SINH V1 — BRD 3 HÀNG
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
   const thucThu = r.rec.thucThu || 0;
   const tongPhaiThu = r.tongPhaiThu;
 
+  // Xác định trạng thái
   const isChuaThu = thucThu === 0 && tongPhaiThu > 0;
   const isThieu = thucThu > 0 && r.conNo > 0;
   const isDu = r.conNo === 0 && tongPhaiThu > 0 && thucThu >= tongPhaiThu;
   const isThua = r.conNo < 0;
 
   let statusColor = C.coral, statusBg = C.coralSoft, statusText = "CHƯA THU", statusIcon = "🔴";
-  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
-  else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
-  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; statusIcon = "🔵"; }
+  if (isThieu) { statusColor = C.amber; statusBg = C.amberSoft; statusText = "THU THIẾU"; statusIcon = "🟡"; }
+  else if (isDu) { statusColor = C.green; statusBg = C.greenSoft; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
+  else if (isThua) { statusColor = "#2563EB"; statusBg = "#DBEAFE"; statusText = "THU THỪA"; statusIcon = "🔵"; }
 
+  // Border trái 5px
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
-  // FIX: thêm ?. để tránh crash khi rec hoặc khoan undefined
-  const dong = r.ps?.dong || [];
-  const hocPhi = r.rec?.khoan?.hocPhi || 0;
-  const tienAn = r.rec?.khoan?.tienAn || 0;
-
-  const truAnItems = dong.filter(d => 
-    (d[0].includes("Hoàn") || d[0].includes("Trừ")) && 
-    (d[0].includes("ăn") || d[0].includes("Ăn"))
-  );
-
-  const phuThu = dong.filter(d => 
-    !d[0].includes("Học phí") && 
-    !d[0].includes("Tiền ăn") && 
-    !(d[0].includes("Hoàn") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
-    !(d[0].includes("Trừ") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
-    d[1] > 0
-  ).reduce((a, b) => a + b[1], 0);
-
+  // Chips dữ liệu
+  const hocPhi = r.rec.khoan?.hocPhi || 0;
+  const tienAn = r.rec.khoan?.tienAn || 0;
+  const phuThu = (r.rec.phuThu || []).reduce((a, p) => a + (p.soTien || 0), 0);
   const noCu = r.noTruoc || 0;
-  const hasLargeDebt = noCu > 500000;
-  
-  const truAnNames = new Set(truAnItems.map(d => d[0]));
-  const hasDiscount = dong.some(d => d[1] < 0 && !truAnNames.has(d[0]));
 
-  const gonTruAn = (label) => {
-    const m = label.match(/T(\d+)|tháng\s*(\d+)/i);
-    return m ? `Trừ ăn T${m[1] || m[2]}` : "Trừ ăn";
-  };
+  // Cảnh báo ngoại lệ
+  const hasLargeDebt = noCu > 500000;
+  const hasDiscount = r.ps.dong.some(d => d[1] < 0);
 
   return (
     <div style={{
@@ -330,23 +299,16 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       </div>
 
       {/* Hàng 2: Chips dòng tiền */}
-      <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
-        {phuThu > 0 && (
-          <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
-        )}
-        {truAnItems.map(([label, val], i) => (
-          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.greenSoft, color: C.green, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
-            {gonTruAn(label)} {fmtK(Math.abs(val))}
-          </span>
-        ))}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px", marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}` }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>HP {fmtK(hocPhi)}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>Ăn {fmtK(tienAn)}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>PT {fmtK(phuThu)}</span>
         {noCu !== 0 && (
           <span style={{
             fontSize: 11.5, fontWeight: 600,
             background: noCu > 0 ? C.coralSoft : C.greenSoft,
             color: noCu > 0 ? C.coral : C.green,
-            padding: "2px 8px", borderRadius: 6, flexShrink: 0
+            padding: "2px 8px", borderRadius: 6
           }}>
             {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
           </span>
@@ -381,7 +343,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
-          {dong.map(([label, val, sua], i) => (
+          {r.ps.dong.map(([label, val, sua], i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
               <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
               <span>{fmt(val)}</span>
@@ -477,7 +439,6 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 
 /* ============================================================
    6. THU PHI TAB V1 — MAIN
-   FIX: fast mode idx + input key để sync batch thu đủ
    ============================================================ */
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
@@ -492,14 +453,15 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const inputRefs = useRef({});
   const { sentinelRef, shrunk } = useStickyShrink();
 
+  // Số đếm chip lọc
   const chipCounts = useMemo(() => {
-    const c = { all: rows.length, chuaThu: 0, thieu: 0, noCu: 0, thuThua: 0 };
+    const c = { all: rows.length, chuaThu: 0, thieu: 0, du: 0, thua: 0 };
     rows.forEach(r => {
       const thuc = r.rec.thucThu || 0;
       if (thuc === 0 && r.tongPhaiThu > 0) c.chuaThu++;
       else if (thuc > 0 && r.conNo > 0) c.thieu++;
-      if (r.noTruoc > 0) c.noCu++;
-      if (r.conNo < 0) c.thuThua++;
+      else if (r.conNo === 0 && r.tongPhaiThu > 0 && thuc >= r.tongPhaiThu) c.du++;
+      else if (r.conNo < 0) c.thua++;
     });
     return c;
   }, [rows]);
@@ -522,15 +484,17 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
     { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: "#1C3530" },
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
-    { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
-    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
+    { key: "du", label: "Thu đủ", count: chipCounts.du, bg: C.greenSoft, color: C.green, border: C.greenSoft },
+    { key: "thua", label: "Thu thừa", count: chipCounts.thua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
   ];
 
   return (
     <>
       <div ref={sentinelRef} style={{ height: 1 }} />
 
+      {/* ====== STICKY HEADER 2 TẦNG ====== */}
       <StickyBar shrunk={shrunk}>
+        {/* Tầng 1: Search + Lọc lớp */}
         <div style={{ display: "flex", gap: C.sm, marginBottom: C.sm, alignItems: "center" }}>
           <div style={{ flex: 1 }}><SearchBar value={search} onChange={setSearch} /></div>
           {isWide ? (
@@ -557,6 +521,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           )}
         </div>
 
+        {/* Tầng 2: Chip lọc trạng thái */}
         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: C.sm, scrollbarWidth: "none" }}>
           {CHIP_CFG.map(chip => {
             const active = thuFilter === chip.key;
@@ -584,6 +549,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           })}
         </div>
 
+        {/* KPI Progress */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>
           <span style={{ color: C.green }}>🟢 Đã thu: {fmtK(tk.thu)}</span>
           <span style={{ color: C.coral }}>🔴 Còn nợ: {fmtK(tk.no)}</span>
@@ -592,7 +558,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           <div style={{ width: `${pct}%`, height: "100%", background: C.green, borderRadius: 99, transition: "width .3s" }} />
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: C.md }}>
-          {rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length}/{rows.length} học sinh đã hoàn thành
+          {chipCounts.du + chipCounts.thua}/{rows.length} học sinh đã hoàn thành
         </div>
       </StickyBar>
 
@@ -601,20 +567,17 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
+      {/* ====== DANH SÁCH HS ====== */}
       {fastMode ? (
-        // FIX: dùng idx từ map thay vì findIndex O(n²)
-        rows.slice(0, thuLimit).map((r, idx) => {
+        rows.slice(0, thuLimit).map((r) => {
+          const idx = rows.findIndex((x) => x.hs.id === r.hs.id);
           return (
             <div key={r.hs.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, marginBottom: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.hs.ten}</div>
                 <div style={{ fontSize: 11.5, color: C.sub }}>cần {fmt(r.tongPhaiThu)}{r.noTruoc > 0 ? ` · 🔴 nợ ${fmt(r.noTruoc)}` : ""}</div>
               </div>
-              <input
-                // FIX: key động để remount input khi thu đủ hàng loạt, giúp sync defaultValue
-                key={`fast-${r.hs.id}-${r.rec.thucThu || 0}`}
-                ref={(el) => (inputRefs.current[r.hs.id] = el)}
-                type="text" inputMode="numeric"
+              <input ref={(el) => (inputRefs.current[r.hs.id] = el)} type="text" inputMode="numeric"
                 defaultValue={r.rec.thucThu ? Number(r.rec.thucThu).toLocaleString("vi-VN") : ""}
                 onFocus={(e) => { e.target.value = r.rec.thucThu ? String(r.rec.thucThu) : ""; e.target.select(); }}
                 onBlur={(e) => { const d = e.target.value.replace(/[^\d]/g, ""); setRec(r.hs.id, { thucThu: d === "" ? 0 : Number(d) }); e.target.value = d ? Number(d).toLocaleString("vi-VN") : ""; }}
@@ -649,6 +612,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       <ThuNgoai mData={mData} upMData={upMData} locked={locked} />
       <KhoanThuLop mData={mData} upMData={upMData} locked={locked} classes={chipsLop.slice(1).map(([id, ten]) => ({ id, ten }))} rows={rows} lopFilter={lopFilter} />
 
+      {/* ====== BOTTOM SHEETS ====== */}
       <ThuTienSheet
         r={rows.find(x => x.hs.id === thuTienId)}
         open={!!thuTienId}
@@ -683,6 +647,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         })}
       </BottomSheet>
 
+      {/* ====== THAO TÁC HÀNG LOẠT — STICKY BOTTOM ====== */}
       {!locked && rows.length > 0 && (
         <>
           <div style={{ height: 90 }} />
