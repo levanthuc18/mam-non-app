@@ -416,7 +416,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         }
         return (
           <div key={r.hs.id} style={{ background: C.card, borderRadius: 16, border: `1px solid ${open ? C.pine : C.line}`, marginBottom: 10, overflow: "hidden" }}>
-            <div onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <div onClick={() => setOpenId(open ? null : r.hs.id)} style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <div style={{ width: 38, height: 38, borderRadius: "50%", background: r.hs.nguoiThu === "B" ? C.violetBSoft : C.blueASoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.display, fontWeight: 700, fontSize: 14, color: r.hs.nguoiThu === "B" ? C.violetB : C.blueA }}>{r.hs.ten.charAt(0).toUpperCase()}</div>
                 {r.noTruoc > 0 && <div title="có nợ tháng trước" style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: 99, background: C.coral, border: "2px solid #fff" }} />}
