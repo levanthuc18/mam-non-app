@@ -324,31 +324,32 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
   const tienAn = r.rec?.khoan?.tienAn || 0;
 
-  // Trừ ăn: từ dòng ps.dong có tên chứa Trừ/trừ (giá trị âm)
-  const truAnItems = dong.filter(d => 
-    (d[0].includes("Trừ") || d[0].includes("trừ")) && d[1] < 0
-  );
+  // Tính tháng trước dựa trên hệ thống (Ví dụ: chạy tháng 6 -> ra T5)
+  const currentMonth = new Date().getMonth() + 1;
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const truAnLabel = `Trừ ăn T${prevMonth}`;
+
+  // Hàm kiểm tra dòng Trừ ăn
+  const isTruAn = (d) => (d[0].includes("Trừ") || d[0].includes("trừ")) && d[1] < 0;
+
+  // Trừ ăn: Lấy từ ps.dong, nhưng ép tên hiển thị thành truAnLabel (Trừ ăn T5, T6...)
+  const truAnItems = dong.filter(isTruAn).map(d => [truAnLabel, d[1]]);
+
+  // Mảng dong mới cho phần Chi tiết mở rộng (cũng ép lại tên Trừ ăn)
+  const displayDong = dong.map(d => isTruAn(d) ? [truAnLabel, d[1], d[2]] : d);
 
   // PT: dương, không phải HP/Ăn, không phải Trừ
   const phuThu = dong.filter(d => 
     !d[0].includes("Học phí") && 
     !d[0].includes("Tiền ăn") && 
     d[1] > 0 &&
-    !truAnItems.some(tr => tr[0] === d[0])
+    !isTruAn(d)
   ).reduce((a, b) => a + b[1], 0);
 
   const noCu = r.noTruoc || 0;
   const hasLargeDebt = noCu > 500000;
   
-  const truAnNames = new Set(truAnItems.map(d => d[0]));
-  const hasDiscount = dong.some(d => d[1] < 0 && !truAnNames.has(d[0]));
-
-  // Tên gọn Trừ ăn T5 / T6...
-  const gonTruAn = (label) => {
-    const m = label.match(/T(\d+)|tháng\s*(\d+)|\((\d+)\)/i);
-    if (m) return `Trừ ăn T${m[1] || m[2] || m[3]}`;
-    return "Trừ ăn";
-  };
+  const hasDiscount = dong.some(d => d[1] < 0 && !isTruAn(d));
 
   return (
     <div style={{
@@ -387,10 +388,10 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
         )}
         
-        {/* Trừ ăn: MÀU ĐỎ, cạnh PT */}
+        {/* Trừ ăn: MÀU ĐỎ, cạnh PT - Sử dụng trực tiếp label đã set */}
         {truAnItems.map(([label, val], i) => (
           <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.coralSoft, color: C.coral, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
-            {gonTruAn(label)} {fmtK(Math.abs(val))}
+            {label} {fmtK(Math.abs(val))}
           </span>
         ))}
         
@@ -432,10 +433,10 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Expand: Giải trình công thức — Dư cũ hiển thị âm */}
+      {/* Expand: Giải trình công thức — Dư cũ hiển thị âm (Dùng displayDong đã sửa tên) */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
-          {dong.map(([label, val, sua], i) => (
+          {displayDong.map(([label, val, sua], i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
               <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
               <span>{fmt(val)}</span>
