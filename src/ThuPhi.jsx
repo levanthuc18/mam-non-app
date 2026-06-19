@@ -147,7 +147,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — CẢI TIẾN: ẩn 0, suffix ngày, ẩn mặc định & reset
+   3. QUICK EDIT SHEET — FIX: useMemo trước if (!r)
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
@@ -172,11 +172,11 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
     setPtSo("");
   }, [sid]);
 
-  if (!r) return null;
-
-  const giaAn = r.rec.khoanDefault?.giaAn ?? r.lop?.tienAn ?? 0;
+  // Tính toán trước early return để useMemo không vi phạm Rules of Hooks
+  const giaAn = r?.rec?.khoanDefault?.giaAn ?? r?.lop?.tienAn ?? 0;
 
   const tongTamTinh = useMemo(() => {
+    if (!r) return 0;
     let tong = 0;
     KHOAN.forEach(k => {
       if (k.key === "tienAn") tong += giaAn * localNgayAn;
@@ -185,7 +185,9 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
     tong += localPhuThu.reduce((a, p) => a + (p.soTien ?? 0), 0);
     tong += r.noTruoc ?? 0;
     return tong;
-  }, [localKhoan, localNgayAn, localPhuThu, r.noTruoc, giaAn]);
+  }, [localKhoan, localNgayAn, localPhuThu, r, giaAn]);
+
+  if (!r) return null;
 
   const handleKhoanChange = (key, v) => {
     setLocalKhoan(prev => ({ ...prev, [key]: v }));
