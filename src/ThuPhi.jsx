@@ -400,9 +400,8 @@ const [fastMode, setFastMode] = useState(false);
           const idx = rows.findIndex((x) => x.hs.id === r.hs.id);
           return (
             <div key={r.hs.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, marginBottom: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                <div onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ fontWeight: 700, fontSize: 15, color: C.ink, cursor: "pointer" }}>{r.hs.ten}{r.ps.suaCount > 0 && <span title="có khoản đã sửa" style={{ color: C.amber, fontSize: 12 }}> ⚠</span>}</div>
-                <div style={{ fontSize: 11.5, color: C.sub }}>cần {fmt(r.tongPhaiThu)}{r.noTruoc > 0 ? ` · 🔴 nợ ${fmt(r.noTruoc)}` : ""}</div>
+                                         <div style={{ flex: 1, minWidth: 0 }}>
+                <div onClick={(e) => { e.stopPropagation(); onSelectStudent && onSelectStudent(r.hs.id); }} style={{ fontWeight: 700, fontSize: 15, color: C.ink, cursor: "pointer" }}>{r.hs.ten}{r.ps.suaCount > 0 && <span title="có khoản đã sửa" style={{ color: C.amber, fontSize: 12 }}> ⚠</span>}</div> 
               </div>
               <input ref={(el) => (inputRefs.current[r.hs.id] = el)} type="text" inputMode="numeric"
                 defaultValue={r.rec.thucThu ? Number(r.rec.thucThu).toLocaleString("vi-VN") : ""}
