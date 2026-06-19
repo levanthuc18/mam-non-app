@@ -15,15 +15,13 @@ function Donut({ pct, color, size = 60 }) {
     <svg width={size} height={size} style={{ flexShrink: 0 }}>
       <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={6} />
       <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={6} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
-      <text x={c} y={c + 4} textAnchor="middle" fontSize={size > 60 ? 14 : 11} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
+      <text x={c} y={c + (size > 70 ? 5 : 4)} textAnchor="middle" fontSize={size > 70 ? 16 : 11} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
     </svg>
   );
 }
 
-// Bảng tổng hợp điểm danh các lớp (Đã sửa lại theo yêu cầu)
+// Bảng tổng hợp điểm danh các lớp (Sửa lại layout theo ảnh)
 function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter }) {
-  const [open, setOpen] = useState(isGV); // GV auto mở, Admin auto đóng
-  
   const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
   const stats = effClasses.map(c => {
     const hsInClass = students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === c.id && TT_THU_PHI[s.trangThai]);
@@ -39,52 +37,41 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
   const totalDiHoc = totalHS - totalNghi;
   const pct = totalHS > 0 ? Math.round(totalDiHoc / totalHS * 100) : 100;
   const daDD = lastSaved ? effClasses.length : stats.filter(c => c.nghi > 0).length;
-  const tongLop = effClasses.length;
-
   const fmtTime = (d) => d ? `Lúc ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : "Chưa xác nhận";
 
   return (
-    <Card style={{ marginBottom: 12, padding: 0, overflow: "hidden" }}>
-      {/* Header có thể bấm để mở/đóng */}
-      <div onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", cursor: "pointer" }}>
-        <div>
-          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>Tổng quan ngày {viewDay}/{month}</div>
-          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>Đã điểm danh {daDD}/{tongLop} lớp · {fmtTime(lastSaved)}</div>
+    <Card style={{ marginBottom: 12, padding: 14 }}>
+      {/* Layout chia 2 cột: Biểu đồ (1/3) và Thông tin (2/3) */}
+      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <div style={{ flex: "0 0 33%", display: "flex", justifyContent: "center" }}>
+          <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={isGV ? 60 : 100} />
         </div>
-        <span style={{ fontSize: 14, color: C.sub, transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Tổng quan ngày {viewDay}/{month}</div>
+          <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Đã điểm danh {daDD}/{effClasses.length} lớp · {fmtTime(lastSaved)}</div>
+          <div style={{ display: "flex", gap: 10, fontSize: 13, flexWrap: "wrap" }}>
+            <span style={{ color: C.green, fontWeight: 700 }}>● Đi học: {totalDiHoc}</span>
+            <span style={{ color: C.coral, fontWeight: 700 }}>● Nghỉ: {totalNghi}</span>
+            <span style={{ color: C.sub }}>Tổng: {totalHS}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Body: Biểu đồ + Tên lớp */}
-      {open && (
-        <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${C.line}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0" }}>
-            <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={isGV ? 50 : 80} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", gap: 12, fontSize: 13, flexWrap: "wrap" }}>
-                <span style={{ color: C.green, fontWeight: 700 }}>● Đi học: {totalDiHoc}</span>
-                <span style={{ color: C.coral, fontWeight: 700 }}>● Nghỉ: {totalNghi}</span>
-                <span style={{ color: C.sub }}>Tổng: {totalHS}</span>
-              </div>
+      {/* Danh sách lớp bên dưới biểu đồ (Chỉ Admin thấy) */}
+      {!isGV && stats.length > 1 && (
+        <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+          {stats.map(c => (
+            <div 
+              key={c.id} 
+              onClick={() => setLopFilter(c.id)} 
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", cursor: "pointer" }}
+            >
+              <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
+              <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700 }}>
+                {c.nghi > 0 ? `Nghỉ ${c.nghi}/${c.siSo}` : `Đủ ${c.siSo}`}
+              </span>
             </div>
-          </div>
-          
-          {/* Danh sách lớp: Bấm để lọc */}
-          {!isGV && stats.length > 1 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-              {stats.map(c => (
-                <div 
-                  key={c.id} 
-                  onClick={(e) => { e.stopPropagation(); setLopFilter(c.id); }} 
-                  style={{ flex: "1 1 45%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, background: C.graySoft, cursor: "pointer" }}
-                >
-                  <span style={{ fontSize: 14, color: C.ink, fontWeight: 700 }}>{c.ten}</span>
-                  <span style={{ fontSize: 12, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700 }}>
-                    {c.nghi > 0 ? `Nghỉ ${c.nghi}` : "Đủ"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
       )}
     </Card>
@@ -100,7 +87,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const att = ddData || {};
   const { sentinelRef, shrunk } = useStickyShrink();
   const [saveState, setSaveState] = useState(null);
-  const [lastSaved, setLastSaved] = useState(null); // State lưu thời gian xác nhận
+  const [lastSaved, setLastSaved] = useState(null);
   const [chiVang, setChiVang] = useState(false); 
   const baoLops = chipsLop.filter(([id]) => id !== "all");
   const [baoOpen, setBaoOpen] = useState(false);
@@ -123,7 +110,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     const ok = await upDDData(att); 
     if (ok) {
       setSaveState("ok");
-      setLastSaved(new Date()); // Cập nhật thời gian xác nhận
+      setLastSaved(new Date());
     } else {
       setSaveState("err");
     }
@@ -163,6 +150,19 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
   return (
     <>
+      {/* 1. CARD TỔNG HỢP ĐIỂM DANH NGÀY (ĐƯA LÊN ĐẦU TIÊN) */}
+      <DiemDanhTongHop 
+        students={students} 
+        classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
+        ddData={ddData} 
+        year={year} month={month} 
+        viewDay={viewDay} 
+        isGV={isGV} gvLopId={gvLopId} 
+        lastSaved={lastSaved}
+        setLopFilter={setLopFilter}
+      />
+
+      {/* 2. THANH TÌM KIẾM & LỚP */}
       {isGV && <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
             👩‍🏫 {gvTen} — Lớp {lopTen}
             <div style={{ fontSize: 12, color: C.sub, marginTop: 4, fontWeight: 500 }}>
@@ -182,20 +182,9 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</div>
         : <LockNote />)}
 
+      {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
       {mode === "ngay" ? (
         <>
-          {/* CARD TỔNG HỢP ĐIỂM DANH NGÀY (MỚI) */}
-          <DiemDanhTongHop 
-            students={students} 
-            classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
-            ddData={ddData} 
-            year={year} month={month} 
-            viewDay={viewDay} 
-            isGV={isGV} gvLopId={gvLopId} 
-            lastSaved={lastSaved}
-            setLopFilter={setLopFilter}
-          />
-
           <Card style={{ marginBottom: 12, padding: "16px 14px", border: `1.5px solid ${C.pineSoft}` }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 28, lineHeight: 1, color: C.pine, border: "none", background: "none", cursor: "pointer", padding: "0 8px" }}>‹</button>
