@@ -89,13 +89,12 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 }
 
 /* ============================================================
-   2. BOTTOM SHEET THU TIỀN — FIX: useEffect thay useMemo
+   2. BOTTOM SHEET THU TIỀN
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
 
-  // FIX: dùng useEffect thay vì useMemo để set state
   useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
@@ -148,19 +147,16 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — FIX: reset state khi đổi sid
+   3. QUICK EDIT SHEET — CẢI TIẾN: ẩn 0, suffix ngày, ẩn mặc định & reset
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
-
-  // Khởi tạo state rỗng, sẽ được fill bởi useEffect
   const [localKhoan, setLocalKhoan] = useState({});
   const [localNgayAn, setLocalNgayAn] = useState(0);
   const [localPhuThu, setLocalPhuThu] = useState([]);
 
-  // FIX: reset toàn bộ local state mỗi khi đổi học sinh
   useEffect(() => {
     if (!r) return;
     const init = {};
@@ -180,7 +176,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 
   const giaAn = r.rec.khoanDefault?.giaAn ?? r.lop?.tienAn ?? 0;
 
-  const tongTamTinh = (() => {
+  const tongTamTinh = useMemo(() => {
     let tong = 0;
     KHOAN.forEach(k => {
       if (k.key === "tienAn") tong += giaAn * localNgayAn;
@@ -189,7 +185,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
     tong += localPhuThu.reduce((a, p) => a + (p.soTien ?? 0), 0);
     tong += r.noTruoc ?? 0;
     return tong;
-  })();
+  }, [localKhoan, localNgayAn, localPhuThu, r.noTruoc, giaAn]);
 
   const handleKhoanChange = (key, v) => {
     setLocalKhoan(prev => ({ ...prev, [key]: v }));
@@ -210,17 +206,73 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
           const def = isNgayAn ? (r.rec.ngayAnDefault ?? 0) : (r.rec.khoanDefault?.[k.key] ?? 0);
           const isEdited = val !== def;
 
+          // Ẩn khoản nếu cài đặt = 0, hiện tại = 0 và chưa hề sửa
+          if (def === 0 && val === 0 && !isEdited) return null;
+
           return (
             <div key={k.key} style={{ display: "flex", alignItems: "center", gap: C.sm }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: isEdited ? C.amber : C.ink }}>
-                  {k.label}{isEdited && <span style={{ fontSize: 11, color: C.amber, marginLeft: 4, fontWeight: 700 }}>· đã sửa</span>}
+                  {k.label}{isEdited && <span style={{ fontSize: 11, color: C.amber, marginLeft: 4, fontWeight: 700 }}> · đã sửa</span>}
                 </div>
-                {!isNgayAn && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Mặc định: {fmt(def)}</div>}
-                {isNgayAn && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Giá: {fmt(giaAn)} đ/ngày · Tự tính: {soNgayHoc(new Date().getFullYear(), new Date().getMonth() + 1, {})} ngày</div>}
+
+                {/* Chỉ hiện dòng nhỏ khi thực sự đã sửa */}
+                {isEdited && !isNgayAn && (
+                  <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Mặc định: {fmt(def)}</div>
+                )}
+                {isEdited && isNgayAn && (
+                  <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>
+                    Giá: {fmt(giaAn)} đ/ngày · Tự tính: {soNgayHoc(new Date().getFullYear(), new Date().getMonth() + 1, {})} ngày
+                  </div>
+                )}
               </div>
-              <NumInput value={val} onChange={(v) => { if (isNgayAn) handleNgayAnChange(v); else handleKhoanChange(k.key, v); }} w={120} />
-              <button onClick={() => isNgayAn ? handleResetNgayAn() : handleResetKhoan(k.key)} style={{ border: `1px solid ${C.line}`, background: C.card, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: C.sub, fontSize: 16 }}>↺</button>
+
+              {/* Ô Tiền ăn: input + suffix "ngày" */}
+              {isNgayAn ? (
+                <div style={{ position: "relative", width: 120, flexShrink: 0 }}>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={val}
+                    onChange={(e) => handleNgayAnChange(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      padding: "8px 38px 8px 10px",
+                      borderRadius: 10,
+                      border: `1.5px solid ${isEdited ? C.amber : C.line}`,
+                      fontSize: 15,
+                      fontFamily: font.display,
+                      fontWeight: 700,
+                      color: C.ink,
+                      textAlign: "right",
+                      outline: "none",
+                      background: "#fff"
+                    }}
+                  />
+                  <span style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: 12,
+                    color: C.sub,
+                    pointerEvents: "none",
+                    fontWeight: 600
+                  }}>ngày</span>
+                </div>
+              ) : (
+                <NumInput value={val} onChange={(v) => handleKhoanChange(k.key, v)} w={120} />
+              )}
+
+              {/* Nút reset chỉ hiện khi đã sửa */}
+              {isEdited && (
+                <button
+                  onClick={() => isNgayAn ? handleResetNgayAn() : handleResetKhoan(k.key)}
+                  style={{ border: `1px solid ${C.line}`, background: C.card, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: C.sub, fontSize: 16, flexShrink: 0 }}
+                >
+                  ↺
+                </button>
+              )}
             </div>
           );
         })}
@@ -253,7 +305,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — FIX: optional chaining r.rec?.khoan
+   4. THẺ HỌC SINH V1
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -265,14 +317,13 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const isDu = r.conNo === 0 && tongPhaiThu > 0 && thucThu >= tongPhaiThu;
   const isThua = r.conNo < 0;
 
-  let statusColor = C.coral, statusBg = C.coralSoft, statusText = "CHƯA THU", statusIcon = "🔴";
+  let statusColor = C.coral, statusText = "CHƯA THU", statusIcon = "🔴";
   if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
   else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
   else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; statusIcon = "🔵"; }
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
-  // FIX: thêm ?. để tránh crash khi rec hoặc khoan undefined
   const dong = r.ps?.dong || [];
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
   const tienAn = r.rec?.khoan?.tienAn || 0;
@@ -312,7 +363,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       display: "flex",
       flexDirection: "column"
     }}>
-      {/* Hàng 1: Định danh + Cảnh báo */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{r.hs.ten}</div>
@@ -329,7 +379,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Hàng 2: Chips dòng tiền */}
       <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
@@ -353,7 +402,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         )}
       </div>
 
-      {/* Hàng 3: Trạng thái + Nút hành động */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
@@ -378,7 +426,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {dong.map(([label, val, sua], i) => (
@@ -477,7 +524,6 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 
 /* ============================================================
    6. THU PHI TAB V1 — MAIN
-   FIX: fast mode idx + input key để sync batch thu đủ
    ============================================================ */
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
@@ -602,7 +648,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
       {fastMode ? (
-        // FIX: dùng idx từ map thay vì findIndex O(n²)
         rows.slice(0, thuLimit).map((r, idx) => {
           return (
             <div key={r.hs.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, marginBottom: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -611,7 +656,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
                 <div style={{ fontSize: 11.5, color: C.sub }}>cần {fmt(r.tongPhaiThu)}{r.noTruoc > 0 ? ` · 🔴 nợ ${fmt(r.noTruoc)}` : ""}</div>
               </div>
               <input
-                // FIX: key động để remount input khi thu đủ hàng loạt, giúp sync defaultValue
                 key={`fast-${r.hs.id}-${r.rec.thucThu || 0}`}
                 ref={(el) => (inputRefs.current[r.hs.id] = el)}
                 type="text" inputMode="numeric"
