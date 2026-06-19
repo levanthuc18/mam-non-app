@@ -95,7 +95,6 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
 
-  // Reset amount khi đổi HS
   useMemo(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
@@ -154,8 +153,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
-
-  // Khởi tạo localKhoan: lấy giá trị THỰC TẾ từ r.rec.khoan (đã bao gồm sửa tay + phụ thu tính toán)
   const [localKhoan, setLocalKhoan] = useState(() => {
     const init = {};
     KHOAN.forEach(k => {
@@ -165,7 +162,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
     });
     return init;
   });
-
   const [localNgayAn, setLocalNgayAn] = useState(() => r?.rec?.ngayAn ?? 0);
   const [localPhuThu, setLocalPhuThu] = useState(() => r?.rec?.phuThu ?? []);
 
@@ -246,7 +242,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — BRD 3 HÀNG (FIX PT TỪ ps.dong)
+   4. THẺ HỌC SINH V1 — BRD 3 HÀNG (FIX PT + TRỪ ĂN T5)
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -258,26 +254,42 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const isDu = r.conNo === 0 && tongPhaiThu > 0 && thucThu >= tongPhaiThu;
   const isThua = r.conNo < 0;
 
-  let statusColor = C.coral, statusBg = C.coralSoft, statusText = "CHƯA THU", statusIcon = "🔴";
-  if (isThieu) { statusColor = C.amber; statusBg = C.amberSoft; statusText = "THU THIẾU"; statusIcon = "🟡"; }
-  else if (isDu) { statusColor = C.green; statusBg = C.greenSoft; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
-  else if (isThua) { statusColor = "#2563EB"; statusBg = "#DBEAFE"; statusText = "THU THỪA"; statusIcon = "🔵"; }
+  let statusColor = C.coral, statusText = "CHƯA THU", statusIcon = "🔴";
+  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
+  else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
+  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; statusIcon = "🔵"; }
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
-  // Lấy HP, Ăn từ khoản
+  // Dữ liệu từ khoản chính
   const hocPhi = r.rec.khoan?.hocPhi || 0;
   const tienAn = r.rec.khoan?.tienAn || 0;
 
-  // Lấy PT từ ps.dong (các khoản không phải HP, Ăn, Bán trú, Vệ sinh, Tiếng Anh, Ngoại khóa)
-  const phuThu = r.ps.dong.filter(d =>
-    !d[0].includes("Học phí") && !d[0].includes("Ăn") && !d[0].includes("Bán trú") &&
-    !d[0].includes("Vệ sinh") && !d[0].includes("Tiếng Anh") && !d[0].includes("Ngoại khóa")
+  // Trừ ăn: các khoản trong ps.dong có tên chứa Hoàn/Trừ + ăn/Ăn
+  const truAnItems = r.ps.dong.filter(d => 
+    (d[0].includes("Hoàn") || d[0].includes("Trừ")) && 
+    (d[0].includes("ăn") || d[0].includes("Ăn"))
+  );
+
+  // PT: chỉ các khoản DƯƠNG tháng này, không phải HP, không phải Ăn, không phải Trừ ăn
+  const phuThu = r.ps.dong.filter(d => 
+    !d[0].includes("Học phí") && 
+    !d[0].includes("Tiền ăn") && 
+    !(d[0].includes("Hoàn") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
+    !(d[0].includes("Trừ") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
+    d[1] > 0
   ).reduce((a, b) => a + b[1], 0);
 
   const noCu = r.noTruoc || 0;
   const hasLargeDebt = noCu > 500000;
-  const hasDiscount = r.ps.dong.some(d => d[1] < 0);
+  // Miễn giảm: có khoản âm nhưng không phải Trừ ăn
+  const hasDiscount = r.ps.dong.some(d => d[1] < 0 && !truAnItems.includes(d));
+
+  // Hàm gọn tên trừ ăn
+  const gonTruAn = (label) => {
+    const m = label.match(/T(\d+)|tháng\s*(\d+)/i);
+    return m ? `Trừ ăn T${m[1] || m[2]}` : "Trừ ăn";
+  };
 
   return (
     <div style={{
@@ -307,17 +319,24 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Hàng 2: Chips dòng tiền */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px", marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}` }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>HP {fmtK(hocPhi)}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>Ăn {fmtK(tienAn)}</span>
-        {phuThu !== 0 && <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>PT {fmtK(phuThu)}</span>}
+      {/* Hàng 2: Chips dòng tiền — SCROLL NGANG, KHÔNG RỚT DÒNG */}
+      <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
+        {phuThu > 0 && (
+          <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
+        )}
+        {truAnItems.map(([label, val], i) => (
+          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.greenSoft, color: C.green, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
+            {gonTruAn(label)} {fmtK(Math.abs(val))}
+          </span>
+        ))}
         {noCu !== 0 && (
           <span style={{
             fontSize: 11.5, fontWeight: 600,
             background: noCu > 0 ? C.coralSoft : C.greenSoft,
             color: noCu > 0 ? C.coral : C.green,
-            padding: "2px 8px", borderRadius: 6
+            padding: "2px 8px", borderRadius: 6, flexShrink: 0
           }}>
             {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
           </span>
