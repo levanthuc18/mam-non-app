@@ -8,6 +8,8 @@ export const C = {
   blueA: "#2F6FBF", blueASoft: "#E7F0FB",
   violetB: "#8A56B8", violetBSoft: "#F2EAFA",
   gold: "#C99A2E", goldSoft: "#FBF1D8",
+// --- Hệ thống Grid 8px (Mới bổ sung) ---
+  xs: 4, sm: 8, md: 16, lg: 24, xl: 32, r: 16, r_kpi: 20
 };
 export const font = { display: "'Baloo 2', system-ui, sans-serif", body: "'Be Vietnam Pro', system-ui, sans-serif" };
 export const fmt = (n) => (n < 0 ? "-" : "") + Math.abs(Math.round(n || 0)).toLocaleString("vi-VN");
