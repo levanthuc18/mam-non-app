@@ -301,7 +301,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — FIX: Trừ ăn đỏ, Dư cũ âm
+   4. THẺ HỌC SINH V1 — FIX: Trừ ăn đỏ, Dư cũ âm, Cụm 4 nút cố định
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -332,7 +332,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   // Hàm kiểm tra dòng Trừ ăn
   const isTruAn = (d) => (d[0].includes("Trừ") || d[0].includes("trừ")) && d[1] < 0;
 
-  // Trừ ăn: Lấy từ ps.dong, nhưng ép tên hiển thị thành truAnLabel (Trừ ăn T5, T6...)
+  // Trừ ăn: Lấy từ ps.dong, nhưng ép tên hiển thị thành truAnLabel
   const truAnItems = dong.filter(isTruAn).map(d => [truAnLabel, d[1]]);
 
   // Mảng dong mới cho phần Chi tiết mở rộng (cũng ép lại tên Trừ ăn)
@@ -348,8 +348,16 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 
   const noCu = r.noTruoc || 0;
   const hasLargeDebt = noCu > 500000;
-  
   const hasDiscount = dong.some(d => d[1] < 0 && !isTruAn(d));
+
+  // Style chung cho cụm 4 nút cố định
+  const btnStyle = (bg, color, isBorder) => ({
+    width: 32, height: 32, borderRadius: 8,
+    border: isBorder ? `1px solid ${C.line}` : "none",
+    background: bg, color: color, fontSize: 14,
+    cursor: "pointer", flexShrink: 0,
+    display: "flex", alignItems: "center", justifyContent: "center"
+  });
 
   return (
     <div style={{
@@ -388,7 +396,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
         )}
         
-        {/* Trừ ăn: MÀU ĐỎ, cạnh PT - Sử dụng trực tiếp label đã set */}
+        {/* Trừ ăn: MÀU ĐỎ */}
         {truAnItems.map(([label, val], i) => (
           <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.coralSoft, color: C.coral, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
             {label} {fmtK(Math.abs(val))}
@@ -408,9 +416,9 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         )}
       </div>
 
-      {/* Hàng 3: Trạng thái + Nút hành động */}
+      {/* Hàng 3: Trạng thái + CỤM 4 NÚT CỐ ĐỊNH */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
+        <div style={{ minWidth: 0, paddingRight: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginTop: 2 }}>
             {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}đ` :
@@ -419,21 +427,35 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           </div>
           {isThieu && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Đã thu: {fmt(thucThu)}đ</div>}
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {(isChuaThu || isThieu) && !locked && (
-            <button onClick={() => onThuTien(r)} style={{ width: 36, height: 36, borderRadius: 8, border: "none", background: C.amber, color: "#fff", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>💰</button>
+
+        {/* Cụm 4 nút vật lý cố định 32px, gap 4px */}
+        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+          {/* Nút 1: Thu tiền nhanh - Ẩn nếu đã khóa sổ */}
+          {!locked ? (
+            <button onClick={() => onThuTien(r)} style={btnStyle(C.amber, "#fff", false)}>💰</button>
+          ) : (
+            <button disabled style={{ ...btnStyle(C.line, C.sub, false), opacity: 0.5, cursor: "default" }}>💰</button>
           )}
-          {(isDu || isThua) && (
-            <button onClick={() => onViewPhieu(r)} style={{ width: 36, height: 36, borderRadius: 8, border: "none", background: C.greenSoft, color: C.green, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>📄</button>
+
+          {/* Nút 2: In / Gửi phiếu - LUÔN LUÔN HIỂN THỊ Ở MỌI TRẠNG THÁI */}
+          <button onClick={() => onViewPhieu(r)} style={btnStyle("#DBEAFE", "#2563EB", false)}>📄</button>
+
+          {/* Nút 3: Sửa khoản thu - Ẩn nếu đã khóa sổ */}
+          {!locked ? (
+            <button onClick={() => onQuickEdit(r)} style={btnStyle("#FFF9EE", C.amber, true)}>✏️</button>
+          ) : (
+            <button disabled style={{ ...btnStyle(C.card, C.sub, true), opacity: 0.5, cursor: "default" }}>✏️</button>
           )}
-          {!locked && (
-            <button onClick={() => onQuickEdit(r)} style={{ width: 36, height: 36, borderRadius: 8, border: `1px solid ${C.amberSoft}`, background: "#FFF9EE", color: C.amber, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✏️</button>
-          )}
-          <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={{ width: 36, height: 36, borderRadius: 8, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▼</button>
+
+          {/* Nút 4: Xổ chi tiết */}
+          <button 
+            onClick={() => setExpandId(isExpanded ? null : r.hs.id)} 
+            style={{ ...btnStyle(C.card, C.sub, true), transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", fontSize: 12 }}
+          >▼</button>
         </div>
       </div>
 
-      {/* Expand: Giải trình công thức — Dư cũ hiển thị âm (Dùng displayDong đã sửa tên) */}
+      {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {displayDong.map(([label, val, sua], i) => (
@@ -445,7 +467,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           {r.noTruoc !== 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
               <span style={{ color: C.sub }}>{r.noTruoc > 0 ? "Nợ cũ" : "Dư cũ"}</span>
-              {/* FIX: hiển thị số âm cho Dư cũ */}
               <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : fmt(r.noTruoc)}</span>
             </div>
           )}
