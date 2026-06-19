@@ -7,7 +7,6 @@ import {
   Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote
 } from "./ui.jsx";
 
-// Helper format ngắn gọn cho KPI
 const fmtK = (n) => {
   if (!n) return "0";
   if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1).replace(".0", "") + "tr";
@@ -15,7 +14,6 @@ const fmtK = (n) => {
   return n;
 };
 
-// Component Empty State
 function EmptyState({ search, onClear }) {
   return (
     <div style={{ textAlign: "center", padding: "36px 20px", color: C.sub }}>
@@ -30,8 +28,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const [quickEditId, setQuickEditId] = useState(null);
   const [batchOpen, setBatchOpen] = useState(false);
   const { sentinelRef, shrunk } = useStickyShrink();
-  
-  // Logic tính KPI Sticky Header
+
   const pct = tk.ps > 0 ? Math.min(100, Math.round(tk.thu / tk.ps * 100)) : 0;
   const daThuCount = rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length;
   const tongHS = rows.length;
@@ -48,8 +45,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   return (
     <>
       <div ref={sentinelRef} style={{ height: 1 }} />
-      
-      {/* 1. STICKY HEADER ĐỈNH TAB */}
+
       <StickyBar shrunk={shrunk}>
         <div style={{ display: "flex", gap: C.sm, marginBottom: C.sm }}>
           <div style={{ flex: 1 }}>
@@ -74,19 +70,16 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
-      {/* 2. DANH SÁCH THẺ HỌC PHÍ CHUYÊN SÂU */}
       {rows.map((r) => {
         const isNo = r.conNo > 0;
         const isDu = r.conNo < 0;
         const isDone = !isNo && !isDu && r.ps.tong > 0;
-        
-        // Style theo trạng thái tài chính
+
         let cardStyle = { background: C.card, borderRadius: C.r, marginBottom: C.md, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" };
         if (isNo) cardStyle.borderLeft = `4px solid ${C.coral}`;
         if (isDone) cardStyle.borderLeft = `4px solid ${C.green}`;
         if (isDu) cardStyle.background = C.pineSoft;
 
-        // Tính chi tiết hiển thị
         const tienAn = r.rec.khoan?.tienAn ?? 0;
         const hocPhi = r.rec.khoan?.hocPhi ?? 0;
         const phuThu = r.ps.dong.filter(d => !d[0].includes("Ăn") && !d[0].includes("Học phí") && !d[0].includes("Bán trú") && !d[0].includes("Vệ sinh") && !d[0].includes("Tiếng Anh") && !d[0].includes("Ngoại khóa")).reduce((a,b)=>a+b[1],0);
@@ -96,7 +89,13 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
             <div style={{ padding: C.md }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{r.hs.ten}</div>
+                  {/* TÊN HS: clickable để mở QuickEditSheet */}
+                  <div
+                    onClick={() => setQuickEditId(r.hs.id)}
+                    style={{ fontSize: 15, fontWeight: 700, color: C.pine, cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
+                  >
+                    {r.hs.ten}
+                  </div>
                   <div style={{ fontSize: 12.5, color: C.sub, display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
                     <span>{r.lop?.ten}</span><PLBadge pl={r.hs.pl} />
                   </div>
@@ -133,7 +132,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         );
       })}
 
-      {/* 3. MENU LỆNH HÀNH LOẠT (Sticky Bottom Action Bar) */}
       {!locked && rows.length > 0 && (
         <div style={{ position: "fixed", bottom: 76, left: 0, right: 0, maxWidth: 640, margin: "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
           <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.ink, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
@@ -149,13 +147,12 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         </div>
       )}
 
-      {/* 4. BOTTOM SHEET SỬA NHANH KHOẢN LINH HOẠT */}
       {quickEditId && (
-        <QuickEditSheet 
-          sid={quickEditId} 
-          rows={rows} 
-          onClose={() => setQuickEditId(null)} 
-          setKhoan={setKhoan} 
+        <QuickEditSheet
+          sid={quickEditId}
+          rows={rows}
+          onClose={() => setQuickEditId(null)}
+          setKhoan={setKhoan}
           resetKhoan={resetKhoan}
           setRec={setRec}
           addPhuThuHS={addPhuThuHS}
@@ -169,32 +166,76 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   );
 }
 
-// COMPONENT BOTTOM SHEET SỬA NHANH
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
-  
+  // Local overrides để tính tổng tạm tính live
+  const [localKhoan, setLocalKhoan] = useState(() => ({ ...r?.rec?.khoan }));
+  const [localNgayAn, setLocalNgayAn] = useState(() => r?.rec?.ngayAn ?? 0);
+  const [localPhuThu, setLocalPhuThu] = useState(() => r?.rec?.phuThu ?? []);
+
   if (!r) return null;
-  
-  // Các khoản cố định (Khóa)
+
   const lockedKeys = ["hocPhi", "banTru", "veSinh"];
-  const total = r.ps.tong + r.noTruoc;
+
+  // Tổng tạm tính live: tính lại từ local state
+  const tongTamTinh = (() => {
+    let tong = 0;
+    KHOAN.forEach(k => {
+      if (k.key === "tienAn") {
+        const giaAn = r.rec.khoanDefault?.giaAn ?? 0;
+        tong += giaAn * localNgayAn;
+      } else {
+        tong += localKhoan?.[k.key] ?? 0;
+      }
+    });
+    tong += localPhuThu.reduce((a, p) => a + (p.soTien ?? 0), 0);
+    tong += r.noTruoc ?? 0;
+    return tong;
+  })();
+
+  const handleKhoanChange = (key, v) => {
+    setLocalKhoan(prev => ({ ...prev, [key]: v }));
+    setKhoan(sid, key, v);
+  };
+
+  const handleNgayAnChange = (v) => {
+    setLocalNgayAn(v);
+    setRec(sid, { ngayAn: v, ngayAnManual: true });
+  };
+
+  const handleResetKhoan = (key) => {
+    const def = r.rec.khoanDefault?.[key] ?? 0;
+    setLocalKhoan(prev => ({ ...prev, [key]: def }));
+    resetKhoan(sid, key);
+  };
+
+  const handleResetNgayAn = () => {
+    setLocalNgayAn(r.rec.ngayAnDefault ?? 0);
+    setRec(sid, { ngayAnManual: false });
+  };
 
   const addPT = () => {
     if (!ptTen.trim() || !ptSo) return;
+    const newPT = { id: uid(), ten: ptTen.trim(), soTien: Number(ptSo) };
+    setLocalPhuThu(prev => [...prev, newPT]);
     addPhuThuHS(sid, ptTen.trim(), Number(ptSo));
     setPtTen(""); setPtSo("");
   };
 
+  const delPT = (id) => {
+    setLocalPhuThu(prev => prev.filter(p => p.id !== id));
+    delPhuThuHS(sid, id);
+  };
+
   return (
-    <BottomSheet open={true} onClose={onClose} title={`⚙️ SỬA KHOẢN THU - ${r.hs.ten.toUpperCase()}`}>
+    <BottomSheet open={true} onClose={onClose} title={`⚙️ SỬA KHOẢN THU — ${r.hs.ten.toUpperCase()}`}>
       <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
         {KHOAN.map(k => {
-          const val = r.rec.khoan?.[k.key] ?? 0;
-          const def = r.rec.khoanDefault?.[k.key] ?? 0;
+          const val = k.key === "tienAn" ? localNgayAn : (localKhoan?.[k.key] ?? 0);
           const isLocked = lockedKeys.includes(k.key);
-          
+
           return (
             <div key={k.key} style={{ display: "flex", alignItems: "center", gap: C.sm }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -203,34 +244,33 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
               </div>
               {!isLocked ? (
                 <>
-                  <NumInput 
-                    value={k.key === "tienAn" ? r.rec.ngayAn : val} 
+                  <NumInput
+                    value={val}
                     onChange={(v) => {
-                      if (k.key === "tienAn") setRec(sid, { ngayAn: v, ngayAnManual: true });
-                      else setKhoan(sid, k.key, v);
-                    }} 
-                    w={120} 
+                      if (k.key === "tienAn") handleNgayAnChange(v);
+                      else handleKhoanChange(k.key, v);
+                    }}
+                    w={120}
                   />
-                  <button 
-                    onClick={() => k.key === "tienAn" ? setRec(sid, { ngayAnManual: false }) : resetKhoan(sid, k.key)} 
+                  <button
+                    onClick={() => k.key === "tienAn" ? handleResetNgayAn() : handleResetKhoan(k.key)}
                     style={{ border: `1px solid ${C.line}`, background: C.card, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: C.sub, fontSize: 16 }}
                   >↺</button>
                 </>
               ) : (
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.gray, width: 120, textAlign: "right" }}>{fmt(val)}đ</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.gray, width: 120, textAlign: "right" }}>{fmt(localKhoan?.[k.key] ?? 0)}đ</div>
               )}
             </div>
           );
         })}
 
-        {/* Khoản riêng */}
         <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: C.md }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: C.sm }}>Khoản riêng</div>
-          {(r.rec.phuThu || []).map((p) => (
+          {localPhuThu.map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13 }}>
               <span style={{ flex: 1, color: C.ink }}>{p.ten}</span>
               <span style={{ fontWeight: 600 }}>{fmt(p.soTien)}</span>
-              <button onClick={() => delPhuThuHS(sid, p.id)} style={{ border: "none", background: "none", color: C.coral, cursor: "pointer", fontSize: 14 }}>🗑</button>
+              <button onClick={() => delPT(p.id)} style={{ border: "none", background: "none", color: C.coral, cursor: "pointer", fontSize: 14 }}>🗑</button>
             </div>
           ))}
           <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
@@ -239,12 +279,13 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
             <button onClick={addPT} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Thêm</button>
           </div>
         </div>
-        
+
+        {/* TỔNG TẠM TÍNH LIVE */}
         <div style={{ marginTop: C.md, paddingTop: C.md, borderTop: `2px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>Tổng tiền mới:</span>
-          <span style={{ fontWeight: 800, fontSize: 18, color: C.coral }}>{fmt(total)}đ</span>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>Tổng tạm tính:</span>
+          <span style={{ fontWeight: 800, fontSize: 18, color: C.coral }}>{fmt(tongTamTinh)}đ</span>
         </div>
-        
+
         <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: C.sm }}>✓ LƯU THAY ĐỔI</button>
       </div>
     </BottomSheet>
