@@ -8,6 +8,7 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
+import { HocSinhTab } from "./HocSinh.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 
