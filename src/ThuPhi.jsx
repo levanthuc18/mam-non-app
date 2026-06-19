@@ -147,7 +147,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — FIX: useMemo trước if (!r)
+   3. QUICK EDIT SHEET
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
@@ -172,7 +172,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
     setPtSo("");
   }, [sid]);
 
-  // Tính toán trước early return để useMemo không vi phạm Rules of Hooks
   const giaAn = r?.rec?.khoanDefault?.giaAn ?? r?.lop?.tienAn ?? 0;
 
   const tongTamTinh = useMemo(() => {
@@ -208,7 +207,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
           const def = isNgayAn ? (r.rec.ngayAnDefault ?? 0) : (r.rec.khoanDefault?.[k.key] ?? 0);
           const isEdited = val !== def;
 
-          // Ẩn khoản nếu cài đặt = 0, hiện tại = 0 và chưa hề sửa
           if (def === 0 && val === 0 && !isEdited) return null;
 
           return (
@@ -217,8 +215,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
                 <div style={{ fontSize: 14, fontWeight: 600, color: isEdited ? C.amber : C.ink }}>
                   {k.label}{isEdited && <span style={{ fontSize: 11, color: C.amber, marginLeft: 4, fontWeight: 700 }}> · đã sửa</span>}
                 </div>
-
-                {/* Chỉ hiện dòng nhỏ khi thực sự đã sửa */}
                 {isEdited && !isNgayAn && (
                   <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Mặc định: {fmt(def)}</div>
                 )}
@@ -229,7 +225,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
                 )}
               </div>
 
-              {/* Ô Tiền ăn: input + suffix "ngày" */}
               {isNgayAn ? (
                 <div style={{ position: "relative", width: 120, flexShrink: 0 }}>
                   <input
@@ -266,7 +261,6 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
                 <NumInput value={val} onChange={(v) => handleKhoanChange(k.key, v)} w={120} />
               )}
 
-              {/* Nút reset chỉ hiện khi đã sửa */}
               {isEdited && (
                 <button
                   onClick={() => isNgayAn ? handleResetNgayAn() : handleResetKhoan(k.key)}
@@ -307,7 +301,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1
+   4. THẺ HỌC SINH V1 — FIX: Trừ ăn đỏ, Dư cũ âm
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -330,17 +324,17 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
   const tienAn = r.rec?.khoan?.tienAn || 0;
 
+  // Trừ ăn: từ dòng ps.dong có tên chứa Trừ/trừ (giá trị âm)
   const truAnItems = dong.filter(d => 
-    (d[0].includes("Hoàn") || d[0].includes("Trừ")) && 
-    (d[0].includes("ăn") || d[0].includes("Ăn"))
+    (d[0].includes("Trừ") || d[0].includes("trừ")) && d[1] < 0
   );
 
+  // PT: dương, không phải HP/Ăn, không phải Trừ
   const phuThu = dong.filter(d => 
     !d[0].includes("Học phí") && 
     !d[0].includes("Tiền ăn") && 
-    !(d[0].includes("Hoàn") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
-    !(d[0].includes("Trừ") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
-    d[1] > 0
+    d[1] > 0 &&
+    !truAnItems.some(tr => tr[0] === d[0])
   ).reduce((a, b) => a + b[1], 0);
 
   const noCu = r.noTruoc || 0;
@@ -349,9 +343,11 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const truAnNames = new Set(truAnItems.map(d => d[0]));
   const hasDiscount = dong.some(d => d[1] < 0 && !truAnNames.has(d[0]));
 
+  // Tên gọn Trừ ăn T5 / T6...
   const gonTruAn = (label) => {
-    const m = label.match(/T(\d+)|tháng\s*(\d+)/i);
-    return m ? `Trừ ăn T${m[1] || m[2]}` : "Trừ ăn";
+    const m = label.match(/T(\d+)|tháng\s*(\d+)|\((\d+)\)/i);
+    if (m) return `Trừ ăn T${m[1] || m[2] || m[3]}`;
+    return "Trừ ăn";
   };
 
   return (
@@ -365,6 +361,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       display: "flex",
       flexDirection: "column"
     }}>
+      {/* Hàng 1: Định danh + Cảnh báo */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{r.hs.ten}</div>
@@ -381,17 +378,23 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
+      {/* Hàng 2: Chips dòng tiền */}
       <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
+        
         {phuThu > 0 && (
           <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
         )}
+        
+        {/* Trừ ăn: MÀU ĐỎ, cạnh PT */}
         {truAnItems.map(([label, val], i) => (
-          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.greenSoft, color: C.green, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
+          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.coralSoft, color: C.coral, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
             {gonTruAn(label)} {fmtK(Math.abs(val))}
           </span>
         ))}
+        
+        {/* Nợ / Dư cũ */}
         {noCu !== 0 && (
           <span style={{
             fontSize: 11.5, fontWeight: 600,
@@ -404,6 +407,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         )}
       </div>
 
+      {/* Hàng 3: Trạng thái + Nút hành động */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
@@ -428,6 +432,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
+      {/* Expand: Giải trình công thức — Dư cũ hiển thị âm */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {dong.map(([label, val, sua], i) => (
@@ -439,7 +444,8 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           {r.noTruoc !== 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
               <span style={{ color: C.sub }}>{r.noTruoc > 0 ? "Nợ cũ" : "Dư cũ"}</span>
-              <span>{fmt(Math.abs(r.noTruoc))}</span>
+              {/* FIX: hiển thị số âm cho Dư cũ */}
+              <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : fmt(r.noTruoc)}</span>
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1.5px solid ${C.line}`, fontWeight: 800, fontSize: 14, color: C.coral }}>
