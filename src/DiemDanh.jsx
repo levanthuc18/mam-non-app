@@ -7,7 +7,68 @@ import {
   Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
 } from "./ui.jsx";
 
-export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students }) {
+// Component Donut mini
+function Donut({ pct, color, size = 60 }) {
+  const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
+  const dash = circ * Math.min(100, pct) / 100;
+  return (
+    <svg width={size} height={size} style={{ flexShrink: 0 }}>
+      <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={6} />
+      <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={6} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
+      <text x={c} y={c + 4} textAnchor="middle" fontSize={12} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
+    </svg>
+  );
+}
+
+// Bảng tổng hợp điểm danh các lớp
+function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId }) {
+  const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
+  const stats = effClasses.map(c => {
+    const hsInClass = students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === c.id && TT_THU_PHI[s.trangThai]);
+    let nghi = 0;
+    hsInClass.forEach(s => {
+      if (ddData?.[s.id]?.[viewDay]) nghi++;
+    });
+    return { ...c, siSo: hsInClass.length, nghi, diHoc: hsInClass.length - nghi };
+  });
+
+  const totalHS = stats.reduce((a, c) => a + c.siSo, 0);
+  const totalNghi = stats.reduce((a, c) => a + c.nghi, 0);
+  const totalDiHoc = totalHS - totalNghi;
+  const pct = totalHS > 0 ? Math.round(totalDiHoc / totalHS * 100) : 100;
+
+  return (
+    <Card style={{ marginBottom: 12, padding: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={64} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Tổng quan ngày {viewDay}/{month}</div>
+          <div style={{ display: "flex", gap: 12, fontSize: 12.5 }}>
+            <span style={{ color: C.green }}>● Đi học: <b>{totalDiHoc}</b></span>
+            <span style={{ color: C.coral }}>● Nghỉ: <b>{totalNghi}</b></span>
+            <span style={{ color: C.sub }}>Tổng: <b>{totalHS}</b></span>
+          </div>
+        </div>
+      </div>
+      
+      {!isGV && stats.length > 1 && (
+        <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
+          {stats.map(c => (
+            <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", fontSize: 12.5 }}>
+              <span style={{ color: C.ink, fontWeight: 600 }}>{c.ten}</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <span style={{ color: C.coral, fontWeight: 700 }}>Nghỉ {c.nghi}</span>
+                <span style={{ color: C.sub }}>/ {c.siSo} HS</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students, onSelectStudent }) {
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const days = new Date(year, month, 0).getDate();
@@ -32,6 +93,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     toast("Đã gửi báo cho quản lý.");
   };
   const openBao = (hs) => { setBaoHs({ id: hs.id, ten: hs.ten }); setBaoLop(baoLops[0]?.[0] || ""); setBaoNote(""); setBaoView("menu"); setBaoOpen(true); };
+  
   const xacNhanDD = async () => {
     setSaveState("saving");
     const ok = await upDDData(att); 
@@ -88,11 +150,21 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         </div>
       </StickyBar>
       {locked && (ddLockReason
-        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt (đã dùng để tính tiền). Mở khóa tháng sau để sửa.</div>
+        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</div>
         : <LockNote />)}
 
       {mode === "ngay" ? (
         <>
+          {/* CARD TỔNG HỢP ĐIỂM DANH NGÀY */}
+          <DiemDanhTongHop 
+            students={students} 
+            classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
+            ddData={ddData} 
+            year={year} month={month} 
+            viewDay={viewDay} 
+            isGV={isGV} gvLopId={gvLopId} 
+          />
+
           <Card style={{ marginBottom: 12, padding: "16px 14px", border: `1.5px solid ${C.pineSoft}` }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 28, lineHeight: 1, color: C.pine, border: "none", background: "none", cursor: "pointer", padding: "0 8px" }}>‹</button>
@@ -106,7 +178,9 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
             {dow !== 0 && !locked && !isGV && <button onClick={() => toggleLe(viewDay)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: isLeNgay ? C.amber : C.amberSoft, color: isLeNgay ? "#fff" : C.amber }}>{isLeNgay ? "✓ Đang là ngày lễ — chạm để bỏ" : "📅 Đặt ngày này là ngày lễ (nghỉ cả trường)"}</button>}
             {dow !== 0 && !isLeNgay && soNghiNgay > 0 && <button onClick={() => setChiVang((v) => !v)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: `1.5px solid ${chiVang ? C.coral : C.line}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? "#fff" : C.coral }}>{chiVang ? "↩ Xem tất cả các cháu" : `👀 Chỉ xem cháu nghỉ (${soNghiNgay})`}</button>}
           </Card>
+          
           {isGV && dow !== 0 && !isLeNgay && <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ width: "100%", marginBottom: 10, padding: "10px 0", borderRadius: 11, border: `1.5px dashed ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body }}>➕ Báo cháu mới (chưa có trong danh sách)</button>}
+          
           {dow === 0 || isLeNgay ? (
             <div style={{ textAlign: "center", color: isLeNgay ? C.amber : C.gray, fontSize: 13.5, padding: 24 }}>{isLeNgay ? "Ngày lễ — cả trường nghỉ, không điểm danh." : "Chủ nhật — không điểm danh."}</div>
           ) : studentRows.length === 0 ? (
@@ -133,8 +207,9 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
           )}
         </>
       ) : (
-        <DiemDanhBang studentRows={studentRows} att={att} toggle={toggle} le={leData || {}} toggleLe={toggleLe} year={year} month={month} days={days} locked={locked} isGV={isGV} />
+        <DiemDanhBang studentRows={studentRows} att={att} toggle={toggle} le={leData || {}} toggleLe={toggleLe} year={year} month={month} days={days} locked={locked} isGV={isGV} onSelectStudent={onSelectStudent} />
       )}
+      
       {!locked && studentRows.length > 0 && (mode === "thang" || (dow !== 0 && !isLeNgay)) && (
         <div style={{ position: "sticky", bottom: 0, zIndex: 5, marginTop: 8, paddingTop: 8, paddingBottom: 8, background: "linear-gradient(to top, " + C.bg + " 72%, rgba(245,247,243,0))" }}>
           {saveState === "err" ? (
@@ -149,6 +224,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
           )}
         </div>
       )}
+
       <BottomSheet open={baoOpen} onClose={() => { setBaoOpen(false); setBaoView("menu"); }} title={baoView === "moi" ? "Báo cháu mới" : baoView === "chuyenlop" ? `Báo chuyển lớp: ${baoHs?.ten || ""}` : `Báo về: ${baoHs?.ten || ""}`}>
         {baoView === "menu" && (<div>
           <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>🏫</span><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.gray }}>›</span></button>
@@ -172,13 +248,16 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   );
 }
 
-const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locked, index, todayD }) {
+const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locked, index, todayD, onSelectStudent }) {
   const a = att[r.hs.id] || {};
   const soNghi = Object.keys(a).length;
   const nhap = ngayNhapHocTrongThang(r.hs, year, month);
   return (
     <tr style={{ background: index % 2 ? "#FAFCFA" : "#fff" }}>
-      <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>{r.hs.ten}{nhap > 1 && nhap < 99 && <span style={{ fontSize: 9, color: C.amber, marginLeft: 4 }}>(nhập {nhap})</span>}</td>
+      <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>
+        <span onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ cursor: "pointer" }}>{r.hs.ten}</span>
+        {nhap > 1 && nhap < 99 && <span style={{ fontSize: 9, color: C.amber, marginLeft: 4 }}>(nhập {nhap})</span>}
+      </td>
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const dw = new Date(year, month - 1, d).getDay();
         const isCN = dw === 0; const isLe = le[d]; const off = a[d]; const closed = isCN || isLe;
@@ -201,7 +280,7 @@ const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locke
   );
 });
 
-export function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, month, days, locked, isGV }) {
+export function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, month, days, locked, isGV, onSelectStudent }) {
   const dayArr = Array.from({ length: days }, (_, i) => i + 1);
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
@@ -221,7 +300,7 @@ export function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, mon
         </tr></thead>
         <tbody>
           {studentRows.map((r, ri) => (
-            <DDRow key={r.hs.id} r={r} att={att} toggle={toggle} le={le} year={year} month={month} days={days} locked={locked} index={ri} todayD={todayD} />
+            <DDRow key={r.hs.id} r={r} att={att} toggle={toggle} le={le} year={year} month={month} days={days} locked={locked} index={ri} todayD={todayD} onSelectStudent={onSelectStudent} />
           ))}
         </tbody>
       </table>
