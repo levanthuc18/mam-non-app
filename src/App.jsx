@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { C, font, ymKey, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef } from "./index";
-import { BottomSheet } from "./index";
+import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef } from "./lib.js";
+import { BottomSheet } from "./ui.jsx";
+import { useStore } from "./useStore.js";
+import { HomeTab } from "./Home.jsx";
 import { ThuPhiTab } from "./ThuPhi.jsx";
 import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
-import { useStore } from "./useStore.js";
 
 function ConfirmHost() {
   const [state, setState] = useState(null);
@@ -29,13 +30,13 @@ function ConfirmHost() {
 
 function ToastHost() {
   const [state, setState] = useState(null);
-  const t = useState(null)[0]; // ref
-  useEffect(() => { setToastRef((s) => { setState(s); clearTimeout(t.current); t.current = setTimeout(() => setState(null), s && s.undo ? 6000 : 2600); }); return () => setToastRef(null); }, []);
+  const tRef = useState({})[0]; 
+  useEffect(() => { setToastRef((s) => { setState(s); clearTimeout(tRef.current); tRef.current = setTimeout(() => setState(null), s && s.undo ? 6000 : 2600); }); return () => setToastRef(null); }, []);
   if (!state) return null;
   return (
     <div style={{ position: "fixed", bottom: 78, left: "50%", transform: "translateX(-50%)", zIndex: 100, background: C.ink, color: "#fff", padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 10 }}>
       <span>{state.msg}</span>
-      {state.undo && <button onClick={() => { state.undo(); clearTimeout(t.current); setState(null); }} style={{ background: "#fff", color: C.ink, border: "none", borderRadius: 99, padding: "4px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>↩ Hoàn tác</button>}
+      {state.undo && <button onClick={() => { state.undo(); clearTimeout(tRef.current); setState(null); }} style={{ background: "#fff", color: C.ink, border: "none", borderRadius: 99, padding: "4px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>↩ Hoàn tác</button>}
     </div>
   );
 }
@@ -73,7 +74,7 @@ function LoginScreen({ meta, onLogin }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("thu");
+  const [tab, setTab] = useState("home"); // Mặc định mở ở Tab Home
   const [auth, setAuth] = useState(null);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
@@ -88,7 +89,9 @@ export default function App() {
 
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
-  setCurrentActor(isAdmin ? "Admin" : (isGV ? auth?.ten : "?"));
+  const gvLopId = auth?.lopId || null;
+  const gvTen = auth?.ten || "";
+  setCurrentActor(isAdmin ? "Admin" : (isGV ? gvTen : "?"));
 
   useEffect(() => {
     const h = () => setIsWide(window.innerWidth >= 820);
@@ -96,10 +99,10 @@ export default function App() {
   }, []);
 
   useEffect(() => { setOpenId(null); }, [tab]);
-  useEffect(() => { if (isGV && tab !== "dd") setTab("dd"); }, [isGV, tab]);
+  useEffect(() => { if (isGV && tab !== "dd" && tab !== "home" && tab !== "hs" && tab !== "more") setTab("home"); }, [isGV, tab]);
 
   const login = (a) => { setAuth(a); sSet("mn5:auth", a); };
-  const logout = () => { setAuth(null); sDel("mn5:auth"); setTab("dd"); };
+  const logout = () => { setAuth(null); sDel("mn5:auth"); setTab("home"); };
 
   useEffect(() => { (async () => { const a = await sGet("mn5:auth"); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); })(); }, []);
 
@@ -111,6 +114,9 @@ export default function App() {
   const nextM = () => { if (store.month === 12) { store.setMonth(1); store.setYear(store.year + 1); } else store.setMonth(store.month + 1); };
   const chipsLop = [["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])];
   const phieuRow = store.allRows.find((r) => r.hs.id === phieuId && r.coRec) || store.allRows.find((r) => r.coRec);
+
+  // Tạm thời: Tab "more" sẽ mở CaiDat
+  const handleMore = () => setTab("caidat");
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font.body, color: C.ink }}>
@@ -128,7 +134,7 @@ export default function App() {
         <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, lineHeight: 1.25, maxHeight: 38, overflow: "hidden", wordBreak: "break-word" }}>{meta.tenTruong}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>{isGV ? `👩‍🏫 ${auth.ten}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} đang học · ${meta.classes.length} lớp`}{store.locked ? " · 🔒" : ""}</div>
+            <div style={{ fontSize: 12, opacity: 0.85 }}>{isGV ? `👩‍🏫 ${gvTen}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} đang học · ${meta.classes.length} lớp`}{store.locked ? " · 🔒" : ""}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,.16)", borderRadius: 999, padding: "4px 4px" }}>
@@ -142,21 +148,15 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
-        {store.seeded && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào ⚙️ Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
+        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào ⚙️ Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
-        {["thu", "phieu", "dash"].includes(tab) && !store.mData && (
-          <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
-            <div style={{ fontSize: 32 }}>📅</div>
-            <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
-            {isAdmin ? (
-              <>
-                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Tạo bảng thu cho HS đang học.</div>
-                <button onClick={store.taoThang} style={{ background: C.pine, color: "#fff", padding: "11px 24px", borderRadius: 99, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", fontFamily: font.display }}>+ Tạo tháng {store.month}/{store.year}</button>
-              </>
-            ) : (
-              <div style={{ fontSize: 13, color: C.sub }}>Vui lòng liên hệ kế toán để tạo bảng thu (vẫn điểm danh được bên dưới).</div>
-            )}
-          </div>
+        {tab === "home" && (
+          <HomeTab 
+            store={store} 
+            auth={auth} 
+            setTab={setTab} 
+            setThuFilter={setThuFilter} 
+          />
         )}
 
         {tab === "thu" && store.mData && (
@@ -164,7 +164,7 @@ export default function App() {
             rows={store.allRows.filter((r) => {
               if (!r.coRec) return false;
               if (lopFilter !== "all" && r.lopId !== lopFilter) return false;
-              const s = (search || "").toLowerCase(); // noDau import omitted for brevity
+              const s = (search || "").toLowerCase(); 
               if (s && !r.hs.ten.toLowerCase().includes(s) && !r.hs.id.toLowerCase().includes(s)) return false;
               if (thuFilter === "chuaThu") return r.ps.tong > 0 && (r.rec.thucThu || 0) === 0;
               if (thuFilter === "thieu") return r.conNo > 0 && (r.rec.thucThu || 0) > 0;
@@ -183,38 +183,72 @@ export default function App() {
             setPhieuId={setPhieuId} setTab={setTab} isWide={isWide} 
           />
         )}
+        
         {tab === "dd" && (
           <DiemDanhTab 
             allRows={store.ddRows} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter}
             search={search} setSearch={setSearch} ddData={store.ddData} upDDData={store.upDDData}
             leData={store.leData} upLeData={store.upLeData} year={store.year} month={store.month}
             locked={store.nextChot} ddLockReason={store.nextChot} isWide={isWide} ym={store.ym}
-            isGV={isGV} gvLopId={auth?.lopId} gvTen={auth?.ten} students={students} 
+            isGV={isGV} gvLopId={gvLopId} gvTen={gvTen} students={students} 
           />
         )}
+        
         {tab === "phieu" && store.mData && phieuRow && (
           <PhieuThu phieuRow={phieuRow} allRows={store.allRows} setPhieuId={setPhieuId} getLop={store.getLop} meta={meta} month={store.month} year={store.year} upMeta={store.upMeta} mData={store.mData} upMData={store.upMData} />
         )}
+        
         {tab === "dash" && store.mData && (
           <DashTab tk={store.tk} mData={store.mData} upMData={store.upMData} month={store.month} year={store.year} locked={store.locked} meta={meta} allRows={store.allRows} delThang={store.delThang} students={students} ym={store.ym} upMeta={store.upMeta} setTab={setTab} />
         )}
+        
         {tab === "no" && (
           <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} />
         )}
+        
         {tab === "caidat" && (
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
         )}
+
+        {/* Xử lý các tab phụ được gọi từ Home (Báo cáo, Công nợ, Cài đặt...) */}
+        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no"].includes(tab) && (
+          <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
+            <div style={{ fontSize: 32 }}>📅</div>
+            <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
+            {isAdmin ? (
+              <>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Tạo bảng thu cho HS đang học.</div>
+                <button onClick={store.taoThang} style={{ background: C.pine, color: "#fff", padding: "11px 24px", borderRadius: 99, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", fontFamily: font.display }}>+ Tạo tháng {store.month}/{store.year}</button>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: C.sub }}>Vui lòng liên hệ kế toán để tạo bảng thu.</div>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* BOTTOM NAV 5 TAB MỚI */}
       <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
-          {(isAdmin ? [["thu", "Thu phí", "₫"], ["dd", "Điểm danh", "✓"], ["no", "Công nợ", "📕"], ["dash", "Tổng quan", "📊"], ["phieu", "Phiếu", "🧾"], ["caidat", "Cài đặt", "⚙️"]] : [["dd", "Điểm danh", "✓"]]).map(([id, lb, ic]) => (
-            <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "9px 0 11px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500 }}>
-              <div style={{ fontSize: 15, marginBottom: 1 }}>{ic}</div>{lb}
+          {(isAdmin 
+            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
+            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
+          ).map(([id, lb, ic]) => (
+            <button 
+              key={id} 
+              onClick={() => {
+                if (id === "more") handleMore();
+                else if (id === "hs") { setTab("caidat"); } // Tạm thời trỏ HS về Cài đặt (sec hs) cho đến khi làm HocSinhTab
+                else setTab(id);
+              }} 
+              style={{ flex: 1, padding: "9px 0 11px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500 }}
+            >
+              <div style={{ fontSize: 17, marginBottom: 2 }}>{ic}</div>{lb}
             </button>
           ))}
         </div>
       </div>
+
       <BottomSheet open={monthPickerOpen} onClose={() => setMonthPickerOpen(false)} title="Chọn tháng xem báo cáo">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {(() => {
@@ -235,6 +269,7 @@ export default function App() {
         </div>
         <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Xong</button>
       </BottomSheet>
+      
       <ConfirmHost />
       <ToastHost />
     </div>
