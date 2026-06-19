@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, font, fmt, sGet } from "./lib.js";
+import { C, font, fmt, sGet, TT_THU_PHI, lopOfMonth } from "./lib.js";
 import { Card, PLBadge } from "./ui.jsx";
 
 function KPICard({ icon, value, label, sub, color, bg, onClick }) {
@@ -78,9 +78,14 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
   const { tk, allRows, students, meta, month, year, mData, ddData } = store;
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
+  const gvLopId = auth?.lopId;
+
+  // Lọc HS theo quyền
+  const visibleStudents = isGV ? students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === gvLopId) : students;
+  const visibleRows = isGV ? allRows.filter(r => r.lopId === gvLopId) : allRows;
 
   // Tính toán dữ liệu cho KPI
-  const recRows0 = allRows.filter((r) => r.coRec);
+  const recRows0 = visibleRows.filter((r) => r.coRec);
   const canThuAll = recRows0.reduce((a, r) => a + r.tongPhaiThu, 0);
   const daThuAll = recRows0.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
   const tyLeThu = canThuAll > 0 ? Math.round(daThuAll / canThuAll * 100) : 0;
@@ -88,8 +93,13 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
   const noRows = recRows0.filter((r) => r.conNo > 0);
   const conNoAll = noRows.reduce((a, r) => a + r.conNo, 0);
 
-  const dashTong = students.length;
-  const dashDangHoc = students.filter((s) => s.trangThai === "Đang học").length;
+  const dashTong = visibleStudents.length;
+  const dashDangHoc = visibleStudents.filter((s) => s.trangThai === "Đang học").length;
+
+  // Đếm số HS đi học hôm nay (dành cho GV)
+  const today = new Date();
+  const todayStr = today.getDate();
+  const diHocHomNay = visibleStudents.filter(s => TT_THU_PHI[s.trangThai] && !ddData?.[s.id]?.[todayStr]).length;
 
   // Cảnh báo
   const chuaThu = recRows0.filter((r) => r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
@@ -97,58 +107,33 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
 
   return (
     <div>
-      {/* 1. KPI Cards */}
+      {/* 1. KPI Cards (Phân quyền) */}
       <div style={{ display: "flex", overflowX: "auto", paddingBottom: 6, marginBottom: 12, marginTop: 12 }}>
-        <KPICard
-          icon="💰"
-          label="Thu tháng"
-          value={`${tyLeThu}%`}
-          sub={`${fmt(daThuAll)} / ${fmt(canThuAll)}`}
-          color={tyLeThu >= 80 ? C.green : C.amber}
-          onClick={() => setTab("thu")}
-        />
-        <KPICard
-          icon="👶"
-          label="Đang học"
-          value={dashDangHoc}
-          sub={`Tổng ${dashTong} HS`}
-          color={C.blueA}
-          onClick={() => setTab("hs")}
-        />
-        <KPICard
-          icon="🔴"
-          label="Cần thu"
-          value={fmt(conNoAll)}
-          sub={`${noRows.length} HS nợ`}
-          color={C.coral}
-          bg={C.coralSoft}
-          onClick={() => { setTab("thu"); setThuFilter("thieu"); }}
-        />
+        {isAdmin ? (
+          <>
+            <KPICard icon="💰" label="Thu tháng" value={`${tyLeThu}%`} sub={`${fmt(daThuAll)} / ${fmt(canThuAll)}`} color={tyLeThu >= 80 ? C.green : C.amber} onClick={() => setTab("thu")} />
+            <KPICard icon="👶" label="Đang học" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} color={C.blueA} onClick={() => setTab("hs")} />
+            <KPICard icon="🔴" label="Cần thu" value={fmt(conNoAll)} sub={`${noRows.length} HS nợ`} color={C.coral} bg={C.coralSoft} onClick={() => { setTab("thu"); setThuFilter("thieu"); }} />
+          </>
+        ) : (
+          <>
+            <KPICard icon="👶" label="Sĩ số lớp" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} color={C.blueA} onClick={() => setTab("hs")} />
+            <KPICard icon="✓" label="Đi học hôm nay" value={diHocHomNay} sub={`Ngày ${todayStr}/${month}`} color={C.green} onClick={() => setTab("dd")} />
+          </>
+        )}
       </div>
 
       {/* 2. Cảnh báo / Todo list */}
-      {isAdmin && (chuaThu > 0 || ngayAn0 > 0) && (
-        <div style={{ marginBottom: 12 }}>
-          {chuaThu > 0 && (
-            <AlertCard
-              type="danger"
-              message={`${chuaThu} HS chưa thu đủ tháng ${month}`}
-              actionLabel="Thu ngay →"
-              onAction={() => setTab("thu")}
-            />
-          )}
-          {ngayAn0 > 0 && (
-            <AlertCard
-              type="warning"
-              message={`${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền ăn)`}
-              actionLabel="Sửa →"
-              onAction={() => setTab("thu")}
-            />
-          )}
-        </div>
-      )}
+      <div style={{ marginBottom: 12 }}>
+        {isAdmin && chuaThu > 0 && (
+          <AlertCard type="danger" message={`${chuaThu} HS chưa thu đủ tháng ${month}`} actionLabel="Thu ngay →" onAction={() => setTab("thu")} />
+        )}
+        {isAdmin && ngayAn0 > 0 && (
+          <AlertCard type="warning" message={`${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền ăn)`} actionLabel="Sửa →" onAction={() => setTab("thu")} />
+        )}
+      </div>
 
-      {/* 3. Quick Actions */}
+      {/* 3. Quick Actions (Phân quyền) */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
         {isAdmin && (
           <>
@@ -159,29 +144,25 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
           </>
         )}
         <QuickAction icon="✓" label="Điểm danh" color={C.green} onClick={() => setTab("dd")} />
-        <QuickAction icon="👶" label="Học sinh" color={C.blueA} onClick={() => setTab("hs")} />
+        <QuickAction icon="👶" label={isGV ? "Lớp tôi" : "Học sinh"} color={C.blueA} onClick={() => setTab("hs")} />
       </div>
 
-      {/* 4. Hoạt động gần đây */}
+      {/* 4. Hoạt động gần đây (Chỉ Admin) */}
       {isAdmin && <RecentActivity />}
 
-      {/* 5. Thông tin nhanh */}
-      <Card style={{ marginBottom: 12, background: C.pineSoft, border: `1px solid #BFE0D4` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 24 }}>📅</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.pine }}>
-              Tháng {month}/{year}
+      {/* 5. Thông tin nhanh / Tạo bảng thu */}
+      {isAdmin && (
+        <Card style={{ marginBottom: 12, background: C.pineSoft, border: `1px solid #BFE0D4` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 24 }}>📅</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.pine }}>Tháng {month}/{year}</div>
+              <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>{mData ? `Đã có bảng thu (${recRows0.length} HS)` : "Chưa có bảng thu tháng này"}</div>
             </div>
-            <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>
-              {mData ? `Đã có bảng thu (${recRows0.length} HS)` : "Chưa có bảng thu tháng này"}
-            </div>
+            {!mData && <button onClick={store.taoThang} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>+ Tạo</button>}
           </div>
-          {!mData && isAdmin && (
-            <button onClick={store.taoThang} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>+ Tạo</button>
-          )}
-        </div>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
