@@ -7,7 +7,7 @@ export function StudentProfile({ studentId, store, onBack }) {
   const student = students.find(s => s.id === studentId);
   const [activeTab, setActiveTab] = useState("info");
   
-  if (!student) return null;
+  if (!student) return <div style={{ padding: 20, textAlign: "center", color: C.sub }}>Đang tải...</div>;
   const lopTen = meta.classes.find(c => c.id === lopOfMonth(student, ym))?.ten || "?";
   
   const tabs = [
