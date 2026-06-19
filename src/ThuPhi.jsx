@@ -394,7 +394,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       )}
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
-      {rows.slice(0, thuLimit).map((r) => {
+           {rows.slice(0, thuLimit).map((r) => {
         const open = openId === r.hs.id;
         if (fastMode) {
           const idx = rows.findIndex((x) => x.hs.id === r.hs.id);
@@ -414,34 +414,36 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
             </div>
           );
         }
+        
+        // RENDER THẺ HS BÌNH THƯỜNG (ĐÃ THÊM ONCLICK MỞ HỒ SƠ 360°)
         return (
-          <div key={r.hs.id} style={{ background: C.card, borderRadius: 16, border: `1px solid ${open ? C.pine : C.line}`, marginBottom: 10, overflow: "hidden" }}>
-            <div onClick={() => setOpenId(open ? null : r.hs.id)} style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+          <div key={r.hs.id} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.line}`, marginBottom: 10, overflow: "hidden" }}>
+            <div onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, background: r.hs.nguoiThu === "B" ? C.violetBSoft : C.blueASoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.display, fontWeight: 700, fontSize: 13, color: r.hs.nguoiThu === "B" ? C.violetB : C.blueA }}>{r.hs.nguoiThu}</div>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: r.hs.nguoiThu === "B" ? C.violetBSoft : C.blueASoft, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: font.display, fontWeight: 700, fontSize: 14, color: r.hs.nguoiThu === "B" ? C.violetB : C.blueA }}>{r.hs.ten.charAt(0).toUpperCase()}</div>
                 {r.noTruoc > 0 && <div title="có nợ tháng trước" style={{ position: "absolute", top: -3, right: -3, width: 11, height: 11, borderRadius: 99, background: C.coral, border: "2px solid #fff" }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{r.hs.ten}{r.ps.suaCount > 0 && <span title="có khoản đã sửa" style={{ color: C.amber, fontSize: 12 }}> ⚠</span>}</div>
-                <div style={{ fontSize: 11.5, color: C.sub, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 1 }}><span>{r.lop?.ten}</span><PLBadge pl={r.hs.pl} />{r.nghi > 0 ? <span>· nghỉ {r.nghi}</span> : null}</div>
+                <div style={{ fontSize: 11.5, color: C.sub, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 1 }}>
+                  <span>{r.lop?.ten}</span>
+                  <PLBadge pl={r.hs.pl} />
+                  {r.nghi > 0 ? <span>· nghỉ {r.nghi}</span> : null}
+                </div>
                 {r.noTruoc !== 0 && <div style={{ fontSize: 11, fontWeight: 700, marginTop: 1, color: r.noTruoc > 0 ? C.coral : C.green }}>{r.noTruoc > 0 ? `🔴 Nợ cũ ${fmt(r.noTruoc)}` : `🟢 Dư cũ ${fmt(-r.noTruoc)}`}</div>}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ textAlign: "right" }}><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.ink }}>{fmt(r.tongPhaiThu)}</div><Badge s={r.st} /></div>
-                <button onClick={(e) => { e.stopPropagation(); setPhieuId(r.hs.id); setTab("phieu"); }} title="Xem phiếu thu" style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", padding: 2 }}>🧾</button>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.ink }}>{fmt(r.tongPhaiThu)}</div>
+                  <Badge s={r.st} />
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setPhieuId(r.hs.id); setTab("phieu"); }} title="In phiếu thu" style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", padding: 2 }}>🧾</button>
               </div>
             </div>
-            {open && (<HSCardDetail r={r} locked={locked} setRec={setRec} setKhoan={setKhoan} resetKhoan={resetKhoan} resetAllKhoan={resetAllKhoan} addPhuThuHS={addPhuThuHS} delPhuThuHS={delPhuThuHS} setPhieuId={setPhieuId} setTab={setTab} />)}
+            {/* ĐÃ BỎ PHẦN MỞ RỘNG INLINE CŨ Ở ĐÂY */}
           </div>
         );
       })}
-      {rows.length > thuLimit && (<button onClick={() => setThuLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10 }}>Hiện thêm 50 HS ({Math.min(thuLimit, rows.length)}/{rows.length})</button>)}
-      <ThuNgoai mData={mData} upMData={upMData} locked={locked} />
-      <KhoanThuLop mData={mData} upMData={upMData} locked={locked} classes={chipsLop.slice(1).map(([id, ten]) => ({ id, ten }))} rows={rows} lopFilter={lopFilter} />
-    </>
-  );
-}
-
 function ThuNgoai({ mData, upMData, locked }) {
   const tn = mData.thuNgoai || [];
   const [ten, setTen] = useState(""); const [so, setSo] = useState("");
