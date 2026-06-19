@@ -8,7 +8,7 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
-import { StudentProfile } from "./StudentProfile.jsx";
+import { StudentProfile } from "./StudentProfile.jsx"; // Đảm bảo dòng này có
 import { MoreMenu } from "./MoreMenu.jsx";
 
 function ConfirmHost() {
@@ -111,7 +111,7 @@ export default function App() {
   const [thuFilter, setThuFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
-  const [viewStudentId, setViewStudentId] = useState(null); 
+  const [viewStudentId, setViewStudentId] = useState(null); // Đảm bảo state này có
   const [notifOpen, setNotifOpen] = useState(false); 
   
   const store = useStore();
@@ -173,7 +173,7 @@ export default function App() {
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
       `}</style>
 
-      {/* HEADER MỚI 72px */}
+      {/* HEADER 72px */}
       <div className="no-print" style={{ background: C.pine, padding: "0 16px", color: "#fff", height: 72, display: "flex", alignItems: "center" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
@@ -279,7 +279,7 @@ export default function App() {
         )}
       </div>
 
-      {/* STICKY BOTTOM NAV 72px */}
+      {/* BOTTOM NAV 72px */}
       <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20, height: 72 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
@@ -318,12 +318,18 @@ export default function App() {
         <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Xong</button>
       </BottomSheet>
 
+      {/* Trung tâm thông báo */}
       {isAdmin && (
         <NotificationSheet open={notifOpen} onClose={() => setNotifOpen(false)} alerts={sysAlerts} onAction={handleNotifAction} />
       )}
 
+      {/* HỒ SƠ 360° */}
       {viewStudentId && (
-        <StudentProfile studentId={viewStudentId} store={store} onBack={() => setViewStudentId(null)} />
+        <StudentProfile 
+          studentId={viewStudentId} 
+          store={store} 
+          onBack={() => setViewStudentId(null)} 
+        />
       )}
       
       <ConfirmHost />
