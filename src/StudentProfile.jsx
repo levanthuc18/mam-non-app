@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, KHOAN, noDau } from "./lib.js";
+import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, KHOAN, noDau, logAction } from "./lib.js";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
 
 export function StudentProfile({ studentId, store, onBack }) {
@@ -57,7 +57,7 @@ export function StudentProfile({ studentId, store, onBack }) {
 
       {/* BODY */}
       <div style={{ padding: "14px 14px 40px" }}>
-        {activeTab === "info" && <InfoTab student={student} meta={meta} ym={ym} upStudents={upStudents} />}
+        {activeTab === "info" && <InfoTab student={student} meta={meta} ym={ym} students={students} upStudents={upStudents} />}
         {activeTab === "thuPhi" && <ThuPhiTab student={student} meta={meta} />}
         {activeTab === "diemDanh" && <DiemDanhTab student={student} />}
         {activeTab === "congNo" && <CongNoTab student={student} meta={meta} />}
@@ -68,9 +68,26 @@ export function StudentProfile({ studentId, store, onBack }) {
 }
 
 // 1. TAB THÔNG TIN
-function InfoTab({ student, meta, ym, upStudents }) {
-  const setHS = (p) => upStudents(prev => prev.map(s => s.id === student.id ? { ...s, ...p } : s));
+function InfoTab({ student, meta, ym, students, upStudents }) {
+  const setHS = (p) => {
+    const newStudents = students.map(s => s.id === student.id ? { ...s, ...p } : s);
+    upStudents(newStudents);
+  };
+  
+  const chuyenLop = (lopMoi) => {
+    const newStudents = students.map(s => {
+      if (s.id !== student.id) return s;
+      const hist = (s.lopHistory || []).filter(h => h.tuThang !== ym);
+      hist.push({ tuThang: ym, lop: lopMoi });
+      hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang));
+      return { ...s, lopHistory: hist };
+    });
+    upStudents(newStudents);
+    logAction(`Chuyển lớp HS "${student.ten}" (T${ym})`);
+  };
+
   const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none", width: "100%" };
+  const lab = { fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 };
   
   return (
     <div>
@@ -78,24 +95,34 @@ function InfoTab({ student, meta, ym, upStudents }) {
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.ink }}>Thông tin cá nhân</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 100%" }}>
-            <label style={{ fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 }}>Họ tên</label>
+            <label style={lab}>Họ tên</label>
             <input defaultValue={student.ten} onBlur={(e) => setHS({ ten: e.target.value })} style={inp} />
           </div>
           <div style={{ flex: "1 1 140px" }}>
-            <label style={{ fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 }}>Phân loại</label>
+            <label style={lab}>Lớp (từ tháng {ym})</label>
+            <select value={lopOfMonth(student, ym) || ""} onChange={(e) => chuyenLop(e.target.value)} style={inp}>
+              {meta.classes.map(c => <option key={c.id} value={c.id}>{c.ten}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Phân loại</label>
             <select value={student.pl} onChange={(e) => setHS({ pl: e.target.value })} style={inp}>
               {PHAN_LOAI.map(p => <option key={p} value={p}>{PL_LABEL[p]}</option>)}
             </select>
           </div>
           <div style={{ flex: "1 1 140px" }}>
-            <label style={{ fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 }}>Trạng thái</label>
+            <label style={lab}>Trạng thái</label>
             <select value={student.trangThai} onChange={(e) => setHS({ trangThai: e.target.value })} style={inp}>
               {TRANG_THAI.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div style={{ flex: "1 1 140px" }}>
-            <label style={{ fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 }}>Người thu</label>
+            <label style={lab}>Người thu</label>
             <div style={{ marginTop: 2 }}><ABBtn val={student.nguoiThu} set={(p) => setHS({ nguoiThu: p })} small /></div>
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Nợ đầu kỳ</label>
+            <NumInput value={student.noDauKy || 0} onChange={(v) => setHS({ noDauKy: v })} w="100%" />
           </div>
         </div>
       </Card>
