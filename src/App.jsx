@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef } from "./lib.js";
+import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt } from "./lib.js";
 import { BottomSheet } from "./ui.jsx";
 import { useStore } from "./useStore.js";
 import { HomeTab } from "./Home.jsx";
@@ -8,7 +8,7 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
-import { HocSinhTab } from "./HocSinh.jsx";
+import { HocSinhTab } from "./HocSinh.jsx"; // 1. ĐÃ THÊM IMPORT
 import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 
@@ -76,21 +76,20 @@ function LoginScreen({ meta, onLogin }) {
   );
 }
 
-// Trung tâm thông báo (Bottom Sheet)
 function NotificationSheet({ open, onClose, alerts, onAction }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="🔔 Trung tâm thông báo">
       {alerts.length === 0 ? (
         <div style={{ textAlign: "center", padding: 30, color: C.green, fontWeight: 600 }}>✓ Tuyệt vời! Hệ thống không có cảnh báo nào.</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: C.sm }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {alerts.map((a, i) => {
-            const c = a.type === 'danger' ? { bg: C.coralSoft, border: "#FFD7D7", fg: C.coral, btn: "#E4573D" } : a.type === 'warning' ? { bg: C.amberSoft, border: "#EAD8A0", fg: "#7A5E12", btn: C.amber } : { bg: C.greenSoft, border: "#BFE3CC", fg: C.green, btn: C.green };
+            const c = a.type === 'danger' ? { bg: C.coralSoft, border: "#EFC9BF", fg: C.coral } : a.type === 'warning' ? { bg: C.amberSoft, border: "#EAD8A0", fg: "#7A5E12" } : { bg: C.greenSoft, border: "#BFE3CC", fg: C.green };
             return (
-              <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: C.r, padding: C.md, display: "flex", alignItems: "center", gap: C.md, minHeight: 88 }}>
-                <div style={{ fontSize: 18 }}>{a.icon}</div>
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: c.fg }}>{a.msg}</div>
-                <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ flexShrink: 0, width: 120, height: 44, borderRadius: 12, border: "none", background: c.btn, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 16 }}>{a.icon}</div>
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{a.msg}</div>
+                <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: c.fg, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", width: 100, textAlign: "center" }}>
                   {a.actionLabel}
                 </button>
               </div>
@@ -130,7 +129,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { setOpenId(null); }, [tab]);
-  useEffect(() => { if (isGV && !["dd", "home", "caidat", "more"].includes(tab)) setTab("home"); }, [isGV, tab]);
+  useEffect(() => { if (isGV && !["dd", "home", "hs", "more"].includes(tab)) setTab("home"); }, [isGV, tab]);
 
   const login = (a) => { setAuth(a); sSet("mn5:auth", a); };
   const logout = () => { setAuth(null); sDel("mn5:auth"); setTab("home"); };
@@ -146,7 +145,6 @@ export default function App() {
   const chipsLop = [["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])];
   const phieuRow = store.allRows.find((r) => r.hs.id === phieuId && r.coRec) || store.allRows.find((r) => r.coRec);
 
-  // Tính toán cảnh báo cho Trung tâm thông báo
   const recRows0 = store.allRows.filter((r) => r.coRec);
   const chuaThu = recRows0.filter((r) => r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
   const ngayAn0 = recRows0.filter((r) => r.hs.pl !== "GV" && r.hs.pl !== "T7" && (r.rec.ngayAn || 0) === 0).length;
@@ -154,7 +152,7 @@ export default function App() {
   
   const sysAlerts = [];
   if (chuaThu > 0) sysAlerts.push({ type: 'danger', icon: '🔴', msg: `${chuaThu} HS chưa thu đủ tháng ${store.month}`, actionLabel: 'Thu ngay', tab: 'thu', filter: 'chuaThu' });
-  if (ngayAn0 > 0) sysAlerts.push({ type: 'warning', icon: '🟠', msg: `${ngayAn0} HS có ngày ăn = 0`, actionLabel: 'Sửa', tab: 'thu', filter: 'all' });
+  if (ngayAn0 > 0) sysAlerts.push({ type: 'warning', icon: '🟠', msg: `${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền)`, actionLabel: 'Sửa', tab: 'thu', filter: 'all' });
   if (noRows.length > 0) sysAlerts.push({ type: 'danger', icon: '🔴', msg: `${noRows.length} HS đang nợ tiền`, actionLabel: 'Xem', tab: 'thu', filter: 'thieu' });
   
   const handleNotifAction = (targetTab, filter) => {
@@ -174,39 +172,39 @@ export default function App() {
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
       `}</style>
 
-      {/* HEADER MỚI 72px */}
-      <div className="no-print" style={{ background: C.pine, padding: "0 16px", color: "#fff", height: 72, display: "flex", alignItems: "center" }}>
+      <div className="no-print" style={{ background: C.pine, padding: "16px", color: "#fff", minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 18, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
-            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
-              {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} HS • ${meta.classes.length} lớp`}
+            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
+            <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+              {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} đang học · ${meta.classes.length} lớp`}
+              {store.locked && <span>· 🔒</span>}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,.16)", borderRadius: 999, padding: "4px 4px" }}>
               <button onClick={prevM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
-              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, minWidth: 60, textAlign: "center", color: "#fff", background: "none", border: "none", cursor: "pointer" }}>Th{store.month}/{store.year} ▾</button>
+              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center", color: "#fff", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{store.month}/{store.year} <span style={{ fontSize: 9, opacity: 0.8 }}>▾</span></button>
               <button onClick={nextM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>›</button>
             </div>
             
             {isAdmin && sysAlerts.length > 0 && (
-              <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, width: 36, height: 36, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 14, cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 🔔
-                <span style={{ position: "absolute", top: -4, right: -4, background: C.coral, color: "#fff", fontSize: 10, fontWeight: 800, width: 16, height: 16, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{sysAlerts.length}</span>
+                <span style={{ position: "absolute", top: -2, right: -2, background: C.coral, color: "#fff", fontSize: 9, fontWeight: 800, width: 14, height: 14, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{sysAlerts.length}</span>
               </button>
             )}
             
-            <button onClick={logout} title="Đăng xuất" style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, width: 36, height: 36, fontSize: 14, cursor: "pointer" }}>↩</button>
+            <button onClick={logout} title="Đăng xuất" style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>↩</button>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 16px 92px" }}>
-        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: C.r, padding: "12px 16px", marginBottom: C.md, marginTop: C.md, fontSize: 13, color: C.pine }}>👋 Khởi tạo xong! Vào tab Học sinh để thêm danh sách, rồi tạo bảng thu cho tháng.</div>}
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
+        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào ⚙️ Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {tab === "home" && (
-          <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} />
+          <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} />
         )}
 
         {tab === "thu" && store.mData && (
@@ -240,7 +238,8 @@ export default function App() {
             search={search} setSearch={setSearch} ddData={store.ddData} upDDData={store.upDDData}
             leData={store.leData} upLeData={store.upLeData} year={store.year} month={store.month}
             locked={store.nextChot} ddLockReason={store.nextChot} isWide={isWide} ym={store.ym}
-            isGV={isGV} gvLopId={gvLopId} gvTen={gvTen} students={students} onSelectStudent={setViewStudentId}
+            isGV={isGV} gvLopId={gvLopId} gvTen={gvTen} students={students} 
+            onSelectStudent={setViewStudentId}
           />
         )}
         
@@ -260,12 +259,23 @@ export default function App() {
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
         )}
 
+        {/* 2. ĐÃ THÊM RENDER TAB HS */}
+        {tab === "hs" && (
+          <HocSinhTab 
+            meta={meta} 
+            students={students} 
+            upStudents={store.upStudents} 
+            ym={store.ym} 
+            openStudentProfile={setViewStudentId} 
+          />
+        )}
+
         {tab === "more" && (
           <MoreMenu setTab={setTab} onLogout={logout} />
         )}
 
-        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more"].includes(tab) && (
-          <div className="no-print" style={{ background: C.card, borderRadius: C.r, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
+        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
+          <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
             <div style={{ fontSize: 32 }}>📅</div>
             <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
             {isAdmin ? (
@@ -280,19 +290,19 @@ export default function App() {
         )}
       </div>
 
-      {/* STICKY BOTTOM NAV 72px */}
-      <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20, height: 72 }}>
+      {/* 3. ĐÃ SỬA BOTTOM NAV ĐÚNG ID "hs" */}
+      <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
-            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
-            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
+            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
+            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
           ).map(([id, lb, ic]) => (
             <button 
               key={id} 
               onClick={() => setTab(id)} 
-              style={{ flex: 1, padding: 0, border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : "#9CA3AF", fontFamily: font.body, fontSize: 12, fontWeight: tab === id ? 700 : 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}
+              style={{ flex: 1, padding: "9px 0 11px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500 }}
             >
-              <div style={{ fontSize: 24 }}>{ic}</div>{lb}
+              <div style={{ fontSize: 17, marginBottom: 2 }}>{ic}</div>{lb}
             </button>
           ))}
         </div>
