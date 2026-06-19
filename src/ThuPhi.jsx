@@ -89,18 +89,14 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 }
 
 /* ============================================================
-   2. BOTTOM SHEET THU TIỀN — PHƯƠNG ÁN B (TĨNH, DISMISSIBLE)
+   2. BOTTOM SHEET THU TIỀN — FIX: useEffect thay useMemo
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
 
-  // ĐÃ SỬA: Đổi useMemo thành useEffect để tránh lỗi Infinite Re-render (Sập app)
-  useEffect(() => {
-    if (open && r) {
-      setAmount(r.rec?.thucThu || 0);
-    }
-  }, [open, r]);
+  // FIX: dùng useEffect thay vì useMemo để set state
+  useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -152,25 +148,33 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — HIỆN ĐÚNG SỐ TIỀN + ĐÁNH DẤU ĐÃ SỬA
+   3. QUICK EDIT SHEET — FIX: reset state khi đổi sid
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
 
-  const [localKhoan, setLocalKhoan] = useState(() => {
+  // Khởi tạo state rỗng, sẽ được fill bởi useEffect
+  const [localKhoan, setLocalKhoan] = useState({});
+  const [localNgayAn, setLocalNgayAn] = useState(0);
+  const [localPhuThu, setLocalPhuThu] = useState([]);
+
+  // FIX: reset toàn bộ local state mỗi khi đổi học sinh
+  useEffect(() => {
+    if (!r) return;
     const init = {};
     KHOAN.forEach(k => {
       if (k.key !== "tienAn") {
         init[k.key] = r?.rec?.khoan?.[k.key] ?? 0;
       }
     });
-    return init;
-  });
-
-  const [localNgayAn, setLocalNgayAn] = useState(() => r?.rec?.ngayAn ?? 0);
-  const [localPhuThu, setLocalPhuThu] = useState(() => r?.rec?.phuThu ?? []);
+    setLocalKhoan(init);
+    setLocalNgayAn(r?.rec?.ngayAn ?? 0);
+    setLocalPhuThu(r?.rec?.phuThu ?? []);
+    setPtTen("");
+    setPtSo("");
+  }, [sid]);
 
   if (!r) return null;
 
@@ -249,7 +253,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — BRD 3 HÀNG (FIX PT TỪ ps.dong)
+   4. THẺ HỌC SINH V1 — FIX: optional chaining r.rec?.khoan
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -262,23 +266,40 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const isThua = r.conNo < 0;
 
   let statusColor = C.coral, statusBg = C.coralSoft, statusText = "CHƯA THU", statusIcon = "🔴";
-  if (isThieu) { statusColor = C.amber; statusBg = C.amberSoft; statusText = "THU THIẾU"; statusIcon = "🟡"; }
-  else if (isDu) { statusColor = C.green; statusBg = C.greenSoft; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
-  else if (isThua) { statusColor = "#2563EB"; statusBg = "#DBEAFE"; statusText = "THU THỪA"; statusIcon = "🔵"; }
+  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
+  else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
+  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; statusIcon = "🔵"; }
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
-  const hocPhi = r.rec.khoan?.hocPhi || 0;
-  const tienAn = r.rec.khoan?.tienAn || 0;
+  // FIX: thêm ?. để tránh crash khi rec hoặc khoan undefined
+  const dong = r.ps?.dong || [];
+  const hocPhi = r.rec?.khoan?.hocPhi || 0;
+  const tienAn = r.rec?.khoan?.tienAn || 0;
 
-  const phuThu = r.ps.dong.filter(d =>
-    !d[0].includes("Học phí") && !d[0].includes("Ăn") && !d[0].includes("Bán trú") &&
-    !d[0].includes("Vệ sinh") && !d[0].includes("Tiếng Anh") && !d[0].includes("Ngoại khóa")
+  const truAnItems = dong.filter(d => 
+    (d[0].includes("Hoàn") || d[0].includes("Trừ")) && 
+    (d[0].includes("ăn") || d[0].includes("Ăn"))
+  );
+
+  const phuThu = dong.filter(d => 
+    !d[0].includes("Học phí") && 
+    !d[0].includes("Tiền ăn") && 
+    !(d[0].includes("Hoàn") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
+    !(d[0].includes("Trừ") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
+    d[1] > 0
   ).reduce((a, b) => a + b[1], 0);
 
   const noCu = r.noTruoc || 0;
   const hasLargeDebt = noCu > 500000;
-  const hasDiscount = r.ps.dong.some(d => d[1] < 0);
+  
+  const truAnNames = new Set(truAnItems.map(d => d[0]));
+  const hasDiscount = dong.some(d => d[1] < 0 && !truAnNames.has(d[0]));
+
+  const gonTruAn = (label) => {
+    const m = label.match(/T(\d+)|tháng\s*(\d+)/i);
+    return m ? `Trừ ăn T${m[1] || m[2]}` : "Trừ ăn";
+  };
 
   return (
     <div style={{
@@ -291,6 +312,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       display: "flex",
       flexDirection: "column"
     }}>
+      {/* Hàng 1: Định danh + Cảnh báo */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{r.hs.ten}</div>
@@ -307,22 +329,31 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px", marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}` }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>HP {fmtK(hocPhi)}</span>
-        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>Ăn {fmtK(tienAn)}</span>
-        {phuThu !== 0 && <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6 }}>PT {fmtK(phuThu)}</span>}
+      {/* Hàng 2: Chips dòng tiền */}
+      <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
+        {phuThu > 0 && (
+          <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>PT {fmtK(phuThu)}</span>
+        )}
+        {truAnItems.map(([label, val], i) => (
+          <span key={i} style={{ fontSize: 11.5, fontWeight: 600, background: C.greenSoft, color: C.green, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>
+            {gonTruAn(label)} {fmtK(Math.abs(val))}
+          </span>
+        ))}
         {noCu !== 0 && (
           <span style={{
             fontSize: 11.5, fontWeight: 600,
             background: noCu > 0 ? C.coralSoft : C.greenSoft,
             color: noCu > 0 ? C.coral : C.green,
-            padding: "2px 8px", borderRadius: 6
+            padding: "2px 8px", borderRadius: 6, flexShrink: 0
           }}>
             {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
           </span>
         )}
       </div>
 
+      {/* Hàng 3: Trạng thái + Nút hành động */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
@@ -347,9 +378,10 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
+      {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
-          {r.ps.dong.map(([label, val, sua], i) => (
+          {dong.map(([label, val, sua], i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
               <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
               <span>{fmt(val)}</span>
@@ -445,6 +477,7 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 
 /* ============================================================
    6. THU PHI TAB V1 — MAIN
+   FIX: fast mode idx + input key để sync batch thu đủ
    ============================================================ */
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
@@ -460,13 +493,13 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const { sentinelRef, shrunk } = useStickyShrink();
 
   const chipCounts = useMemo(() => {
-    const c = { all: rows.length, chuaThu: 0, thieu: 0, du: 0, thua: 0 };
+    const c = { all: rows.length, chuaThu: 0, thieu: 0, noCu: 0, thuThua: 0 };
     rows.forEach(r => {
       const thuc = r.rec.thucThu || 0;
       if (thuc === 0 && r.tongPhaiThu > 0) c.chuaThu++;
       else if (thuc > 0 && r.conNo > 0) c.thieu++;
-      else if (r.conNo === 0 && r.tongPhaiThu > 0 && thuc >= r.tongPhaiThu) c.du++;
-      else if (r.conNo < 0) c.thua++;
+      if (r.noTruoc > 0) c.noCu++;
+      if (r.conNo < 0) c.thuThua++;
     });
     return c;
   }, [rows]);
@@ -489,8 +522,8 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
     { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: "#1C3530" },
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
-    { key: "du", label: "Thu đủ", count: chipCounts.du, bg: C.greenSoft, color: C.green, border: C.greenSoft },
-    { key: "thua", label: "Thu thừa", count: chipCounts.thua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
+    { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
+    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
   ];
 
   return (
@@ -559,7 +592,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           <div style={{ width: `${pct}%`, height: "100%", background: C.green, borderRadius: 99, transition: "width .3s" }} />
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: C.md }}>
-          {chipCounts.du + chipCounts.thua}/{rows.length} học sinh đã hoàn thành
+          {rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length}/{rows.length} học sinh đã hoàn thành
         </div>
       </StickyBar>
 
@@ -569,15 +602,19 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
       {fastMode ? (
-        rows.slice(0, thuLimit).map((r) => {
-          const idx = rows.findIndex((x) => x.hs.id === r.hs.id);
+        // FIX: dùng idx từ map thay vì findIndex O(n²)
+        rows.slice(0, thuLimit).map((r, idx) => {
           return (
             <div key={r.hs.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, marginBottom: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.hs.ten}</div>
                 <div style={{ fontSize: 11.5, color: C.sub }}>cần {fmt(r.tongPhaiThu)}{r.noTruoc > 0 ? ` · 🔴 nợ ${fmt(r.noTruoc)}` : ""}</div>
               </div>
-              <input ref={(el) => (inputRefs.current[r.hs.id] = el)} type="text" inputMode="numeric"
+              <input
+                // FIX: key động để remount input khi thu đủ hàng loạt, giúp sync defaultValue
+                key={`fast-${r.hs.id}-${r.rec.thucThu || 0}`}
+                ref={(el) => (inputRefs.current[r.hs.id] = el)}
+                type="text" inputMode="numeric"
                 defaultValue={r.rec.thucThu ? Number(r.rec.thucThu).toLocaleString("vi-VN") : ""}
                 onFocus={(e) => { e.target.value = r.rec.thucThu ? String(r.rec.thucThu) : ""; e.target.select(); }}
                 onBlur={(e) => { const d = e.target.value.replace(/[^\d]/g, ""); setRec(r.hs.id, { thucThu: d === "" ? 0 : Number(d) }); e.target.value = d ? Number(d).toLocaleString("vi-VN") : ""; }}
