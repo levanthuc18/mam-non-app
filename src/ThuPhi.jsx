@@ -89,7 +89,7 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 }
 
 /* ============================================================
-   2. BOTTOM SHEET THU TIỀN — PHƯƠNG ÁN B (TĨNH, DISMISSIBLE)
+   2. BOTTOM SHEET THU TIỀN
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
@@ -147,7 +147,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 }
 
 /* ============================================================
-   3. QUICK EDIT SHEET — HIỆN ĐÚNG SỐ TIỀN + ĐÁNH DẤU ĐÃ SỬA
+   3. QUICK EDIT SHEET
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
@@ -242,7 +242,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — BRD 3 HÀNG (FIX PT + TRỪ ĂN T5)
+   4. THẺ HỌC SINH V1 — FIX: thêm fallback r.ps?.dong
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -261,18 +261,19 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
-  // Dữ liệu từ khoản chính
+  // Dữ liệu an toàn với fallback
+  const dong = r.ps?.dong || [];
   const hocPhi = r.rec.khoan?.hocPhi || 0;
   const tienAn = r.rec.khoan?.tienAn || 0;
 
-  // Trừ ăn: các khoản trong ps.dong có tên chứa Hoàn/Trừ + ăn/Ăn
-  const truAnItems = r.ps.dong.filter(d => 
+  // Trừ ăn: các khoản trong dong có tên chứa Hoàn/Trừ + ăn/Ăn
+  const truAnItems = dong.filter(d => 
     (d[0].includes("Hoàn") || d[0].includes("Trừ")) && 
     (d[0].includes("ăn") || d[0].includes("Ăn"))
   );
 
   // PT: chỉ các khoản DƯƠNG tháng này, không phải HP, không phải Ăn, không phải Trừ ăn
-  const phuThu = r.ps.dong.filter(d => 
+  const phuThu = dong.filter(d => 
     !d[0].includes("Học phí") && 
     !d[0].includes("Tiền ăn") && 
     !(d[0].includes("Hoàn") && (d[0].includes("ăn") || d[0].includes("Ăn"))) &&
@@ -282,8 +283,10 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 
   const noCu = r.noTruoc || 0;
   const hasLargeDebt = noCu > 500000;
-  // Miễn giảm: có khoản âm nhưng không phải Trừ ăn
-  const hasDiscount = r.ps.dong.some(d => d[1] < 0 && !truAnItems.includes(d));
+  
+  // Miễn giảm: có khoản âm nhưng không phải Trừ ăn (so sánh tên, không so sánh object)
+  const truAnNames = new Set(truAnItems.map(d => d[0]));
+  const hasDiscount = dong.some(d => d[1] < 0 && !truAnNames.has(d[0]));
 
   // Hàm gọn tên trừ ăn
   const gonTruAn = (label) => {
@@ -319,7 +322,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Hàng 2: Chips dòng tiền — SCROLL NGANG, KHÔNG RỚT DÒNG */}
+      {/* Hàng 2: Chips dòng tiền — SCROLL NGANG */}
       <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
@@ -371,7 +374,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
-          {r.ps.dong.map(([label, val, sua], i) => (
+          {dong.map(([label, val, sua], i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
               <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
               <span>{fmt(val)}</span>
@@ -466,7 +469,7 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 }
 
 /* ============================================================
-   6. THU PHI TAB V1 — MAIN
+   6. THU PHI TAB V1 — MAIN (FIX: đồng bộ thuFilter values)
    ============================================================ */
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
@@ -481,14 +484,15 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const inputRefs = useRef({});
   const { sentinelRef, shrunk } = useStickyShrink();
 
+  // Đếm chip — giữ nguyên values filter cũ để khớp parent
   const chipCounts = useMemo(() => {
-    const c = { all: rows.length, chuaThu: 0, thieu: 0, du: 0, thua: 0 };
+    const c = { all: rows.length, chuaThu: 0, thieu: 0, noCu: 0, thuThua: 0 };
     rows.forEach(r => {
       const thuc = r.rec.thucThu || 0;
       if (thuc === 0 && r.tongPhaiThu > 0) c.chuaThu++;
       else if (thuc > 0 && r.conNo > 0) c.thieu++;
-      else if (r.conNo === 0 && r.tongPhaiThu > 0 && thuc >= r.tongPhaiThu) c.du++;
-      else if (r.conNo < 0) c.thua++;
+      if (r.noTruoc > 0) c.noCu++;
+      if (r.conNo < 0) c.thuThua++;
     });
     return c;
   }, [rows]);
@@ -507,12 +511,13 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
 
   const selStyle = { padding: "9px 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
 
+  // Dùng đúng values filter cũ để khớp với parent logic
   const CHIP_CFG = [
     { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: "#1C3530" },
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
-    { key: "du", label: "Thu đủ", count: chipCounts.du, bg: C.greenSoft, color: C.green, border: C.greenSoft },
-    { key: "thua", label: "Thu thừa", count: chipCounts.thua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
+    { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
+    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
   ];
 
   return (
@@ -581,7 +586,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           <div style={{ width: `${pct}%`, height: "100%", background: C.green, borderRadius: 99, transition: "width .3s" }} />
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: C.md }}>
-          {chipCounts.du + chipCounts.thua}/{rows.length} học sinh đã hoàn thành
+          {rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length}/{rows.length} học sinh đã hoàn thành
         </div>
       </StickyBar>
 
