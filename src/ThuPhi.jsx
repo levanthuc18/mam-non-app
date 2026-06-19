@@ -4,7 +4,7 @@ import {
   KHOAN, tinhPSFromRec, trangThaiThu
 } from "./lib.js";
 import {
-  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, EmptyState
+  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote
 } from "./ui.jsx";
 
 // Helper format ngắn gọn cho KPI
@@ -14,6 +14,17 @@ const fmtK = (n) => {
   if (Math.abs(n) >= 1000) return Math.round(n / 1000) + "k";
   return n;
 };
+
+// Component Empty State
+function EmptyState({ search, onClear }) {
+  return (
+    <div style={{ textAlign: "center", padding: "36px 20px", color: C.sub }}>
+      <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+      <div style={{ fontSize: 14, marginBottom: 12 }}>{search ? "Không tìm thấy học sinh phù hợp" : "Không có học sinh trong bộ lọc này"}</div>
+      <button onClick={onClear} style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Xóa bộ lọc</button>
+    </div>
+  );
+}
 
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
