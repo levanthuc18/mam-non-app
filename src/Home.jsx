@@ -159,7 +159,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
           </>
         )}
         <QuickAction icon="✓" label="Điểm danh" color={C.green} onClick={() => setTab("dd")} />
-        <QuickAction icon="👶" label="Học sinh" color={C.blueA} onClick={() => setTab("caidat")} />
+        <QuickAction icon="👶" label="Học sinh" color={C.blueA} onClick={() => setTab("hs")} />
       </div>
 
       {/* 4. Hoạt động gần đây */}
