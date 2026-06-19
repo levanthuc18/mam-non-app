@@ -8,6 +8,8 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { PhieuThu, DashTab } from "./TongQuan.jsx";
 import { CaiDat } from "./CaiDat.jsx";
+import { StudentProfile } from "./StudentProfile.jsx";
+import { MoreMenu } from "./MoreMenu.jsx";
 
 function ConfirmHost() {
   const [state, setState] = useState(null);
@@ -74,7 +76,7 @@ function LoginScreen({ meta, onLogin }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState("home"); // Mặc định mở ở Tab Home
+  const [tab, setTab] = useState("home"); 
   const [auth, setAuth] = useState(null);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
@@ -83,6 +85,7 @@ export default function App() {
   const [thuFilter, setThuFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
+  const [viewStudentId, setViewStudentId] = useState(null); 
   
   const store = useStore();
   const { meta, students, loading } = store;
@@ -99,7 +102,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { setOpenId(null); }, [tab]);
-  useEffect(() => { if (isGV && tab !== "dd" && tab !== "home" && tab !== "hs" && tab !== "more") setTab("home"); }, [isGV, tab]);
+  useEffect(() => { if (isGV && !["dd", "home", "caidat", "more"].includes(tab)) setTab("home"); }, [isGV, tab]);
 
   const login = (a) => { setAuth(a); sSet("mn5:auth", a); };
   const logout = () => { setAuth(null); sDel("mn5:auth"); setTab("home"); };
@@ -114,9 +117,6 @@ export default function App() {
   const nextM = () => { if (store.month === 12) { store.setMonth(1); store.setYear(store.year + 1); } else store.setMonth(store.month + 1); };
   const chipsLop = [["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])];
   const phieuRow = store.allRows.find((r) => r.hs.id === phieuId && r.coRec) || store.allRows.find((r) => r.coRec);
-
-  // Tạm thời: Tab "more" sẽ mở CaiDat
-  const handleMore = () => setTab("caidat");
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font.body, color: C.ink }}>
@@ -156,6 +156,7 @@ export default function App() {
             auth={auth} 
             setTab={setTab} 
             setThuFilter={setThuFilter} 
+            openStudentProfile={setViewStudentId}
           />
         )}
 
@@ -181,6 +182,7 @@ export default function App() {
             addPhuThuHS={store.addPhuThuHS} delPhuThuHS={store.delPhuThuHS}
             locked={store.locked} mData={store.mData} upMData={store.upMData}
             setPhieuId={setPhieuId} setTab={setTab} isWide={isWide} 
+            onSelectStudent={setViewStudentId}
           />
         )}
         
@@ -191,6 +193,7 @@ export default function App() {
             leData={store.leData} upLeData={store.upLeData} year={store.year} month={store.month}
             locked={store.nextChot} ddLockReason={store.nextChot} isWide={isWide} ym={store.ym}
             isGV={isGV} gvLopId={gvLopId} gvTen={gvTen} students={students} 
+            onSelectStudent={setViewStudentId}
           />
         )}
         
@@ -210,8 +213,11 @@ export default function App() {
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
         )}
 
-        {/* Xử lý các tab phụ được gọi từ Home (Báo cáo, Công nợ, Cài đặt...) */}
-        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no"].includes(tab) && (
+        {tab === "more" && (
+          <MoreMenu setTab={setTab} onLogout={logout} />
+        )}
+
+        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more"].includes(tab) && (
           <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
             <div style={{ fontSize: 32 }}>📅</div>
             <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
@@ -227,20 +233,15 @@ export default function App() {
         )}
       </div>
 
-      {/* BOTTOM NAV 5 TAB MỚI */}
       <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
-            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
-            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
+            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
+            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["caidat", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
           ).map(([id, lb, ic]) => (
             <button 
               key={id} 
-              onClick={() => {
-                if (id === "more") handleMore();
-                else if (id === "hs") { setTab("caidat"); } // Tạm thời trỏ HS về Cài đặt (sec hs) cho đến khi làm HocSinhTab
-                else setTab(id);
-              }} 
+              onClick={() => setTab(id)} 
               style={{ flex: 1, padding: "9px 0 11px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500 }}
             >
               <div style={{ fontSize: 17, marginBottom: 2 }}>{ic}</div>{lb}
@@ -269,6 +270,14 @@ export default function App() {
         </div>
         <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Xong</button>
       </BottomSheet>
+
+      {viewStudentId && (
+        <StudentProfile 
+          studentId={viewStudentId} 
+          store={store} 
+          onBack={() => setViewStudentId(null)} 
+        />
+      )}
       
       <ConfirmHost />
       <ToastHost />
