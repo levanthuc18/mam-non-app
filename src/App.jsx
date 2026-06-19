@@ -160,7 +160,7 @@ export default function App() {
           />
         )}
 
-        {tab === "thu" && store.mData && (
+                {tab === "thu" && store.mData && (
           <ThuPhiTab 
             rows={store.allRows.filter((r) => {
               if (!r.coRec) return false;
