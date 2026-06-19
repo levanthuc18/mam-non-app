@@ -89,7 +89,7 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 }
 
 /* ============================================================
-   2. QUICK EDIT SHEET — TẤT CẢ KHOẢN ĐỀU MỞ KHÓA
+   2. QUICK EDIT SHEET — TẤT CẢ KHOẢN MỞ KHÓA
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
@@ -194,7 +194,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   3. THẺ HỌC SINH (ĐÃ NÉN)
+   3. THẺ HỌC SINH — ĐÃ NÉN + TINH CHỈNH 3 ĐIỂM
    ============================================================ */
 function HSCard({ r, locked, onQuickEdit, onThuDu, onViewPhieu, setRec }) {
   const isNo = r.conNo > 0;
@@ -266,10 +266,15 @@ function HSCard({ r, locked, onQuickEdit, onThuDu, onViewPhieu, setRec }) {
         <div>• Nợ cũ: {fmtK(r.noTruoc)}</div>
       </div>
 
-      {/* Hàng 3: Phải thu → Input → Sửa nhanh */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      {/* Hàng 3: Phải thu → Input → Sửa nhanh — TINH CHỈNH 3 ĐIỂM */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center", // <-- ĐIỂM 2: Thẳng hàng tâm trục
+        paddingTop: 0
+      }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ fontSize: 15, fontWeight: 750, color: C.ink }}>{fmt(r.tongPhaiThu)}đ</div>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{fmt(r.tongPhaiThu)}đ</div>
           <span style={{ color: C.gray, fontSize: 12, fontWeight: "bold" }}>➔</span>
           <input
             type="number"
@@ -277,9 +282,17 @@ function HSCard({ r, locked, onQuickEdit, onThuDu, onViewPhieu, setRec }) {
             onChange={(e) => setRec(r.hs.id, { thucThu: Number(e.target.value) || 0 })}
             disabled={locked}
             style={{
-              width: 105, height: 34, padding: "0 8px", borderRadius: 8,
-              border: `1px solid ${C.graySoft}`, fontSize: 13.5, fontWeight: 700,
-              color: C.green, backgroundColor: "#FAFAFA", textAlign: "center", outline: "none"
+              width: 115,           // <-- ĐIỂM 1: Rộng thêm cho số tiền thở
+              height: 34,
+              padding: "0 8px",
+              borderRadius: 8.5,    // <-- ĐIỂM 3: Bo góc mượt đồng bộ card
+              border: `1px solid ${C.graySoft}`,
+              fontSize: 13.5,
+              fontWeight: 700,
+              color: C.green,
+              backgroundColor: "#FAFAFA",
+              textAlign: "center",
+              outline: "none"
             }}
           />
         </div>
@@ -372,13 +385,13 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
 }
 
 /* ============================================================
-   5. THU PHI TAB V5 (MAIN — FULL FEATURE)
+   5. THU PHI TAB V5 — MAIN (HEADER GỌN + BOTTOM THAO TÁC HÀNG LOẠT)
    ============================================================ */
 export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
   const [quickEditId, setQuickEditId] = useState(null);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
   const [thuSheetOpen, setThuSheetOpen] = useState(false);
-  const [cfgOpen, setCfgOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [showNgayAn, setShowNgayAn] = useState(false);
   const [fastMode, setFastMode] = useState(false);
   const [thuLimit, setThuLimit] = useState(50);
@@ -388,6 +401,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const pct = tk.ps > 0 ? Math.min(100, Math.round(tk.thu / tk.ps * 100)) : 0;
   const daThuCount = rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length;
   const tongHS = rows.length;
+  const soNo = rows.filter((r) => r.conNo > 0).length;
 
   const batchThuDu = async (onlyNo) => {
     const pairs = rows.filter((r) => !onlyNo || r.conNo > 0).map((r) => ({ sid: r.hs.id, thucThu: r.tongPhaiThu }));
@@ -395,16 +409,16 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
     if (!(await ask(`Đánh "thu đủ" cho ${pairs.length} HS đang hiển thị?`, { okText: "Thu đủ" }))) return;
     thuDuNhieu(pairs);
     toast(`Đã thu đủ ${pairs.length} HS.`);
-    setCfgOpen(false);
+    setBatchOpen(false);
   };
 
   const selStyle = { padding: "9px 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
-  const cfgItem = { width: "100%", textAlign: "left", padding: "11px 12px", borderRadius: 12, border: "none", background: "none", color: C.ink, fontWeight: 700, fontSize: 13.5, fontFamily: font.body, cursor: "pointer" };
 
   return (
     <>
       <div ref={sentinelRef} style={{ height: 1 }} />
 
+      {/* ====== STICKY HEADER: CHỈ SEARCH + LỌC + KPI ====== */}
       <StickyBar shrunk={shrunk}>
         <div style={{ display: "flex", gap: C.sm, marginBottom: C.sm, alignItems: "center" }}>
           <div style={{ flex: 1 }}><SearchBar value={search} onChange={setSearch} /></div>
@@ -430,11 +444,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
               <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
             </button>
           )}
-          {!locked && (
-            <button onClick={() => setCfgOpen((v) => !v)} style={{ padding: "9px 14px", borderRadius: 12, border: `1.5px solid ${C.pine}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: cfgOpen ? C.pine : C.pineSoft, color: cfgOpen ? "#fff" : C.pine }}>
-              ⚙️ Cấu hình
-            </button>
-          )}
         </div>
 
         {/* KPI + Progress */}
@@ -450,21 +459,11 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         </div>
       </StickyBar>
 
-      {/* ====== CARD CẤU HÌNH (đúng như ảnh 2) ====== */}
-      {!locked && fastMode && (
-        <button onClick={() => setFastMode(false)} style={{ width: "100%", marginBottom: 10, padding: "11px 0", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 13.5, fontFamily: font.body, background: C.pine, color: "#fff" }}>
-          ⛔ Tắt chế độ Tích thu nhanh
-        </button>
-      )}
-      {!locked && !fastMode && cfgOpen && (
-        <Card style={{ marginBottom: 10, padding: 6, borderRadius: C.r }}>
-          <button onClick={() => setShowNgayAn((v) => !v)} style={{ ...cfgItem, color: showNgayAn ? C.pine : C.ink }}>🍽️ Áp ngày ăn hàng loạt {showNgayAn ? "▲" : "▼"}</button>
-          {showNgayAn && <div style={{ padding: "2px 2px 6px" }}><NgayAnBar onApply={setNgayAnAll} rows={rows} /></div>}
-          <button onClick={() => { setFastMode(true); setCfgOpen(false); }} style={cfgItem}>⚡ Bật chế độ Tích thu nhanh</button>
-          {(() => { const soNo = rows.filter((r) => r.conNo > 0).length; return (
-            <button onClick={() => { if (soNo > 0) { batchThuDu(true); } }} disabled={soNo === 0} style={{ ...cfgItem, color: soNo > 0 ? C.green : C.gray, cursor: soNo > 0 ? "pointer" : "default" }}>💵 Thu đủ {soNo} HS còn nợ đang hiển thị</button>
-          ); })()}
-        </Card>
+      {/* ====== NGÀY ĂN HÀNG LOẠT (nếu bật từ dropdown) ====== */}
+      {showNgayAn && (
+        <div style={{ marginBottom: 10 }}>
+          <NgayAnBar onApply={(v, ids) => { setNgayAnAll(v, ids); setShowNgayAn(false); }} rows={rows} />
+        </div>
       )}
 
       {locked && <LockNote />}
@@ -540,6 +539,31 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           );
         })}
       </BottomSheet>
+
+      {/* ====== THAO TÁC HÀNG LOẠT — STICKY BOTTOM (như bản cũ) ====== */}
+      {!locked && rows.length > 0 && (
+        <>
+          <div style={{ height: 90 }} /> {/* Spacer tránh che nội dung cuối */}
+          <div style={{ position: "fixed", bottom: 76, left: 0, right: 0, maxWidth: 640, margin: "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
+            <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.ink, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
+              ⚡ Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+            </div>
+            {batchOpen && (
+              <div style={{ background: C.card, borderRadius: C.r, marginTop: C.xs, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden" }}>
+                <button onClick={() => { setShowNgayAn(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>🍽️</span> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
+                </button>
+                <button onClick={() => { setFastMode(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>⚡</span> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
+                </button>
+                <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.green : C.gray, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>💵</span> Thu đủ {soNo} HS còn nợ đang hiển thị
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </>
   );
 }
