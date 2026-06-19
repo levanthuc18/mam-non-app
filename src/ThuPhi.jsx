@@ -75,57 +75,108 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         const isDu = r.conNo < 0;
         const isDone = !isNo && !isDu && r.ps.tong > 0;
 
-        let cardStyle = { background: C.card, borderRadius: C.r, marginBottom: C.md, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" };
-        if (isNo) cardStyle.borderLeft = `4px solid ${C.coral}`;
-        if (isDone) cardStyle.borderLeft = `4px solid ${C.green}`;
-        if (isDu) cardStyle.background = C.pineSoft;
+        const cardStyle = {
+          backgroundColor: C.card,
+          borderRadius: C.r,
+          padding: "12px 14px",
+          marginBottom: 12,
+          borderLeft: `4px solid ${isNo ? C.coral : C.green}`,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+          display: "flex",
+          flexDirection: "column"
+        };
+        if (isDu) {
+          cardStyle.background = C.pineSoft;
+          cardStyle.borderLeft = `4px solid ${C.pine}`;
+        }
 
         const tienAn = r.rec.khoan?.tienAn ?? 0;
         const hocPhi = r.rec.khoan?.hocPhi ?? 0;
-        const phuThu = r.ps.dong.filter(d => !d[0].includes("Ăn") && !d[0].includes("Học phí") && !d[0].includes("Bán trú") && !d[0].includes("Vệ sinh") && !d[0].includes("Tiếng Anh") && !d[0].includes("Ngoại khóa")).reduce((a,b)=>a+b[1],0);
+        const phuThu = r.ps.dong.filter(d =>
+          !d[0].includes("Ăn") && !d[0].includes("Học phí") && !d[0].includes("Bán trú") &&
+          !d[0].includes("Vệ sinh") && !d[0].includes("Tiếng Anh") && !d[0].includes("Ngoại khóa")
+        ).reduce((a, b) => a + b[1], 0);
 
         return (
           <div key={r.hs.id} style={cardStyle}>
-            <div style={{ padding: C.md }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* TÊN HS: clickable để mở QuickEditSheet */}
-                  <div
-                    onClick={() => setQuickEditId(r.hs.id)}
-                    style={{ fontSize: 15, fontWeight: 700, color: C.pine, cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
-                  >
-                    {r.hs.ten}
-                  </div>
-                  <div style={{ fontSize: 12.5, color: C.sub, display: "flex", gap: 6, alignItems: "center", marginTop: 2 }}>
-                    <span>{r.lop?.ten}</span><PLBadge pl={r.hs.pl} />
-                  </div>
+            {/* Hàng 1: Tên + Trạng thái */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+              <div onClick={() => setQuickEditId(r.hs.id)} style={{ cursor: "pointer", flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.pine, textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3, display: "inline" }}>
+                  {r.hs.ten}
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  {!locked && isNo && (
-                    <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>💰 Thu nhanh</button>
-                  )}
-                  {isDone && <span style={{ fontSize: 11, color: C.green, fontWeight: 600, background: C.greenSoft, padding: "4px 8px", borderRadius: 6 }}>✓ Đã đóng đủ</span>}
-                  {isDu && <span style={{ fontSize: 11, color: C.pine, fontWeight: 600, background: "#fff", padding: "4px 8px", borderRadius: 6 }}>Dư {fmt(Math.abs(r.conNo))}đ</span>}
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>
+                  {r.lop?.ten} <PLBadge pl={r.hs.pl} />
                 </div>
               </div>
-
-              <div style={{ marginTop: C.xs, fontSize: 13, color: C.sub, display: "flex", flexDirection: "column", gap: 2 }}>
-                <div>Học phí: {fmtK(hocPhi)} • Tiền ăn ({r.rec.ngayAn}n): {fmtK(tienAn)}</div>
-                <div>Phụ thu: {fmtK(phuThu)} • Nợ cũ: {fmtK(r.noTruoc)}</div>
-              </div>
-
-              <div style={{ marginTop: C.md, display: "flex", alignItems: "center", gap: C.sm, borderTop: `1px dashed ${C.line}`, paddingTop: C.md }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700, color: isNo ? C.coral : C.ink }}>{fmt(r.tongPhaiThu)}đ</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                    <span style={{ fontSize: 12, color: C.sub }}>Thực thu:</span>
-                    <NumInput value={r.rec.thucThu} onChange={(v) => setRec(r.hs.id, { thucThu: v })} w={100} disabled={locked} />
+              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                {isDu && (
+                  <div style={{ backgroundColor: C.greenSoft, color: C.green, padding: "4px 8px", borderRadius: 8, fontSize: 12, fontWeight: 650 }}>
+                    Dư {fmt(Math.abs(r.conNo))}đ
                   </div>
-                </div>
-                {!locked && (
-                  <button onClick={() => setQuickEditId(r.hs.id)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.amberSoft}`, background: C.amberSoft, color: C.amber, fontWeight: 700, fontSize: 12, cursor: "pointer", alignSelf: "flex-end" }}>✏️ Sửa nhanh</button>
                 )}
-                <button onClick={(e) => { e.stopPropagation(); setPhieuId(r.hs.id); setTab("phieu"); }} title="In phiếu thu" style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 14, cursor: "pointer", alignSelf: "flex-end" }}>🧾</button>
+                {isDone && (
+                  <div style={{ backgroundColor: C.greenSoft, color: C.green, padding: "4px 8px", borderRadius: 8, fontSize: 12, fontWeight: 650 }}>
+                    ✓ Đã đóng đủ
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Hàng 2: Grid 2 cột chi tiết khoản */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "4px 8px",
+              fontSize: 13,
+              color: C.sub,
+              marginBottom: 10,
+              paddingBottom: 10,
+              borderBottom: `1px dashed ${C.line}`
+            }}>
+              <div>• Học phí: {fmtK(hocPhi)}</div>
+              <div>• Tiền ăn ({r.rec.ngayAn}n): {fmtK(tienAn)}</div>
+              <div>• Phụ thu: {fmtK(phuThu)}</div>
+              <div>• Nợ cũ: {fmtK(r.noTruoc)}</div>
+            </div>
+
+            {/* Hàng 3: Phải thu + Input Thực thu + Sửa nhanh */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 15, fontWeight: 750, color: C.ink }}>
+                  {fmt(r.tongPhaiThu)}đ
+                </div>
+                <span style={{ color: C.gray, fontSize: 12, fontWeight: "bold" }}>➔</span>
+                <input
+                  type="number"
+                  value={r.rec.thucThu ?? ""}
+                  onChange={(e) => setRec(r.hs.id, { thucThu: Number(e.target.value) || 0 })}
+                  disabled={locked}
+                  style={{
+                    width: 105,
+                    height: 34,
+                    padding: "0 8px",
+                    borderRadius: 8,
+                    border: `1px solid ${C.graySoft}`,
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    color: C.green,
+                    backgroundColor: "#FAFAFA",
+                    textAlign: "center",
+                    outline: "none"
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {!locked && isNo && (
+                  <button onClick={() => setRec(r.hs.id, { thucThu: r.tongPhaiThu })} style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>💰 Thu nhanh</button>
+                )}
+                {!locked && (
+                  <button onClick={() => setQuickEditId(r.hs.id)} style={{ display: "flex", alignItems: "center", gap: 4, backgroundColor: "#FFF9EE", border: `1px solid ${C.amberSoft}`, padding: "6px 10px", borderRadius: 8, fontSize: 12.5, fontWeight: 650, color: C.amber, cursor: "pointer" }}>
+                    ✏️ Sửa nhanh
+                  </button>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); setPhieuId(r.hs.id); setTab("phieu"); }} title="In phiếu thu" style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 14, cursor: "pointer" }}>🧾</button>
               </div>
             </div>
           </div>
@@ -166,20 +217,20 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   );
 }
 
+/* ============================================================
+   QUICK EDIT SHEET — TẤT CẢ KHOẢN ĐỀU MỞ KHÓA SỬA TAY
+   ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
   const r = rows.find(x => x.hs.id === sid);
   const [ptTen, setPtTen] = useState("");
   const [ptSo, setPtSo] = useState("");
-  // Local overrides để tính tổng tạm tính live
   const [localKhoan, setLocalKhoan] = useState(() => ({ ...r?.rec?.khoan }));
   const [localNgayAn, setLocalNgayAn] = useState(() => r?.rec?.ngayAn ?? 0);
   const [localPhuThu, setLocalPhuThu] = useState(() => r?.rec?.phuThu ?? []);
 
   if (!r) return null;
 
-  const lockedKeys = ["hocPhi", "banTru", "veSinh"];
-
-  // Tổng tạm tính live: tính lại từ local state
+  // Tổng tạm tính live
   const tongTamTinh = (() => {
     let tong = 0;
     KHOAN.forEach(k => {
@@ -234,32 +285,24 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
       <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
         {KHOAN.map(k => {
           const val = k.key === "tienAn" ? localNgayAn : (localKhoan?.[k.key] ?? 0);
-          const isLocked = lockedKeys.includes(k.key);
 
           return (
             <div key={k.key} style={{ display: "flex", alignItems: "center", gap: C.sm }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: isLocked ? C.gray : C.ink }}>{k.label}</div>
-                {isLocked && <div style={{ fontSize: 11, color: C.gray }}>(Khóa)</div>}
+                <div style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{k.label}</div>
               </div>
-              {!isLocked ? (
-                <>
-                  <NumInput
-                    value={val}
-                    onChange={(v) => {
-                      if (k.key === "tienAn") handleNgayAnChange(v);
-                      else handleKhoanChange(k.key, v);
-                    }}
-                    w={120}
-                  />
-                  <button
-                    onClick={() => k.key === "tienAn" ? handleResetNgayAn() : handleResetKhoan(k.key)}
-                    style={{ border: `1px solid ${C.line}`, background: C.card, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: C.sub, fontSize: 16 }}
-                  >↺</button>
-                </>
-              ) : (
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.gray, width: 120, textAlign: "right" }}>{fmt(localKhoan?.[k.key] ?? 0)}đ</div>
-              )}
+              <NumInput
+                value={val}
+                onChange={(v) => {
+                  if (k.key === "tienAn") handleNgayAnChange(v);
+                  else handleKhoanChange(k.key, v);
+                }}
+                w={120}
+              />
+              <button
+                onClick={() => k.key === "tienAn" ? handleResetNgayAn() : handleResetKhoan(k.key)}
+                style={{ border: `1px solid ${C.line}`, background: C.card, borderRadius: 8, padding: "8px 10px", cursor: "pointer", color: C.sub, fontSize: 16 }}
+              >↺</button>
             </div>
           );
         })}
