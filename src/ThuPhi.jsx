@@ -466,7 +466,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 }
 
 /* ============================================================
-   5. THU NGOÀI & KHOẢN THU LỚP (Cải tiến UX Thu Ngoài)
+   5. THU NGOÀI & KHOẢN THU LỚP (Cải tiến: Thu đủ & Cố định)
    ============================================================ */
 function ThuNgoaiItem({ k, locked, set, del }) {
   const conNo = k.soTien - k.thucThu;
@@ -494,7 +494,10 @@ function ThuNgoaiItem({ k, locked, set, del }) {
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</span>
+            {k.coDinh && <span style={{ fontSize: 10, fontWeight: 700, color: C.blueA, background: C.blueASoft, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}>🔁 Cố định</span>}
+          </div>
           <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>Phải thu: {fmt(k.soTien)}đ</div>
         </div>
         {!locked && (
@@ -512,6 +515,11 @@ function ThuNgoaiItem({ k, locked, set, del }) {
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             <ABBtn val={k.nguoiThu} set={(p) => set(k.id, { nguoiThu: p })} small disabled={locked} />
             <NumInput value={k.thucThu} onChange={(v) => set(k.id, { thucThu: v })} w={100} disabled={locked} />
+            <button 
+              onClick={() => set(k.id, { thucThu: k.soTien })} 
+              style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, width: 32, height: 32, fontSize: 14, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+              title="Thu đủ"
+            >✓</button>
           </div>
         ) : (
           <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{fmt(k.thucThu)}đ</div>
@@ -523,8 +531,21 @@ function ThuNgoaiItem({ k, locked, set, del }) {
 
 function ThuNgoai({ mData, upMData, locked }) {
   const tn = mData.thuNgoai || [];
-  const [ten, setTen] = useState(""); const [so, setSo] = useState("");
-  const add = () => { if (!ten.trim()) return; upMData({ ...mData, thuNgoai: [...tn, { id: uid(), ten: ten.trim(), soTien: Number(so) || 0, thucThu: 0, nguoiThu: "A" }] }); setTen(""); setSo(""); };
+  const [ten, setTen] = useState(""); 
+  const [so, setSo] = useState("");
+  const [coDinh, setCoDinh] = useState(false); // State cho khoản cố định
+
+  const add = () => { 
+    if (!ten.trim()) return; 
+    upMData({ 
+      ...mData, 
+      thuNgoai: [...tn, { id: uid(), ten: ten.trim(), soTien: Number(so) || 0, thucThu: 0, nguoiThu: "A", coDinh }] 
+    }); 
+    setTen(""); 
+    setSo(""); 
+    setCoDinh(false);
+  };
+  
   const set = (id, p) => upMData({ ...mData, thuNgoai: tn.map((k) => (k.id === id ? { ...k, ...p } : k)) });
   const del = (id) => upMData({ ...mData, thuNgoai: tn.filter((k) => k.id !== id) });
   
@@ -551,27 +572,36 @@ function ThuNgoai({ mData, upMData, locked }) {
           borderRadius: C.r,
           padding: "12px",
           display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          alignItems: "center"
+          flexDirection: "column",
+          gap: 8
         }}>
-          <input 
-            value={ten} 
-            onChange={(e) => setTen(e.target.value)} 
-            placeholder="Tên khoản (VD: Quỹ CSVC)" 
-            style={{ flex: "2 1 150px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
-          />
-          <input 
-            type="number" 
-            value={so} 
-            onChange={(e) => setSo(e.target.value)} 
-            placeholder="Số tiền" 
-            style={{ flex: "1 1 100px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
-          />
-          <button 
-            onClick={add} 
-            style={{ flex: "1 1 80px", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "10px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}
-          >+ Thêm</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input 
+              value={ten} 
+              onChange={(e) => setTen(e.target.value)} 
+              placeholder="Tên khoản (VD: Quỹ CSVC)" 
+              style={{ flex: "2 1 150px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
+            />
+            <input 
+              type="number" 
+              value={so} 
+              onChange={(e) => setSo(e.target.value)} 
+              placeholder="Số tiền" 
+              style={{ flex: "1 1 100px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
+            />
+          </div>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid ${C.line}` }}>
+              <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.pine : "#fff", color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
+              <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.pine : "#fff", color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}>🔁 Cố định</button>
+            </div>
+            
+            <button 
+              onClick={add} 
+              style={{ flex: "1 1 80px", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "10px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}
+            >+ Thêm</button>
+          </div>
         </div>
       )}
     </div>
