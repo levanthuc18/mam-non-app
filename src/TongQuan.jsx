@@ -200,12 +200,14 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     if (await ask(msg, { okText: "Chốt tháng" })) {
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
-      await upMData({ ...mData, daChot: true, noLuyKe });
+      const snapThuNgoai = (mData.thuNgoai || []).reduce((a, k) => a + ((Number(k.soTien) || 0) - (Number(k.thucThu) || 0)), 0);
+      const snapNCC = (mData.chiPhi || []).reduce((a, c) => (c.loai === "CHUYEN" || c.loai === "NO_AB") ? a : a + ((Number(c.soTien) || 0) - (Number(c.daTra) || 0)), 0);
+      await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, snapThuNgoai, snapNCC, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
 
