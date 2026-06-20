@@ -301,7 +301,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
 }
 
 /* ============================================================
-   4. THẺ HỌC SINH V1 — FIX: Trừ ăn đỏ, Dư cũ âm, Cụm 4 nút cố định, Layout Header gọn
+   4. THẺ HỌC SINH V1
    ============================================================ */
 function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
@@ -324,7 +324,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
   const tienAn = r.rec?.khoan?.tienAn || 0;
 
-  // Logic tự động tính tháng trước cho Trừ ăn
   const currentMonth = new Date().getMonth() + 1;
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
   const truAnLabel = `Trừ ăn T${prevMonth}`;
@@ -363,7 +362,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       display: "flex",
       flexDirection: "column"
     }}>
-      {/* Hàng 1: Định danh + Lớp/PL (Cải tiến layout sang 2 bên) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
         <div style={{ minWidth: 0, flex: 1, paddingRight: 8 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>
@@ -384,7 +382,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Hàng 2: Chips dòng tiền */}
       <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: `1px dashed ${C.line}`, scrollbarWidth: "none" }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>HP {fmtK(hocPhi)}</span>
         <span style={{ fontSize: 11.5, fontWeight: 600, background: C.graySoft, color: C.sub, padding: "2px 8px", borderRadius: 6, flexShrink: 0 }}>Ăn {fmtK(tienAn)}</span>
@@ -411,7 +408,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         )}
       </div>
 
-      {/* Hàng 3: Trạng thái + Cụm 4 nút cố định */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ minWidth: 0, paddingRight: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
@@ -445,7 +441,6 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         </div>
       </div>
 
-      {/* Expand: Giải trình công thức */}
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {displayDong.map(([label, val, sua], i) => (
@@ -471,33 +466,115 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 }
 
 /* ============================================================
-   5. THU NGOÀI & KHOẢN THU LỚP
+   5. THU NGOÀI & KHOẢN THU LỚP (Cải tiến UX Thu Ngoài)
    ============================================================ */
+function ThuNgoaiItem({ k, locked, set, del }) {
+  const conNo = k.soTien - k.thucThu;
+  const isChuaThu = k.thucThu === 0 && k.soTien > 0;
+  const isThieu = k.thucThu > 0 && conNo > 0;
+  const isDu = conNo <= 0 && k.soTien > 0;
+
+  let statusColor = C.coral, statusText = "CHƯA THU", statusIcon = "🔴";
+  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
+  else if (isDu) { statusColor = C.green; statusText = "ĐÃ THU ĐỦ"; statusIcon = "🟢"; }
+
+  const borderLeftColor = isChuaThu || isThieu ? C.coral : C.green;
+
+  return (
+    <div style={{
+      backgroundColor: C.card,
+      borderRadius: C.r,
+      padding: "10px 14px",
+      marginBottom: 10,
+      borderLeft: `5px solid ${borderLeftColor}`,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>Phải thu: {fmt(k.soTien)}đ</div>
+        </div>
+        {!locked && (
+          <button onClick={() => del(k.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 16, flexShrink: 0 }}>🗑</button>
+        )}
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: `1px dashed ${C.line}` }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
+          {isThieu && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Còn thiếu: {fmt(conNo)}đ</div>}
+        </div>
+        
+        {!locked ? (
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            <ABBtn val={k.nguoiThu} set={(p) => set(k.id, { nguoiThu: p })} small disabled={locked} />
+            <NumInput value={k.thucThu} onChange={(v) => set(k.id, { thucThu: v })} w={100} disabled={locked} />
+          </div>
+        ) : (
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>{fmt(k.thucThu)}đ</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ThuNgoai({ mData, upMData, locked }) {
   const tn = mData.thuNgoai || [];
   const [ten, setTen] = useState(""); const [so, setSo] = useState("");
   const add = () => { if (!ten.trim()) return; upMData({ ...mData, thuNgoai: [...tn, { id: uid(), ten: ten.trim(), soTien: Number(so) || 0, thucThu: 0, nguoiThu: "A" }] }); setTen(""); setSo(""); };
   const set = (id, p) => upMData({ ...mData, thuNgoai: tn.map((k) => (k.id === id ? { ...k, ...p } : k)) });
   const del = (id) => upMData({ ...mData, thuNgoai: tn.filter((k) => k.id !== id) });
+  
   return (
-    <Card style={{ marginTop: 4 }}>
-      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>💧 Thu ngoài (KV4)</div>
-      {tn.map((k) => (
-        <div key={k.id} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderBottom: `1px solid ${C.line}` }}>
-          <div style={{ flex: "1 1 120px", fontSize: 13.5, fontWeight: 600, minWidth: 0 }}>{k.ten} <span style={{ color: C.sub, fontWeight: 400 }}>({fmt(k.soTien)})</span></div>
-          <NumInput value={k.thucThu} onChange={(v) => set(k.id, { thucThu: v })} w={100} disabled={locked} />
-          <ABBtn val={k.nguoiThu} set={(p) => set(k.id, { nguoiThu: p })} small disabled={locked} />
-          {!locked && <button onClick={() => del(k.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}>🗑</button>}
-        </div>
-      ))}
-      {!locked && (
-        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-          <input value={ten} onChange={(e) => setTen(e.target.value)} placeholder="Tên khoản (VD: Quỹ CSVC)" style={{ flex: "2 1 140px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-          <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-          <button onClick={add} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>+ Thêm</button>
+    <div style={{ marginTop: 16 }}>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+        <span>💧 Thu ngoài (KV4)</span>
+      </div>
+      
+      {tn.length === 0 && (
+        <div style={{ textAlign: "center", padding: "20px", color: C.sub, fontSize: 13, background: C.card, border: `1.5px dashed ${C.line}`, borderRadius: C.r, marginBottom: 10 }}>
+          Chưa có khoản thu ngoài nào.
         </div>
       )}
-    </Card>
+
+      {tn.map((k) => (
+        <ThuNgoaiItem key={k.id} k={k} locked={locked} set={set} del={del} />
+      ))}
+
+      {!locked && (
+        <div style={{
+          background: C.card,
+          border: `1.5px dashed ${C.line}`,
+          borderRadius: C.r,
+          padding: "12px",
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          alignItems: "center"
+        }}>
+          <input 
+            value={ten} 
+            onChange={(e) => setTen(e.target.value)} 
+            placeholder="Tên khoản (VD: Quỹ CSVC)" 
+            style={{ flex: "2 1 150px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
+          />
+          <input 
+            type="number" 
+            value={so} 
+            onChange={(e) => setSo(e.target.value)} 
+            placeholder="Số tiền" 
+            style={{ flex: "1 1 100px", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, outline: "none" }} 
+          />
+          <button 
+            onClick={add} 
+            style={{ flex: "1 1 80px", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "10px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}
+          >+ Thêm</button>
+        </div>
+      )}
+    </div>
   );
 }
 
