@@ -71,7 +71,7 @@ export function StudentProfile({ studentId, store, onBack }) {
 function InfoTab({ student, meta, ym, students, upStudents }) {
   const setHS = (p) => {
     const newStudents = students.map(s => s.id === student.id ? { ...s, ...p } : s);
-    upStudents(newStudents);
+    upStudents(newStudents, true);
   };
   
   const chuyenLop = (lopMoi) => {
@@ -82,7 +82,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
       hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang));
       return { ...s, lopHistory: hist };
     });
-    upStudents(newStudents);
+    upStudents(newStudents, true);
     logAction(`Chuyển lớp HS "${student.ten}" (T${ym})`);
   };
 
@@ -123,6 +123,14 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Nợ đầu kỳ</label>
             <NumInput value={student.noDauKy || 0} onChange={(v) => setHS({ noDauKy: v })} w="100%" />
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Ngày nhập học</label>
+            <input type="date" value={student.ngayNhapHoc || ""} onChange={(e) => setHS({ ngayNhapHoc: e.target.value })} style={inp} />
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Ngày ra trường</label>
+            <input type="date" value={student.ngayNghiHoc || ""} onChange={(e) => setHS(e.target.value ? { ngayNghiHoc: e.target.value, trangThai: "Ra trường" } : { ngayNghiHoc: "" })} style={inp} />
           </div>
         </div>
       </Card>
