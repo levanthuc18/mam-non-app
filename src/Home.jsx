@@ -136,11 +136,11 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
           <>
             <KPICard icon="💰" label="Thu tháng" value={`${fmtKPI(daThuAll)}`} sub={`${fmtKPI(daThuAll)} / ${fmtKPI(canThuAll)}`} progress={tyLeThu} color={tyLeThu >= 80 ? C.green : C.amber} onClick={() => setTab("thu")} />
             <KPICard icon="🔴" label="Cần thu" value={fmtKPI(conNoAll)} sub={`${noRows.length} HS đang nợ`} progress={100} color={C.coral} onClick={() => { setTab("thu"); setThuFilter("thieu"); }} />
-            <KPICard icon="👶" label="Đang học" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={dashTong > 0 ? 100 : 0} color={C.blueA} onClick={() => setTab("caidat")} />
+            <KPICard icon="👶" label="Đang học" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={dashTong > 0 ? 100 : 0} color={C.blueA} onClick={() => setTab("hs")} />
           </>
         ) : (
           <>
-            <KPICard icon="👶" label="Sĩ số lớp" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={100} color={C.blueA} onClick={() => setTab("caidat")} />
+            <KPICard icon="👶" label="Sĩ số lớp" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={100} color={C.blueA} onClick={() => setTab("hs")} />
             <KPICard icon="✓" label="Đi học hôm nay" value={diHocHomNay} sub={`Ngày ${todayStr}/${month}`} progress={diHocHomNay > 0 ? 100 : 0} color={C.green} onClick={() => setTab("dd")} />
             <KPICard icon="✕" label="Nghỉ hôm nay" value={nghiHomNay} sub={`Ngày ${todayStr}/${month}`} progress={nghiHomNay > 0 ? 100 : 0} color={C.coral} onClick={() => setTab("dd")} />
           </>
@@ -166,7 +166,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
           </>
         )}
         <QuickAction icon="✓" label="Điểm danh" bgColor={C.pineSoft} txtColor={C.pine} onClick={() => setTab("dd")} />
-        <QuickAction icon="👶" label={isGV ? "Lớp tôi" : "Học sinh"} bgColor={C.amberSoft} txtColor={C.amber} onClick={() => setTab("caidat")} />
+        <QuickAction icon="👶" label={isGV ? "Lớp tôi" : "Học sinh"} bgColor={C.amberSoft} txtColor={C.amber} onClick={() => setTab("hs")} />
       </div>
 
       {/* 5. HOẠT ĐỘNG GẦN ĐÂY (Chỉ Admin) */}
