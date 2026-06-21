@@ -4,7 +4,7 @@ import {
   KHOAN
 } from "./lib.js";
 import {
-  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote
+  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, Avatar
 } from "./ui.jsx";
 
 /* ============================================================
@@ -389,13 +389,8 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       {/* HÀNG 1: HEADER (Avatar + Tên | Lớp + Tag) */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1, paddingRight: 8 }}>
-          {/* Avatar (Dùng emoji hoặc thẻ img tùy hệ thống của bạn) */}
-          <div style={{ 
-            width: 26, height: 26, borderRadius: "50%", marginRight: 6, 
-            backgroundColor: C.graySoft, display: "flex", alignItems: "center", justifyContent: "center", 
-            fontSize: 14, flexShrink: 0 
-          }}>
-            👤
+          <div style={{ marginRight: 8, flexShrink: 0 }}>
+            <Avatar hs={r.hs} size={36} />
           </div>
           <span style={{ 
             fontSize: 15, fontWeight: 700, color: "#111827", 
