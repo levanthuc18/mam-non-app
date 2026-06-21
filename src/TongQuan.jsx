@@ -116,7 +116,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
         const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
         let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
-        let thangNoNCC = 0;
+        let thangNoNCC = 0, tnPhaiThang = 0, tnThuThang = 0;
         Object.entries(td.fees || {}).forEach(([sid, rec]) => {
           const hs = students.find((s) => s.id === sid); if (!hs) return;
           const tt = Number(rec.thucThu) || 0;
@@ -128,6 +128,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         });
         (td.thuNgoai || []).forEach((k) => {
           const tt = Number(k.thucThu) || 0, st = Number(k.soTien) || 0;
+          tnPhaiThang += st; tnThuThang += tt;
           if (k.nguoiThu === "A") { thuA += tt; psA += st; } else if (k.nguoiThu === "B") { thuB += tt; psB += st; }
         });
         (td.chiPhi || []).forEach((c) => {
@@ -141,7 +142,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         giuA += thuA - traA; giuB += thuB - traB;
         const [yy, mm] = m.split("-");
         const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuA + thuB, traThang = traA + traB;
-        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA, thuB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA: thuA - traA, deltaB: thuB - traB });
+        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA, thuB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA: thuA - traA, deltaB: thuB - traB, tnPhai: tnPhaiThang, tnThu: tnThuThang, noNCCThang: thangNoNCC });
       }
       if (!huy) { setLuyKe({ giuA, giuB, noNCC }); setLichSu(ls); }
     })();
@@ -504,8 +505,20 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
                 <div style={{ padding: "10px 12px" }}>
                   <div style={rowLine}><span style={{ color: C.sub, fontWeight: 600 }}>🧾 Doanh thu (thực thu)</span><b style={{ color: C.ink }}>{fmt(r.thuThang)} đ</b></div>
                   {sub2("A thu:", r.thuA, "B thu:", r.thuB)}
+                  {(r.tnPhai > 0 || r.tnThu > 0) && (
+                    <div style={{ ...rowLine, marginTop: 3, fontSize: 11.5 }}>
+                      <span style={{ color: C.sub }}>💧 trong đó thu ngoài (KV4)</span>
+                      <span style={{ color: C.sub }}>thu <b style={{ color: C.ink }}>{fmt(r.tnThu)}</b>{r.tnPhai - r.tnThu > 0 ? <b style={{ color: C.coral }}> · nợ {fmt(r.tnPhai - r.tnThu)}</b> : null}</span>
+                    </div>
+                  )}
                   <div style={{ ...rowLine, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}><span style={{ color: C.sub, fontWeight: 600 }}>💸 Chi phí xử lý (đã chi)</span><b style={{ color: C.ink }}>{fmt(r.traThang)} đ</b></div>
                   {sub2("A chi:", r.traA, "B chi:", r.traB)}
+                  {(r.noNCCThang !== 0 || r.noNCC > 0) && (
+                    <div style={{ ...rowLine, marginTop: 3, fontSize: 11.5 }}>
+                      <span style={{ color: "#9A6B00" }}>🏭 Nợ NCC (trường nợ)</span>
+                      <span style={{ color: "#9A6B00" }}>{r.noNCCThang !== 0 ? `T${r.mm}: ${r.noNCCThang > 0 ? "+" : ""}${fmt(r.noNCCThang)} · ` : ""}dồn <b>{fmt(r.noNCC)}</b></span>
+                    </div>
+                  )}
                   <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}>
                     <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginBottom: 6 }}>📊 Phân chia tài chính · LN kế toán: <b style={{ color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)} đ</b></div>
                     <div style={{ border: `1px solid ${C.line}`, borderRadius: 9, overflow: "hidden" }}>
@@ -544,3 +557,4 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     </>
   );
 }
+ 
