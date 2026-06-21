@@ -340,19 +340,14 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
     !isTruAn(d)
   ).reduce((a, b) => a + b[1], 0);
 
-    const noCu = r.noTruoc || 0;
+      const noCu = r.noTruoc || 0;
   const hasEdited = useMemo(() => {
     if (!r?.rec) return false;
     for (const k of KHOAN) {
-      if (k.key === "tienAn") {
-        const val = r.rec?.ngayAn ?? 0;
-        const def = r.rec?.ngayAnDefault ?? 0;
-        if (val !== def) return true;
-      } else {
-        const val = r.rec?.khoan?.[k.key] ?? 0;
-        const def = r.rec?.khoanDefault?.[k.key] ?? 0;
-        if (val !== def) return true;
-      }
+      if (k.key === "tienAn") continue; // ⬅️ BỎ QUA tiền ăn
+      const val = r.rec?.khoan?.[k.key] ?? 0;
+      const def = r.rec?.khoanDefault?.[k.key] ?? 0;
+      if (val !== def) return true;
     }
     return false;
   }, [r]);
