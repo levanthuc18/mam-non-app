@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
 
-export function StudentProfile({ studentId, store, onBack }) {
+export function StudentProfile({ studentId, store, onBack, embedded = false }) {
   const { meta, students, ym, upStudents } = store;
   const student = students.find(s => s.id === studentId);
   const [activeTab, setActiveTab] = useState("info");
@@ -17,6 +17,45 @@ export function StudentProfile({ studentId, store, onBack }) {
     { id: "congNo", label: "Công nợ" },
     { id: "lichSu", label: "Lịch sử" },
   ];
+
+  const tabBar = (
+    <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 2 }}>
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => setActiveTab(t.id)}
+          style={{
+            padding: "6px 12px", borderRadius: 99, border: "none", cursor: "pointer",
+            fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap",
+            background: activeTab === t.id ? C.pine : C.graySoft,
+            color: activeTab === t.id ? "#fff" : C.sub
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const body = (
+    <>
+      {activeTab === "info" && <InfoTab student={student} meta={meta} ym={ym} students={students} upStudents={upStudents} />}
+      {activeTab === "thuPhi" && <ThuPhiTab student={student} meta={meta} />}
+      {activeTab === "diemDanh" && <DiemDanhTab student={student} />}
+      {activeTab === "congNo" && <CongNoTab student={student} meta={meta} />}
+      {activeTab === "lichSu" && <LichSuTab student={student} />}
+    </>
+  );
+
+  // Nhúng inline trong danh sách (accordion sổ xuống): bỏ header, chỉ còn tab + nội dung
+  if (embedded) {
+    return (
+      <div>
+        <div style={{ marginBottom: 12 }}>{tabBar}</div>
+        {body}
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 60, overflowY: "auto" }}>
@@ -37,31 +76,12 @@ export function StudentProfile({ studentId, store, onBack }) {
           </div>
         </div>
         {/* TABS */}
-        <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 2 }}>
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              style={{
-                padding: "6px 12px", borderRadius: 99, border: "none", cursor: "pointer",
-                fontWeight: 700, fontSize: 12.5, whiteSpace: "nowrap",
-                background: activeTab === t.id ? C.pine : C.graySoft,
-                color: activeTab === t.id ? "#fff" : C.sub
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {tabBar}
       </div>
 
       {/* BODY */}
       <div style={{ padding: "14px 14px 40px" }}>
-        {activeTab === "info" && <InfoTab student={student} meta={meta} ym={ym} students={students} upStudents={upStudents} />}
-        {activeTab === "thuPhi" && <ThuPhiTab student={student} meta={meta} />}
-        {activeTab === "diemDanh" && <DiemDanhTab student={student} />}
-        {activeTab === "congNo" && <CongNoTab student={student} meta={meta} />}
-        {activeTab === "lichSu" && <LichSuTab student={student} />}
+        {body}
       </div>
     </div>
   );
