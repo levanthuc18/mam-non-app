@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, KHOAN, noDau, logAction } from "./lib.js";
+import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
 
 export function StudentProfile({ studentId, store, onBack }) {
@@ -108,6 +108,13 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
             <label style={lab}>Phân loại</label>
             <select value={student.pl} onChange={(e) => setHS({ pl: e.target.value })} style={inp}>
               {PHAN_LOAI.map(p => <option key={p} value={p}>{PL_LABEL[p]}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Giới tính</label>
+            <select value={student.gt || ""} onChange={(e) => { setHS({ gt: e.target.value }); logAction(`Đổi giới tính HS "${student.ten}" → ${GT_LABEL[e.target.value] || "—"}`); }} style={inp}>
+              <option value="">—</option>
+              {GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div style={{ flex: "1 1 140px" }}>
