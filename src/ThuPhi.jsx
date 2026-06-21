@@ -92,19 +92,14 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
    2. BOTTOM SHEET THU TIỀN
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
-  const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
+  const [amount, setAmount] = useState(0);
   const [pt, setPt] = useState("tm");
-  const [dragY, setDragY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const startYRef = useRef(0);
 
-  useEffect(() => { 
-    if (open) { 
-      setAmount(r?.rec?.thucThu || 0); 
-      setDragY(0); 
-      setIsClosing(false);
-    } 
+  useEffect(() => {
+    if (open) {
+      setAmount(r?.rec?.thucThu || 0);
+      setPt("tm");
+    }
   }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
@@ -117,98 +112,75 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
     toast("Đã xác nhận thu");
   };
 
-  const animateClose = () => {
-    setIsClosing(true);
-    setDragY(400);
-    setTimeout(() => {
-      onClose();
-      setDragY(0);
-      setIsClosing(false);
-    }, 280);
-  };
-
-  const onTouchStart = (e) => {
-    setIsDragging(true);
-    startYRef.current = e.touches[0].clientY;
-  };
-  const onTouchMove = (e) => {
-    if (!isDragging) return;
-    const dy = e.touches[0].clientY - startYRef.current;
-    if (dy > 0) setDragY(dy);
-  };
-  const onTouchEnd = () => {
-    setIsDragging(false);
-    if (dragY > 100) animateClose();
-    else setDragY(0);
-  };
-
-  const overlayOpacity = Math.max(0, Math.min(1, 1 - dragY / 300));
-
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div 
-        onClick={animateClose} 
-        style={{ 
-          flex: 1, 
-          background: "rgba(0,0,0,.45)", 
-          opacity: overlayOpacity,
-          transition: isDragging ? 'none' : 'opacity 0.25s ease',
-        }} 
-      />
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "20px 20px 0 0",
-          padding: "12px 16px 28px",
-          boxShadow: "0 -4px 24px rgba(0,0,0,.18)",
-          transform: `translateY(${dragY}px)`,
-          transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)",
-          willChange: "transform",
-        }}
-      >
-        {/* Thanh gợi ý — chỉ vuốt ở đây */}
-        <div 
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          style={{ 
-            width: 40, height: 4, borderRadius: 99, background: C.line, 
-            margin: "0 auto 16px", touchAction: "none" 
-          }} 
-        />
+    <BottomSheet open={true} onClose={onClose} title={`💰 THU TIỀN — ${r.hs.ten.toUpperCase()}`}>
+      <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
 
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
+        {/* Thông tin HS */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: C.sm, borderBottom: `1px solid ${C.line}` }}>
+          <Avatar hs={r.hs} size={40} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{r.hs.ten}</div>
+            <div style={{ fontSize: 13, color: C.sub }}>{r.lop?.ten}</div>
+          </div>
+        </div>
 
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>Phải thu:</div>
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 28, color: C.coral, marginBottom: 16 }}>{fmt(r.tongPhaiThu)}đ</div>
+        {/* Phải thu */}
+        <div style={{ background: C.coralSoft, borderRadius: 10, padding: "12px 14px" }}>
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 2 }}>Phải thu</div>
+          <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 26, color: C.coral }}>{fmt(r.tongPhaiThu)}đ</div>
+        </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        {/* Nút nhanh */}
+        <div style={{ display: "flex", gap: 8 }}>
           <button onClick={handleThuDu} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Thu đủ</button>
           <button onClick={handleThuTron} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Thu tròn</button>
         </div>
 
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu:</div>
-        <input
-          type="number" inputMode="numeric"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0"
-          style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
-        />
-
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <label onClick={() => setPt("tm")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "tm" ? C.pine : C.line}`, background: pt === "tm" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
-            <input type="radio" checked={pt === "tm"} onChange={() => setPt("tm")} style={{ accentColor: C.pine }} /> Tiền mặt
-          </label>
-          <label onClick={() => setPt("ck")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "ck" ? C.pine : C.line}`, background: pt === "ck" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
-            <input type="radio" checked={pt === "ck"} onChange={() => setPt("ck")} style={{ accentColor: C.pine }} /> Chuyển khoản
-          </label>
+        {/* Nhập thực thu */}
+        <div>
+          <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu</div>
+          <input
+            type="number" inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
+            style={{
+              width: "100%", padding: "14px 12px", borderRadius: 12,
+              border: `1.5px solid ${C.pine}`, fontSize: 18,
+              fontFamily: font.display, fontWeight: 700, color: C.ink,
+              textAlign: "right", outline: "none"
+            }}
+          />
         </div>
 
-        <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
+        {/* Phương thức */}
+        <div style={{ display: "flex", gap: 8 }}>
+          {[
+            { key: "tm", label: "💵 Tiền mặt" },
+            { key: "ck", label: "🏦 Chuyển khoản" }
+          ].map(({ key, label }) => (
+            <label key={key} onClick={() => setPt(key)} style={{
+              flex: 1, display: "flex", alignItems: "center", gap: 8,
+              padding: "10px 12px", borderRadius: 10,
+              border: `1.5px solid ${pt === key ? C.pine : C.line}`,
+              background: pt === key ? C.pineSoft : C.card,
+              cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink
+            }}>
+              <input type="radio" checked={pt === key} onChange={() => setPt(key)} style={{ accentColor: C.pine }} />
+              {label}
+            </label>
+          ))}
+        </div>
+
+        {/* Xác nhận */}
+        <button onClick={handleConfirm} style={{
+          width: "100%", padding: "14px 0", borderRadius: 12,
+          border: "none", background: C.amber, color: "#fff",
+          fontWeight: 800, fontSize: 16, cursor: "pointer"
+        }}>XÁC NHẬN THU</button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }
 /* ============================================================
