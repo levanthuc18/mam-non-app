@@ -557,4 +557,3 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     </>
   );
 }
- 
