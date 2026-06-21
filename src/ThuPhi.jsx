@@ -421,18 +421,18 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
         <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
           {hasLargeDebt && (
             <span style={{ 
-              fontSize: 11.5, fontWeight: 700, color: "#D97706", 
+              fontSize: 10, fontWeight: 700, color: "#D97706", 
               background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "2px 8px", borderRadius: 6 
+              padding: "1px 6px", borderRadius: 6 
             }}>
               ⚠ Nợ cũ lớn: {fmtK(noCu)}
             </span>
           )}
           {hasDiscount && (
             <span style={{ 
-              fontSize: 11.5, fontWeight: 700, color: "#D97706", 
+              fontSize: 10, fontWeight: 700, color: "#D97706", 
               background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "2px 8px", borderRadius: 6 
+              padding: "1px 6px", borderRadius: 6 
             }}>
               ⚠ Miễn giảm
             </span>
