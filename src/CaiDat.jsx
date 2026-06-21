@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   C, font, fmt, ymKey, noDau, sGet, sSet, sList, sDel,
   ask, toast, logAction, uid,
-  PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI,
+  PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
   KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META
 } from "./lib.js";
@@ -142,7 +142,8 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
       const ngaySinh = get(r, ["Ngày sinh (YYYY-MM-DD)", "Ngày sinh", "Ngay sinh"]);
       const sdt = get(r, ["SĐT phụ huynh", "SDT phu huynh", "SĐT"]);
       const noDauKy = Number(get(r, ["Nợ đầu kỳ", "No dau ky"]) || 0) || 0;
-      ns.push({ id: "hs" + uid(), ten, ngaySinh, lopHistory: [{ tuThang: ngayNhap || ym, lop: lop.id }], pl: PHAN_LOAI.includes(pl) ? pl : "Bthg", nguoiThu: nguoiThu === "B" ? "B" : "A", trangThai: TRANG_THAI.includes(tt) ? tt : "Đang học", ngayNhapHoc: ngayNhap || ym, ngayNghiHoc: "", noDauKy, phuHuynh: { ten: "", sdt } });
+      const gt = normGt(get(r, ["Giới tính", "Gioi tinh", "GT", "Sex"]));
+      ns.push({ id: "hs" + uid(), ten, gt, ngaySinh, lopHistory: [{ tuThang: ngayNhap || ym, lop: lop.id }], pl: PHAN_LOAI.includes(pl) ? pl : "Bthg", nguoiThu: nguoiThu === "B" ? "B" : "A", trangThai: TRANG_THAI.includes(tt) ? tt : "Đang học", ngayNhapHoc: ngayNhap || ym, ngayNghiHoc: "", noDauKy, phuHuynh: { ten: "", sdt } });
       added++;
     });
     upStudents(ns, true);
@@ -154,7 +155,7 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
   return (
     <Card style={{ marginBottom: 12, background: C.blueASoft, borderColor: "#C7DCF3" }}>
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.blueA, marginBottom: 6 }}>📥 Nhập hàng loạt từ Excel/CSV</div>
-      <div style={{ fontSize: 12, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mỗi dòng = 1 học sinh, cách nhau bằng dấu phẩy, theo thứ tự: <b>Họ tên, Lớp, Phân loại, Người thu, SĐT, Nợ</b>. Chỉ <b>Họ tên</b> + <b>Lớp</b> bắt buộc; ô trống cứ để 2 dấu phẩy liền. Giữ nguyên dòng tiêu đề đầu tiên.</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mỗi dòng = 1 học sinh, cách nhau bằng dấu phẩy, theo thứ tự: <b>Họ tên, Lớp, Phân loại, Người thu, SĐT, Nợ</b>. Chỉ <b>Họ tên</b> + <b>Lớp</b> bắt buộc; ô trống cứ để 2 dấu phẩy liền. Giữ nguyên dòng tiêu đề đầu tiên. Có thể thêm cột <b>Giới tính</b> (Nam/Nữ) — tùy chọn.</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         <button onClick={downloadTpl} style={{ padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.blueA}`, background: C.card, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>📄 File mẫu CSV</button>
         <label style={{ display: "inline-block", padding: "9px 14px", borderRadius: 9, border: `1.5px dashed ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{busy ? "Đang xử lý…" : "📂 Chọn file CSV"}<input type="file" accept=".csv,text/csv" onChange={importFile} disabled={busy} style={{ display: "none" }} /></label>
@@ -204,6 +205,13 @@ export function HSDetail({ s, meta, ym, setHS, chuyenLop, inp, onRename }) {
       <div style={wrap}>
         <label style={lab}>Nợ đầu kỳ (đ)</label>
         <NumInput value={s.noDauKy || 0} onChange={(v) => setHS(s.id, { noDauKy: v })} w={130} />
+      </div>
+      <div style={wrap}>
+        <label style={lab}>Giới tính</label>
+        <select value={s.gt || ""} onChange={(e) => { setHS(s.id, { gt: e.target.value }); logAction(`Đổi giới tính HS "${s.ten}" → ${GT_LABEL[e.target.value] || "—"}`); }} style={sel}>
+          <option value="">—</option>
+          {GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
       </div>
       <div style={wrap}>
         <label style={lab}>Ngày sinh</label>
@@ -273,6 +281,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const [ten, setTen] = useState("");
   const [lop, setLop] = useState(meta.classes[0]?.id || "");
   const [pl, setPl] = useState("Bthg");
+  const [gt, setGt] = useState("");
   const [nguoiThu, setNguoiThu] = useState("A");
   const [ngaySinh, setNgaySinh] = useState("");
   const [phSdt, setPhSdt] = useState("");
@@ -292,6 +301,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const [ttView, setTtView] = useState("menu"); 
   const [bulkThu, setBulkThu] = useState("A");
   const [bulkPl, setBulkPl] = useState("Bthg");
+  const [bulkGt, setBulkGt] = useState("nam");
   const [bulkNgayNhap, setBulkNgayNhap] = useState(new Date().toISOString().slice(0, 10));
   const [bulkRaNgay, setBulkRaNgay] = useState(new Date().toISOString().slice(0, 10));
   const [xoaText, setXoaText] = useState("");
@@ -330,8 +340,8 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       const lopTen = meta.classes.find((c) => c.id === lopHienTai(dup))?.ten || "?";
       if (!(await ask(`Đã có học sinh "${dup.ten}" (lớp ${lopTen}, ${dup.trangThai}). Vẫn thêm em mới?`, { okText: "Vẫn thêm" }))) return;
     }
-    upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }], true);
-    setTen(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh.");
+    upStudents([...students, { id: "hs" + uid(), ten: t, gt, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }], true);
+    setTen(""); setGt(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh.");
   };
   const renameHS = async (id, newName) => {
     const t = (newName || "").trim(); const cur = students.find((s) => s.id === id);
@@ -408,6 +418,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
                   <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
                   <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+                  <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
                   <ABBtn val={nguoiThu} set={setNguoiThu} small />
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -436,7 +447,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
 
             <BottomSheet open={thaoTacOpen} onClose={closeThaoTac} title={ttView === "menu" ? `Thao tác cho ${selectedHS.length} HS` : ttView === "khac" ? `Khác — ${selectedHS.length} HS` : ttView === "lop" ? `Chuyển ${selectedHS.length} HS sang lớp` : ttView === "tt" ? `Đổi trạng thái ${selectedHS.length} HS` : ttView === "thu" ? `Đổi người thu ${selectedHS.length} HS` : ttView === "pl" ? `Đổi phân loại ${selectedHS.length} HS` : ttView === "ngay" ? `Đặt ngày nhập học ${selectedHS.length} HS` : ttView === "ratruong" ? `Cho ${selectedHS.length} HS ra trường` : `Xóa vĩnh viễn ${selectedHS.length} HS`}>
               {ttView === "menu" && (<div>
-                {[["🏫", "Chuyển lớp", "lop"], ["🔖", "Đổi trạng thái", "tt"], ["💰", "Đổi người thu A/B", "thu"], ["🏷️", "Đổi phân loại", "pl"], ["⚙️", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
+                {[["🏫", "Chuyển lớp", "lop"], ["🔖", "Đổi trạng thái", "tt"], ["💰", "Đổi người thu A/B", "thu"], ["🏷️", "Đổi phân loại", "pl"], ["⚥", "Đổi giới tính", "gt"], ["⚙️", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
                   <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>{ic}</span><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
                 ))}
               </div>)}
@@ -461,6 +472,10 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
               {ttView === "pl" && (<div>
                 {PHAN_LOAI.map((p) => (<button key={p} onClick={() => setBulkPl(p)} style={{ display: "block", width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${bulkPl === p ? C.pine : C.line}`, background: bulkPl === p ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{bulkPl === p ? "● " : "○ "}{PL_LABEL[p] || p}</button>))}
                 <button onClick={() => bulkPatch({ pl: bulkPl }, `Đổi phân loại hàng loạt ${selectedHS.length} HS → ${bulkPl} (T${ym})`, `Đã đổi phân loại ${selectedHS.length} HS sang ${bulkPl}`)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginTop: 4 }}>Áp dụng cho {selectedHS.length} HS</button>
+              </div>)}
+              {ttView === "gt" && (<div>
+                {[["nam", "Nam"], ["nu", "Nữ"], ["", "Chưa rõ (xóa giới tính)"]].map(([v, lb]) => (<button key={v || "none"} onClick={() => setBulkGt(v)} style={{ display: "block", width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${bulkGt === v ? C.pine : C.line}`, background: bulkGt === v ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{bulkGt === v ? "● " : "○ "}{lb}</button>))}
+                <button onClick={() => bulkPatch({ gt: bulkGt }, `Đổi giới tính hàng loạt ${selectedHS.length} HS → ${GT_LABEL[bulkGt] || "—"}`, `Đã đổi giới tính ${selectedHS.length} HS sang ${GT_LABEL[bulkGt] || "—"}`)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginTop: 4 }}>Áp dụng cho {selectedHS.length} HS</button>
               </div>)}
               {ttView === "ngay" && (<div>
                 <button onClick={() => setTtView("khac")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 10, padding: 0 }}>‹ Quay lại</button>
