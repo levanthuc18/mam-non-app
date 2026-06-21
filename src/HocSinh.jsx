@@ -1,17 +1,19 @@
 import { useState, useMemo, useRef } from "react";
 import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
-import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, Avatar } from "./ui.jsx";
+import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, Avatar, useStickyShrink, StickyBar } from "./ui.jsx";
 import { ImportHSExcel } from "./CaiDat.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
 
-export function HocSinhTab({ meta, students, upStudents, ym, store, openStudentProfile }) {
+export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, openStudentProfile }) {
   const [hsSearch, setHsSearch] = useState("");
   const [hsFilter, setHsFilter] = useState("all");
   const [hsStatusFilter, setHsStatusFilter] = useState("all");
-  const [showLeft, setShowLeft] = useState(false);
+  const [lopSheetOpen, setLopSheetOpen] = useState(false);
+  const [ttSheetOpen, setTtSheetOpen] = useState(false);
   const [expandId, setExpandId] = useState(null);
   const [showAddHS, setShowAddHS] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const { sentinelRef, shrunk } = useStickyShrink();
 
   // State sắp xếp thứ tự
   const [reorderMode, setReorderMode] = useState(false);
@@ -55,9 +57,8 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, openStudentP
   const filteredHS = useMemo(() => students.filter((s) => 
     (hsFilter === "all" || lopHienTai(s) === hsFilter) && 
     (!hsSearch || noDau(s.ten).includes(noDau(hsSearch))) && 
-    (hsStatusFilter === "all" || s.trangThai === hsStatusFilter) &&
-    (showLeft || hsStatusFilter !== "all" || (s.trangThai !== "Nghỉ học" && s.trangThai !== "Ra trường"))
-  ), [students, hsFilter, hsSearch, hsStatusFilter, showLeft]);
+    (hsStatusFilter === "all" || s.trangThai === hsStatusFilter)
+  ), [students, hsFilter, hsSearch, hsStatusFilter]);
 
   const allFilteredSelected = filteredHS.length > 0 && filteredHS.every((s) => selectedHS.includes(s.id));
   const toggleSelectAll = () => setSelectedHS(allFilteredSelected ? [] : filteredHS.map((s) => s.id));
@@ -73,11 +74,14 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, openStudentP
 
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <button onClick={() => setShowAddHS(!showAddHS)} style={{ flex: 1, padding: "11px 8px", borderRadius: 12, border: `1.5px solid ${showAddHS ? C.pine : C.line}`, background: showAddHS ? C.pine : C.card, color: showAddHS ? "#fff" : C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>＋ Thêm HS</button>
-        <button onClick={() => setShowImport(!showImport)} style={{ flex: 1, padding: "11px 8px", borderRadius: 12, border: `1.5px solid ${showImport ? C.blueA : C.line}`, background: showImport ? C.blueA : C.card, color: showImport ? "#fff" : C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>📥 Nhập CSV</button>
-        <button onClick={() => { setBulkMode(!bulkMode); setSelectedHS([]); }} style={{ flex: "0 0 auto", padding: "11px 12px", borderRadius: 12, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>{bulkMode ? "⛔ Xong" : "☑ Chọn nhiều"}</button>
-      </div>
+      <div ref={sentinelRef} style={{ height: 1 }} />
+      <StickyBar shrunk={shrunk}>
+        <div style={{ display: "flex", gap: 8, marginBottom: shrunk ? 0 : 10, flexWrap: "wrap" }}>
+          <button onClick={() => setShowAddHS(!showAddHS)} style={{ flex: 1, padding: shrunk ? "9px 6px" : "11px 8px", borderRadius: 12, border: `1.5px solid ${showAddHS ? C.pine : C.line}`, background: showAddHS ? C.pine : C.card, color: showAddHS ? "#fff" : C.pine, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{shrunk ? "＋" : "＋ Thêm HS"}</button>
+          <button onClick={() => setShowImport(!showImport)} style={{ flex: 1, padding: shrunk ? "9px 6px" : "11px 8px", borderRadius: 12, border: `1.5px solid ${showImport ? C.blueA : C.line}`, background: showImport ? C.blueA : C.card, color: showImport ? "#fff" : C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{shrunk ? "📥" : "📥 Nhập CSV"}</button>
+          <button onClick={() => { setBulkMode(!bulkMode); setSelectedHS([]); }} style={{ flex: "0 0 auto", padding: shrunk ? "9px 10px" : "11px 12px", borderRadius: 12, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{bulkMode ? "⛔ Xong" : (shrunk ? "☑" : "☑ Chọn nhiều")}</button>
+        </div>
+      </StickyBar>
 
       {showImport && <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />}
 
@@ -101,20 +105,30 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, openStudentP
 
       <SearchBar value={hsSearch} onChange={setHsSearch} />
       
-      <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
-        <select value={hsFilter} onChange={(e) => setHsFilter(e.target.value)} style={{ ...inp, flex: "1 1 120px", minWidth: 0 }}>
-          <option value="all">Tất cả lớp</option>
-          {meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}
-        </select>
-        <select value={hsStatusFilter} onChange={(e) => setHsStatusFilter(e.target.value)} style={{ ...inp, flex: "1 1 120px", minWidth: 0 }}>
-          <option value="all">Mọi trạng thái</option>
-          {TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <button onClick={() => { setReorderMode((v) => !v); setDragId(null); setExpandId(null); }} style={{ flexShrink: 0, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
-      </div>
-
-      {hsStatusFilter === "all" && (
-        <button onClick={() => setShowLeft((v) => !v)} style={{ marginBottom: 10, padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${showLeft ? C.pine : C.line}`, background: showLeft ? C.pineSoft : C.card, color: showLeft ? C.pine : C.sub, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>{showLeft ? "✓ Đang hiện HS đã nghỉ / ra trường" : "👁️ Hiện cả HS đã nghỉ / ra trường"}</button>
+      {isWide ? (
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+          <select value={hsFilter} onChange={(e) => setHsFilter(e.target.value)} style={{ ...inp, flex: "1 1 130px", minWidth: 0 }}>
+            <option value="all">Tất cả lớp</option>
+            {meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}
+          </select>
+          <select value={hsStatusFilter} onChange={(e) => setHsStatusFilter(e.target.value)} style={{ ...inp, flex: "1 1 130px", minWidth: 0 }}>
+            <option value="all">Mọi trạng thái</option>
+            {TRANG_THAI.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <button onClick={() => { setReorderMode((v) => !v); setDragId(null); setExpandId(null); }} style={{ flexShrink: 0, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+          <button onClick={() => setLopSheetOpen(true)} style={{ ...inp, flex: "1 1 130px", minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hsFilter === "all" ? "Tất cả lớp" : meta.classes.find((c) => c.id === hsFilter)?.ten}</span>
+            <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+          </button>
+          <button onClick={() => setTtSheetOpen(true)} style={{ ...inp, flex: "1 1 130px", minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hsStatusFilter === "all" ? "Mọi trạng thái" : hsStatusFilter}</span>
+            <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+          </button>
+          <button onClick={() => { setReorderMode((v) => !v); setDragId(null); setExpandId(null); }} style={{ flexShrink: 0, padding: "9px 12px", borderRadius: 9, border: `1.5px solid ${reorderMode ? C.pine : C.line}`, background: reorderMode ? C.pine : C.card, color: reorderMode ? "#fff" : C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{reorderMode ? "⛔ Xong" : "⇅ Sắp xếp"}</button>
+        </div>
       )}
 
       {reorderMode && <div style={{ fontSize: 12, color: C.sub, marginBottom: 8 }}>Dùng ▲ ▼ để xê dịch, ⤒ đưa lên đầu (theo danh sách đang lọc). Máy tính vẫn kéo-thả được.</div>}
@@ -204,6 +218,38 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, openStudentP
           {filteredHS.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh phù hợp.</div>}
         </>);
       })()}
+
+      {/* SHEET CHỌN LỚP / TRẠNG THÁI (mobile) */}
+      <BottomSheet open={lopSheetOpen} onClose={() => setLopSheetOpen(false)} title="Chọn lớp">
+        {[{ id: "all", ten: "Tất cả lớp" }, ...meta.classes.map((c) => ({ id: c.id, ten: c.ten }))].map((item) => {
+          const active = hsFilter === item.id;
+          const count = item.id === "all" ? students.length : students.filter((s) => lopHienTai(s) === item.id).length;
+          return (
+            <div key={item.id} onClick={() => { setHsFilter(item.id); setLopSheetOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink }}>{item.ten}</div>
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{count} học sinh</div>
+              </div>
+            </div>
+          );
+        })}
+      </BottomSheet>
+      <BottomSheet open={ttSheetOpen} onClose={() => setTtSheetOpen(false)} title="Chọn trạng thái">
+        {[{ id: "all", ten: "Mọi trạng thái" }, ...TRANG_THAI.map((t) => ({ id: t, ten: t }))].map((item) => {
+          const active = hsStatusFilter === item.id;
+          const count = item.id === "all" ? students.length : students.filter((s) => s.trangThai === item.id).length;
+          return (
+            <div key={item.id} onClick={() => { setHsStatusFilter(item.id); setTtSheetOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink }}>{item.ten}</div>
+                <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{count} học sinh</div>
+              </div>
+            </div>
+          );
+        })}
+      </BottomSheet>
 
       {/* BOTTOM SHEET THAO TÁC HÀNG LOẠT */}
       <BottomSheet open={thaoTacOpen} onClose={closeThaoTac} title={ttView === "menu" ? `Thao tác cho ${selectedHS.length} HS` : ttView === "khac" ? `Khác — ${selectedHS.length} HS` : ttView === "lop" ? `Chuyển ${selectedHS.length} HS sang lớp` : ttView === "tt" ? `Đổi trạng thái ${selectedHS.length} HS` : ttView === "thu" ? `Đổi người thu ${selectedHS.length} HS` : ttView === "pl" ? `Đổi phân loại ${selectedHS.length} HS` : ttView === "gt" ? `Đổi giới tính ${selectedHS.length} HS` : ttView === "ngay" ? `Đặt ngày nhập học ${selectedHS.length} HS` : ttView === "ratruong" ? `Cho ${selectedHS.length} HS ra trường` : `Xóa vĩnh viễn ${selectedHS.length} HS`}>
