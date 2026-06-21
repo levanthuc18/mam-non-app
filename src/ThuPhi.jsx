@@ -95,10 +95,17 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
   const [dragY, setDragY] = useState(0);
-  const startYRef = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const startYRef = useRef(0);
 
-  useEffect(() => { if (open) { setAmount(r?.rec?.thucThu || 0); setDragY(0); } }, [open, r?.hs?.id]);
+  useEffect(() => { 
+    if (open) { 
+      setAmount(r?.rec?.thucThu || 0); 
+      setDragY(0); 
+      setIsClosing(false);
+    } 
+  }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -110,9 +117,19 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
     toast("Đã xác nhận thu");
   };
 
+  const animateClose = () => {
+    setIsClosing(true);
+    setDragY(400);
+    setTimeout(() => {
+      onClose();
+      setDragY(0);
+      setIsClosing(false);
+    }, 280);
+  };
+
   const onTouchStart = (e) => {
-    startYRef.current = e.touches[0].clientY;
     setIsDragging(true);
+    startYRef.current = e.touches[0].clientY;
   };
   const onTouchMove = (e) => {
     if (!isDragging) return;
@@ -121,33 +138,44 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   };
   const onTouchEnd = () => {
     setIsDragging(false);
-    if (dragY > 80) {
-      onClose();
-      setTimeout(() => setDragY(0), 300);
-    } else {
-      setDragY(0);
-    }
+    if (dragY > 100) animateClose();
+    else setDragY(0);
   };
+
+  const overlayOpacity = Math.max(0, Math.min(1, 1 - dragY / 300));
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
+      <div 
+        onClick={animateClose} 
+        style={{ 
+          flex: 1, 
+          background: "rgba(0,0,0,.45)", 
+          opacity: overlayOpacity,
+          transition: isDragging ? 'none' : 'opacity 0.25s ease',
+        }} 
+      />
       <div
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
         style={{
           background: "#fff",
           borderRadius: "20px 20px 0 0",
           padding: "12px 16px 28px",
           boxShadow: "0 -4px 24px rgba(0,0,0,.18)",
           transform: `translateY(${dragY}px)`,
-          transition: isDragging ? "none" : "transform .25s ease-out",
-          touchAction: "pan-y"
+          transition: isDragging ? "none" : "transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)",
+          willChange: "transform",
         }}
       >
-        {/* Thanh gợi ý vuốt */}
-        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.line, margin: "0 auto 16px" }} />
+        {/* Thanh gợi ý — chỉ vuốt ở đây */}
+        <div 
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          style={{ 
+            width: 40, height: 4, borderRadius: 99, background: C.line, 
+            margin: "0 auto 16px", touchAction: "none" 
+          }} 
+        />
 
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
@@ -163,27 +191,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu:</div>
         <input
           type="number" inputMode="numeric"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0"
-          style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
-        />
-
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <label onClick={() => setPt("tm")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "tm" ? C.pine : C.line}`, background: pt === "tm" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
-            <input type="radio" checked={pt === "tm"} onChange={() => setPt("tm")} style={{ accentColor: C.pine }} /> Tiền mặt
-          </label>
-          <label onClick={() => setPt("ck")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "ck" ? C.pine : C.line}`, background: pt === "ck" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
-            <input type="radio" checked={pt === "ck"} onChange={() => setPt("ck")} style={{ accentColor: C.pine }} /> Chuyển khoản
-          </label>
-        </div>
-
-        <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
-      </div>
-    </div>
-  );
-}
-/* ============================================================
+          value/* ============================================================
    3. QUICK EDIT SHEET
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
