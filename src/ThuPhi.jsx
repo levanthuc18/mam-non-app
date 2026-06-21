@@ -191,7 +191,27 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu:</div>
         <input
           type="number" inputMode="numeric"
-          value/* ============================================================
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0"
+          style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
+        />
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          <label onClick={() => setPt("tm")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "tm" ? C.pine : C.line}`, background: pt === "tm" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
+            <input type="radio" checked={pt === "tm"} onChange={() => setPt("tm")} style={{ accentColor: C.pine }} /> Tiền mặt
+          </label>
+          <label onClick={() => setPt("ck")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "ck" ? C.pine : C.line}`, background: pt === "ck" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
+            <input type="radio" checked={pt === "ck"} onChange={() => setPt("ck")} style={{ accentColor: C.pine }} /> Chuyển khoản
+          </label>
+        </div>
+
+        <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
+      </div>
+    </div>
+  );
+}
+/* ============================================================
    3. QUICK EDIT SHEET
    ============================================================ */
 function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addPhuThuHS, delPhuThuHS }) {
