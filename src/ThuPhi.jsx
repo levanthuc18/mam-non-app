@@ -475,63 +475,87 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       </div>
 
       {/* HÀNG 3: TRẠNG THÁI & NÚT HÀNH ĐỘNG */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ minWidth: 0, paddingRight: 8 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: statusColor }}>
-            {statusIcon} {statusText}
-          </div>
-          <div style={{ fontSize: 15.5, fontWeight: 700, color: "#111827", marginTop: 2 }}>
-            {isChuaThu ? `• Phải thu: ${fmt(tongPhaiThu)}đ` :
-             isThieu ? `• Còn thiếu: ${fmt(r.conNo)}đ` :
-             isThua ? `• Dư: ${fmt(-r.conNo)}đ` : "• Đã thu đủ"}
-          </div>
-          {isThieu && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Đã thu: {fmt(thucThu)}đ</div>}
-        </div>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+  
+  {/* BÊN TRÁI: Trạng thái + số tiền */}
+  <div style={{ minWidth: 0, paddingRight: 8 }}>
+    <div style={{ fontSize: 12.5, fontWeight: 600, color: statusColor }}>
+      {statusIcon} {statusText}
+    </div>
+    <div style={{ fontSize: 14.5, fontWeight: 700, color: "#111827", marginTop: 2 }}>
+      {isChuaThu ? `• Phải thu: ${fmt(tongPhaiThu)}đ` :
+       isThieu ? `• Còn thiếu: ${fmt(r.conNo)}đ` :
+       isThua ? `• Dư: ${fmt(-r.conNo)}đ` : "• Đã thu đủ"}
+    </div>
+    {isThieu && <div style={{ fontSize: 10, color: C.sub, marginTop: 2 }}>Đã thu: {fmt(thucThu)}đ</div>}
+  </div>
 
-        {/* Cụm 4 nút bấm có chữ */}
-        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          {!locked ? (
-            <button onClick={() => onThuTien(r)} style={btnStyle(C.amber, "#fff", false)}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>💰</span>
-              <span style={{ fontSize: 10, fontWeight: 700 }}>Thu</span>
-            </button>
-          ) : (
-            <button disabled style={{ ...btnStyle(C.line, C.sub, false), opacity: 0.5, cursor: "default" }}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>💰</span>
-              <span style={{ fontSize: 10, fontWeight: 700 }}>Thu</span>
-            </button>
-          )}
+  {/* BÊN PHẢI: Cụm 4 nút bấm */}
+  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+    {!locked ? (
+      <button onClick={() => onThuTien(r)} style={{
+        width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
+        background: C.amber, color: "#fff", cursor: "pointer", flexShrink: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
+      }}>
+        <span style={{ fontSize: 14, lineHeight: 1 }}>💰</span>
+        <span style={{ fontSize: 9, fontWeight: 700 }}>Thu</span>
+      </button>
+    ) : (
+      <button disabled style={{
+        width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
+        background: C.line, color: C.sub, opacity: 0.5, cursor: "default", flexShrink: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
+      }}>
+        <span style={{ fontSize: 14, lineHeight: 1 }}>💰</span>
+        <span style={{ fontSize: 9, fontWeight: 700 }}>Thu</span>
+      </button>
+    )}
 
-          <button onClick={() => onViewPhieu(r)} style={btnStyle("#DBEAFE", "#2563EB", false)}>
-            <span style={{ fontSize: 16, lineHeight: 1 }}>📄</span>
-            <span style={{ fontSize: 10, fontWeight: 700 }}>Phiếu</span>
-          </button>
+    <button onClick={() => onViewPhieu(r)} style={{
+      width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
+      background: "#DBEAFE", color: "#2563EB", cursor: "pointer", flexShrink: 0,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
+    }}>
+      <span style={{ fontSize: 14, lineHeight: 1 }}>📄</span>
+      <span style={{ fontSize: 9, fontWeight: 700 }}>Phiếu</span>
+    </button>
 
-          {!locked ? (
-            <button onClick={() => onQuickEdit(r)} style={btnStyle("#FFF9EE", C.amber, true)}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>✏️</span>
-              <span style={{ fontSize: 10, fontWeight: 700 }}>Sửa</span>
-            </button>
-          ) : (
-            <button disabled style={{ ...btnStyle(C.card, C.sub, true), opacity: 0.5, cursor: "default" }}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>✏️</span>
-              <span style={{ fontSize: 10, fontWeight: 700 }}>Sửa</span>
-            </button>
-          )}
+    {!locked ? (
+      <button onClick={() => onQuickEdit(r)} style={{
+        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
+        background: "#FFF9EE", color: C.amber, cursor: "pointer", flexShrink: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
+      }}>
+        <span style={{ fontSize: 14, lineHeight: 1 }}>✏️</span>
+        <span style={{ fontSize: 9, fontWeight: 700 }}>Sửa</span>
+      </button>
+    ) : (
+      <button disabled style={{
+        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
+        background: C.card, color: C.sub, opacity: 0.5, cursor: "default", flexShrink: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
+      }}>
+        <span style={{ fontSize: 14, lineHeight: 1 }}>✏️</span>
+        <span style={{ fontSize: 9, fontWeight: 700 }}>Sửa</span>
+      </button>
+    )}
 
-          <button 
-            onClick={() => setExpandId(isExpanded ? null : r.hs.id)} 
-            style={{ 
-              ...btnStyle(C.card, C.sub, true), 
-              transition: "transform .2s", 
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" 
-            }}
-          >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>▼</span>
-            <span style={{ fontSize: 10, fontWeight: 700 }}>Xem</span>
-          </button>
-        </div>
-      </div>
+    <button 
+      onClick={() => setExpandId(isExpanded ? null : r.hs.id)} 
+      style={{
+        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
+        background: C.card, color: C.sub, cursor: "pointer", flexShrink: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+        transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)"
+      }}
+    >
+      <span style={{ fontSize: 14, lineHeight: 1 }}>▼</span>
+      <span style={{ fontSize: 9, fontWeight: 700 }}>Xem</span>
+    </button>
+  </div>
+
+</div>
 
       {/* KHỐI CHI TIẾT RỘNG RÃNG KHI BẮM XEM */}
       {isExpanded && (
