@@ -108,9 +108,8 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-      <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 28px", boxShadow: "0 -4px 24px rgba(0,0,0,.18)" }}>
+    <BottomSheet open={open} onClose={onClose} title={`💰 THU TIỀN — ${r.hs.ten.toUpperCase()}`}>
+      <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
 
@@ -142,7 +141,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 
         <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
       </div>
-    </div>
+    </BottomSheet>
   );
 }
 
