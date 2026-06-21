@@ -88,6 +88,16 @@ export const PHAN_LOAI = ["Bthg", "AE", "GV", "T7"];
 export const PL_LABEL = { Bthg: "Bình thường", AE: "Anh em (−50%)", GV: "Con GV (miễn)", T7: "Chỉ thứ 7" };
 export const PL_COLOR = { Bthg: { bg: C.greenSoft, fg: C.green }, AE: { bg: C.blueASoft, fg: C.blueA }, GV: { bg: C.violetBSoft, fg: C.violetB }, T7: { bg: C.amberSoft, fg: C.amber } };
 export const PL_HE = { Bthg: 1, AE: 0.5, GV: 0, T7: 0 };
+export const GIOI_TINH = [["nam", "Nam"], ["nu", "Nữ"]];
+export const GT_LABEL = { nam: "Nam", nu: "Nữ", "": "—" };
+// Chuẩn hoá giá trị giới tính từ nhập tay / file import về "nam" | "nu" | ""
+export const normGt = (v) => {
+  const x = noDau(String(v || "").trim().toLowerCase());
+  if (["nam", "male", "m", "trai", "b", "boy", "1"].includes(x)) return "nam";
+  if (["nu", "female", "f", "gai", "g", "girl", "2"].includes(x)) return "nu";
+  return "";
+};
+
 export const TRANG_THAI = ["Đang học", "Học thử", "Bảo lưu", "Nghỉ học", "Ra trường"];
 export const TT_COLOR = { "Đang học": C.green, "Học thử": C.blueA, "Bảo lưu": C.amber, "Nghỉ học": C.coral, "Ra trường": C.violetB };
 export const TT_THU_PHI = { "Đang học": true, "Học thử": true, "Bảo lưu": false, "Nghỉ học": false, "Ra trường": false };
