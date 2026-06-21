@@ -266,6 +266,7 @@ export default function App() {
             students={students} 
             upStudents={store.upStudents} 
             ym={store.ym} 
+            store={store}
             openStudentProfile={setViewStudentId} 
           />
         )}
