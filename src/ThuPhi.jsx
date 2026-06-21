@@ -340,9 +340,22 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
     !isTruAn(d)
   ).reduce((a, b) => a + b[1], 0);
 
-  const noCu = r.noTruoc || 0;
-  const hasLargeDebt = noCu > 500000;
-  const hasDiscount = dong.some(d => d[1] < 0 && !isTruAn(d));
+    const noCu = r.noTruoc || 0;
+  const hasEdited = useMemo(() => {
+    if (!r?.rec) return false;
+    for (const k of KHOAN) {
+      if (k.key === "tienAn") {
+        const val = r.rec?.ngayAn ?? 0;
+        const def = r.rec?.ngayAnDefault ?? 0;
+        if (val !== def) return true;
+      } else {
+        const val = r.rec?.khoan?.[k.key] ?? 0;
+        const def = r.rec?.khoanDefault?.[k.key] ?? 0;
+        if (val !== def) return true;
+      }
+    }
+    return false;
+  }, [r]);
 
   // Style cho các nút bấm (có chứa chữ ở dưới)
   const btnStyle = (bg, color, isBorder) => ({
@@ -412,26 +425,15 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       </div>
 
       {/* HÀNG CẢNH BÁO NGHIỆP VỤ (Nợ cũ lớn / Miễn giảm) */}
-      {(hasLargeDebt || hasDiscount) && (
+      {hasEdited && (
         <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          {hasLargeDebt && (
-            <span style={{ 
-              fontSize: 10, fontWeight: 700, color: "#D97706", 
-              background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "1px 6px", borderRadius: 6 
-            }}>
-              ⚠ Nợ cũ lớn: {fmtK(noCu)}
-            </span>
-          )}
-          {hasDiscount && (
-            <span style={{ 
-              fontSize: 10, fontWeight: 700, color: "#D97706", 
-              background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "1px 6px", borderRadius: 6 
-            }}>
-              ⚠ Miễn giảm
-            </span>
-          )}
+          <span style={{ 
+            fontSize: 10, fontWeight: 700, color: "#D97706", 
+            background: "#FEF3C7", border: `1px solid #FDE68A`, 
+            padding: "1px 6px", borderRadius: 6 
+          }}>
+            ⚠ Đã sửa tay
+          </span>
         </div>
       )}
 
