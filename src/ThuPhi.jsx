@@ -363,7 +363,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 
   // Style chung cho Chip tiền
   const chipStyle = {
-    fontSize: 12, 
+    fontSize: 10, 
     fontWeight: 600, 
     background: "#F3F4F6", 
     color: C.sub, 
@@ -442,7 +442,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
 
       {/* HÀNG 2: CHIP TIỀN (Vuốt ngang) */}
       <div style={{ 
-        display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 4, 
+        display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, 
         marginBottom: 8, scrollbarWidth: "none", 
         "-webkit-overflow-scrolling": "touch", 
         "&::-webkit-scrollbar": { display: "none" } 
