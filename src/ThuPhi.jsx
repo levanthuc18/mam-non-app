@@ -400,7 +400,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           <span style={{ 
             fontSize: 15, fontWeight: 700, color: "#111827", 
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", 
-            maxWidth: "55%" 
+            maxWidth: "75%" 
           }}>
             {r.hs.ten}
           </span>
