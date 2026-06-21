@@ -94,8 +94,11 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 function ThuTienSheet({ r, open, onClose, setRec }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
+  const [dragY, setDragY] = useState(0);
+  const startYRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
 
-  useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
+  useEffect(() => { if (open) { setAmount(r?.rec?.thucThu || 0); setDragY(0); } }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -107,10 +110,45 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
     toast("Đã xác nhận thu");
   };
 
+  const onTouchStart = (e) => {
+    startYRef.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+  const onTouchMove = (e) => {
+    if (!isDragging) return;
+    const dy = e.touches[0].clientY - startYRef.current;
+    if (dy > 0) setDragY(dy);
+  };
+  const onTouchEnd = () => {
+    setIsDragging(false);
+    if (dragY > 80) {
+      onClose();
+      setTimeout(() => setDragY(0), 300);
+    } else {
+      setDragY(0);
+    }
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 28px", boxShadow: "0 -4px 24px rgba(0,0,0,.18)" }}>
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{
+          background: "#fff",
+          borderRadius: "20px 20px 0 0",
+          padding: "12px 16px 28px",
+          boxShadow: "0 -4px 24px rgba(0,0,0,.18)",
+          transform: `translateY(${dragY}px)`,
+          transition: isDragging ? "none" : "transform .25s ease-out",
+          touchAction: "pan-y"
+        }}
+      >
+        {/* Thanh gợi ý vuốt */}
+        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.line, margin: "0 auto 16px" }} />
+
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
 
