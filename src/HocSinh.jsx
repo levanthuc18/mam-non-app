@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, lopHienTai } from "./lib.js";
+import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
 import { Card, ABBtn, SearchBar, BottomSheet, PLBadge } from "./ui.jsx";
 import { ImportHSExcel } from "./CaiDat.jsx";
 
@@ -16,6 +16,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
   const [ttView, setTtView] = useState("menu");
   const [bulkThu, setBulkThu] = useState("A");
   const [bulkPl, setBulkPl] = useState("Bthg");
+  const [bulkGt, setBulkGt] = useState("nam");
   const [bulkTargetLop, setBulkTargetLop] = useState(meta.classes[0]?.id || "");
   const [bulkTargetTT, setBulkTargetTT] = useState("Đang học");
   const [bulkNgayNhap, setBulkNgayNhap] = useState(new Date().toISOString().slice(0, 10));
@@ -26,6 +27,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
   const [ten, setTen] = useState("");
   const [lop, setLop] = useState(meta.classes[0]?.id || "");
   const [pl, setPl] = useState("Bthg");
+  const [gt, setGt] = useState("");
   const [nguoiThu, setNguoiThu] = useState("A");
   const [ngaySinh, setNgaySinh] = useState("");
   const [phSdt, setPhSdt] = useState("");
@@ -33,8 +35,8 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
 
   const addHS = async () => {
     const t = ten.trim(); if (!t || !lop) return;
-    upStudents([...students, { id: "hs" + uid(), ten: t, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }], true);
-    setTen(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh.");
+    upStudents([...students, { id: "hs" + uid(), ten: t, gt, ngaySinh, lopHistory: [{ tuThang: ym, lop }], pl, nguoiThu, trangThai: "Đang học", ngayNhapHoc: ngayNhap || new Date().toISOString().slice(0, 10), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: phSdt.trim() } }], true);
+    setTen(""); setGt(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh.");
   };
 
   const setHS = (id, p) => upStudents(students.map((s) => (s.id === id ? { ...s, ...p } : s)));
@@ -74,6 +76,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
             <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
             <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+            <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             <ABBtn val={nguoiThu} set={setNguoiThu} small />
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
@@ -136,9 +139,9 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
       {filteredHS.length === 0 && <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh phù hợp.</div>}
 
       {/* BOTTOM SHEET THAO TÁC HÀNG LOẠT */}
-      <BottomSheet open={thaoTacOpen} onClose={closeThaoTac} title={ttView === "menu" ? `Thao tác cho ${selectedHS.length} HS` : ttView === "khac" ? `Khác — ${selectedHS.length} HS` : ttView === "lop" ? `Chuyển ${selectedHS.length} HS sang lớp` : ttView === "tt" ? `Đổi trạng thái ${selectedHS.length} HS` : ttView === "thu" ? `Đổi người thu ${selectedHS.length} HS` : ttView === "pl" ? `Đổi phân loại ${selectedHS.length} HS` : ttView === "ngay" ? `Đặt ngày nhập học ${selectedHS.length} HS` : ttView === "ratruong" ? `Cho ${selectedHS.length} HS ra trường` : `Xóa vĩnh viễn ${selectedHS.length} HS`}>
+      <BottomSheet open={thaoTacOpen} onClose={closeThaoTac} title={ttView === "menu" ? `Thao tác cho ${selectedHS.length} HS` : ttView === "khac" ? `Khác — ${selectedHS.length} HS` : ttView === "lop" ? `Chuyển ${selectedHS.length} HS sang lớp` : ttView === "tt" ? `Đổi trạng thái ${selectedHS.length} HS` : ttView === "thu" ? `Đổi người thu ${selectedHS.length} HS` : ttView === "pl" ? `Đổi phân loại ${selectedHS.length} HS` : ttView === "gt" ? `Đổi giới tính ${selectedHS.length} HS` : ttView === "ngay" ? `Đặt ngày nhập học ${selectedHS.length} HS` : ttView === "ratruong" ? `Cho ${selectedHS.length} HS ra trường` : `Xóa vĩnh viễn ${selectedHS.length} HS`}>
         {ttView === "menu" && (<div>
-          {[["🏫", "Chuyển lớp", "lop"], ["🔖", "Đổi trạng thái", "tt"], ["💰", "Đổi người thu A/B", "thu"], ["🏷️", "Đổi phân loại", "pl"], ["⚙️", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
+          {[["🏫", "Chuyển lớp", "lop"], ["🔖", "Đổi trạng thái", "tt"], ["💰", "Đổi người thu A/B", "thu"], ["🏷️", "Đổi phân loại", "pl"], ["⚥", "Đổi giới tính", "gt"], ["⚙️", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
             <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>{ic}</span><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
           ))}
         </div>)}
@@ -163,6 +166,10 @@ export function HocSinhTab({ meta, students, upStudents, ym, openStudentProfile 
         {ttView === "pl" && (<div>
           {PHAN_LOAI.map((p) => (<button key={p} onClick={() => setBulkPl(p)} style={{ display: "block", width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${bulkPl === p ? C.pine : C.line}`, background: bulkPl === p ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{bulkPl === p ? "● " : "○ "}{PL_LABEL[p] || p}</button>))}
           <button onClick={() => bulkPatch({ pl: bulkPl }, `Đổi phân loại hàng loạt ${selectedHS.length} HS → ${bulkPl}`, `Đã đổi phân loại ${selectedHS.length} HS sang ${bulkPl}`)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginTop: 4 }}>Áp dụng cho {selectedHS.length} HS</button>
+        </div>)}
+        {ttView === "gt" && (<div>
+          {[["nam", "Nam"], ["nu", "Nữ"], ["", "Chưa rõ (xóa giới tính)"]].map(([v, lb]) => (<button key={v || "none"} onClick={() => setBulkGt(v)} style={{ display: "block", width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${bulkGt === v ? C.pine : C.line}`, background: bulkGt === v ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{bulkGt === v ? "● " : "○ "}{lb}</button>))}
+          <button onClick={() => bulkPatch({ gt: bulkGt }, `Đổi giới tính hàng loạt ${selectedHS.length} HS → ${bulkGt === "nam" ? "Nam" : bulkGt === "nu" ? "Nữ" : "—"}`, `Đã đổi giới tính ${selectedHS.length} HS`)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginTop: 4 }}>Áp dụng cho {selectedHS.length} HS</button>
         </div>)}
         {ttView === "ngay" && (<div>
           <button onClick={() => setTtView("khac")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 10, padding: 0 }}>‹ Quay lại</button>
