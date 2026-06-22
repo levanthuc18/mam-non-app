@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
+import { AvatarEditor } from "./Avatar.jsx";
 
 export function StudentProfile({ studentId, store, onBack, embedded = false }) {
   const { meta, students, ym, upStudents } = store;
@@ -113,6 +114,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
     <div>
       <Card style={{ marginBottom: 12 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.ink }}>Thông tin cá nhân</div>
+        <AvatarEditor hs={student} setHS={setHS} />
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 100%" }}>
             <label style={lab}>Họ tên</label>
