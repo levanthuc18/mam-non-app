@@ -4,23 +4,6 @@ import { C, font, PL_COLOR } from "./lib.js";
 export function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 export function Badge({ s }) { return <span style={{ background: s.bg, color: s.c, fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap" }}>{s.t}</span>; }
 
-// Avatar dùng chung. Phần 1: demo theo giới tính (hs.gt). Phần 2: truyền src=ảnh thật.
-const GT_AVA = {
-  nam: { emoji: "👦", bg: "#DBEAFE" },
-  nu: { emoji: "👧", bg: "#FCE7F0" },
-  "": { emoji: "🧒", bg: C.graySoft || "#EEF2F0" },
-};
-export function Avatar({ hs, size = 32, src, onClick }) {
-  const g = GT_AVA[hs?.gt] || GT_AVA[""];
-  const base = {
-    width: size, height: size, borderRadius: "50%", flexShrink: 0,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    overflow: "hidden", cursor: onClick ? "pointer" : "default",
-  };
-  if (src) return <div onClick={onClick} style={{ ...base, background: "#fff" }}><img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>;
-  return <div onClick={onClick} style={{ ...base, background: g.bg, fontSize: Math.round(size * 0.56), lineHeight: 1 }}>{g.emoji}</div>;
-}
-
 export function NumInput({ value, onChange, w = 70, disabled, warn }) {
   const [focused, setFocused] = useState(false);
   const display = focused ? (value === 0 || value == null ? "" : String(value)) : (value === 0 || value == null ? "" : Number(value).toLocaleString("vi-VN"));
