@@ -305,7 +305,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
    /* ============================================================
    4. THẺ HỌC SINH V1 (Cập nhật V1.2 theo UI/UX Guide)
    ============================================================ */
-function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
+function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onViewPhieu, setRec, expandId, setExpandId }) {
   const isExpanded = expandId === r.hs.id;
   const thucThu = r.rec.thucThu || 0;
   const tongPhaiThu = r.tongPhaiThu;
@@ -474,10 +474,24 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
              isThua ? `Dư: ${fmt(-r.conNo)}` : `Đã thu: ${fmt(thucThu)}`}
           </div>
           <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
-            <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
-              <span style={{ fontSize: 13, lineHeight: 1 }}>💰</span>
-              <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
-            </button>
+            {fastMode ? (
+              paidFull ? (
+                <button disabled style={{ ...colBtn(C.greenSoft, C.green, false, false), cursor: "default" }}>
+                  <span style={{ fontSize: 13, lineHeight: 1 }}>✓</span>
+                  <span style={{ fontSize: 8.5, fontWeight: 700 }}>Đủ</span>
+                </button>
+              ) : (
+                <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={colBtn(C.green, "#fff", false, locked)}>
+                  <span style={{ fontSize: 13, lineHeight: 1 }}>⚡</span>
+                  <span style={{ fontSize: 8.5, fontWeight: 700 }}>Thu đủ</span>
+                </button>
+              )
+            ) : (
+              <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
+                <span style={{ fontSize: 13, lineHeight: 1 }}>💰</span>
+                <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
+              </button>
+            )}
             <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn("#FFF9EE", C.amber, true, locked)}>
               <span style={{ fontSize: 13, lineHeight: 1 }}>✏️</span>
               <span style={{ fontSize: 8.5, fontWeight: 700 }}>Sửa</span>
@@ -713,6 +727,11 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const [batchOpen, setBatchOpen] = useState(false);
   const [showNgayAn, setShowNgayAn] = useState(false);
   const [fastMode, setFastMode] = useState(false);
+  const onFastThu = (r) => {
+    const old = r.rec.thucThu || 0;
+    setRec(r.hs.id, { thucThu: r.tongPhaiThu });
+    toast(`Đã thu đủ ${fmt(r.tongPhaiThu)} — ${r.hs.ten}`, () => setRec(r.hs.id, { thucThu: old }));
+  };
   const [thuLimit, setThuLimit] = useState(50);
   const inputRefs = useRef({});
   const { sentinelRef, shrunk } = useStickyShrink();
@@ -826,42 +845,28 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
-      {fastMode ? (
-        rows.slice(0, thuLimit).map((r, idx) => {
-          return (
-            <div key={r.hs.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.line}`, marginBottom: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.hs.ten}</div>
-                <div style={{ fontSize: 11.5, color: C.sub }}>cần {fmt(r.tongPhaiThu)}{r.noTruoc > 0 ? ` · 🔴 nợ ${fmt(r.noTruoc)}` : ""}</div>
-              </div>
-              <input
-                key={`fast-${r.hs.id}-${r.rec.thucThu || 0}`}
-                ref={(el) => (inputRefs.current[r.hs.id] = el)}
-                type="text" inputMode="numeric"
-                defaultValue={r.rec.thucThu ? Number(r.rec.thucThu).toLocaleString("vi-VN") : ""}
-                onFocus={(e) => { e.target.value = r.rec.thucThu ? String(r.rec.thucThu) : ""; e.target.select(); }}
-                onBlur={(e) => { const d = e.target.value.replace(/[^\d]/g, ""); setRec(r.hs.id, { thucThu: d === "" ? 0 : Number(d) }); e.target.value = d ? Number(d).toLocaleString("vi-VN") : ""; }}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.target.blur(); const next = rows[idx + 1]; if (next) setTimeout(() => inputRefs.current[next.hs.id]?.focus(), 30); } }}
-                placeholder="0" style={{ width: 110, padding: "9px 8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: "#FAFCFA", textAlign: "right", outline: "none" }} />
-              <button onClick={() => { setRec(r.hs.id, { thucThu: r.tongPhaiThu }); if (inputRefs.current[r.hs.id]) inputRefs.current[r.hs.id].value = Number(r.tongPhaiThu).toLocaleString("vi-VN"); }} style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, width: 40, height: 40, fontSize: 16, cursor: "pointer", flexShrink: 0 }}>✓</button>
-            </div>
-          );
-        })
-      ) : (
-        rows.slice(0, thuLimit).map((r) => (
-          <HSCardV1
-            key={r.hs.id}
-            r={r}
-            locked={locked}
-            onThuTien={(row) => setThuTienId(row.hs.id)}
-            onQuickEdit={(row) => setQuickEditId(row.hs.id)}
-            onViewPhieu={(row) => { setPhieuId(row.hs.id); setTab("phieu"); }}
-            setRec={setRec}
-            expandId={expandId}
-            setExpandId={setExpandId}
-          />
-        ))
+      {fastMode && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FEF9E7", border: "1px solid #FDE68A", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: "#92702A", fontWeight: 600 }}>
+          <span style={{ fontSize: 15 }}>⚡</span>
+          <span>Đang bật Tích thu nhanh — bấm <b>Thu đủ</b> là thu ngay, có thể Hoàn tác.</span>
+        </div>
       )}
+
+      {rows.slice(0, thuLimit).map((r) => (
+        <HSCardV1
+          key={r.hs.id}
+          r={r}
+          locked={locked}
+          fastMode={fastMode}
+          onFastThu={onFastThu}
+          onThuTien={(row) => setThuTienId(row.hs.id)}
+          onQuickEdit={(row) => setQuickEditId(row.hs.id)}
+          onViewPhieu={(row) => { setPhieuId(row.hs.id); setTab("phieu"); }}
+          setRec={setRec}
+          expandId={expandId}
+          setExpandId={setExpandId}
+        />
+      ))}
 
       {rows.length > thuLimit && (
         <button onClick={() => setThuLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10 }}>
