@@ -161,10 +161,18 @@ export function AvatarEditor({ hs, setHS }) {
   const onSave = async (dataURL) => {
     setCropSrc(null); setBusy(true);
     try {
-      const ok = await sSet(avtKey(hs.id), dataURL);
-      AVT_CACHE.set(hs.id, dataURL);
-      setHS({ avt: 1 });
-      toast(ok ? "Đã lưu ảnh ✓" : "⚠️ Lưu ảnh lên máy chủ thất bại");
+      const small = await sSet("mn5:avt:_probe", "x");
+      sDel("mn5:avt:_probe").catch(() => {});
+      const big = await sSet(avtKey(hs.id), dataURL);
+      if (big) {
+        AVT_CACHE.set(hs.id, dataURL);
+        setHS({ avt: 1 });
+        toast("Đã lưu ảnh ✓");
+      } else if (small) {
+        toast("⚠️ Lỗi do DUNG LƯỢNG ảnh (ghi nhỏ thì OK)");
+      } else {
+        toast("⚠️ Máy chủ chặn ghi — do QUYỀN/RLS hoặc kết nối");
+      }
     } catch { toast("⚠️ Lưu ảnh lỗi"); }
     setBusy(false);
   };
