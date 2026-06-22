@@ -42,6 +42,17 @@ export async function sGet(k) {
   try { const r = await window.storage.get(k); const v = r ? JSON.parse(r.value) : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
   catch { storageOK = false; return MEM[k] ?? null; }
 }
+export async function sProbe(k, v) {
+  if (!SB) return { ok: false, status: 0, text: "no-supabase" };
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
+      method: "POST",
+      headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ key: k, value: v, updated_at: new Date().toISOString() }),
+    });
+    return { ok: r.ok, status: r.status, text: r.ok ? "" : (await r.text()).slice(0, 120) };
+  } catch (e) { return { ok: false, status: -1, text: String(e).slice(0, 120) }; }
+}
 export async function sSet(k, v) {
   MEM[k] = v;
   const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
