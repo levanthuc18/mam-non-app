@@ -400,6 +400,18 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
   });
   const paidFull = !isChuaThu && !isThieu && !isThua;
 
+  // Nút dọc: icon trên, chữ dưới, nhỏ gọn
+  const colBtn = (bg, color, border, disabled) => ({
+    width: 34, padding: "4px 2px", borderRadius: 7,
+    border: border ? `1px solid ${C.line}` : "none",
+    background: disabled ? C.line : bg,
+    color: disabled ? C.sub : color,
+    opacity: disabled ? 0.5 : 1,
+    cursor: disabled ? "default" : "pointer",
+    flexShrink: 0, display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center", gap: 1
+  });
+
   return (
     <div style={{
       backgroundColor: "#FFFFFF",
@@ -432,7 +444,7 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 2, scrollbarWidth: "none" }}>
             <span style={chipStyle}>HP {fmtK(hocPhi)}</span>
             <span style={chipStyle}>Ăn {fmtK(tienAn)}</span>
             {phuThu > 0 && <span style={chipStyle}>PT {fmtK(phuThu)}</span>}
@@ -447,31 +459,37 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
           </div>
         </div>
 
-        {/* VẠCH NGĂN */}
+        {/* VẠCH NGĂN (dịch phải — khối trái rộng cho đủ tên) */}
         <div style={{ width: 1, alignSelf: "stretch", background: C.line, flexShrink: 0 }} />
 
-        {/* KHỐI PHẢI: trạng thái + tiền + nút */}
-        <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", justifyContent: "center" }}>
+        {/* KHỐI PHẢI: trạng thái + tiền + nút (cố định hẹp) */}
+        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ width: 8, height: 8, borderRadius: 99, background: statusColor, flexShrink: 0 }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusText}</span>
           </div>
-          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#111827", whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#111827", whiteSpace: "nowrap" }}>
             {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}đ` :
              isThieu ? `Còn thiếu: ${fmt(r.conNo)}đ` :
              isThua ? `Dư: ${fmt(-r.conNo)}đ` : `Đã thu: ${fmt(thucThu)}đ`}
           </div>
-          <div style={{ display: "flex", gap: 3, justifyContent: "flex-end", overflowX: "auto", scrollbarWidth: "none", maxWidth: "100%" }}>
-            <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={actBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
-              <span style={{ fontSize: 12 }}>💰</span>{paidFull ? "Thu thêm" : "Thu"}
+          <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
+            <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
+              <span style={{ fontSize: 13, lineHeight: 1 }}>💰</span>
+              <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
             </button>
-            <button onClick={() => onViewPhieu(r)} style={actBtn("#DBEAFE", "#2563EB")}>
-              <span style={{ fontSize: 12 }}>📄</span>Phiếu
+            <button onClick={() => onViewPhieu(r)} style={colBtn("#DBEAFE", "#2563EB")}>
+              <span style={{ fontSize: 13, lineHeight: 1 }}>📄</span>
+              <span style={{ fontSize: 8.5, fontWeight: 700 }}>Phiếu</span>
             </button>
-            <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={actBtn("#FFF9EE", C.amber, true, locked)}>
-              <span style={{ fontSize: 12 }}>✏️</span>Sửa
+            <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn("#FFF9EE", C.amber, true, locked)}>
+              <span style={{ fontSize: 13, lineHeight: 1 }}>✏️</span>
+              <span style={{ fontSize: 8.5, fontWeight: 700 }}>Sửa</span>
             </button>
-            <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={{ ...actBtn(C.card, C.sub, true), padding: "5px 6px", transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</button>
+            <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={colBtn(C.card, C.sub, true)}>
+              <span style={{ fontSize: 13, lineHeight: 1, transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</span>
+              <span style={{ fontSize: 8.5, fontWeight: 700 }}>Xem</span>
+            </button>
           </div>
         </div>
       </div>
