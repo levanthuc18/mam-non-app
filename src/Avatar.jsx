@@ -111,12 +111,12 @@ function AvatarCropper({ src, onCancel, onSave }) {
   const wheel = (e) => { if (!nat) return; e.preventDefault(); zoomCenter(scale * (e.deltaY < 0 ? 1.08 : 0.92)); };
 
   const save = () => {
-    const OUT = 256, r = OUT / VIEW;
+    const OUT = 128, r = OUT / VIEW;
     const c = document.createElement("canvas"); c.width = OUT; c.height = OUT;
     const ctx = c.getContext("2d");
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, OUT, OUT);
     ctx.drawImage(imgRef.current, ox * r, oy * r, nat.w * scale * r, nat.h * scale * r);
-    onSave(c.toDataURL("image/jpeg", 0.7));
+    onSave(c.toDataURL("image/jpeg", 0.5));
   };
 
   return (
@@ -161,17 +161,13 @@ export function AvatarEditor({ hs, setHS }) {
   const onSave = async (dataURL) => {
     setCropSrc(null); setBusy(true);
     try {
-      const small = await sSet("mn5:avt:_probe", "x");
-      sDel("mn5:avt:_probe").catch(() => {});
-      const big = await sSet(avtKey(hs.id), dataURL);
-      if (big) {
+      const ok = await sSet(avtKey(hs.id), dataURL);
+      if (ok) {
         AVT_CACHE.set(hs.id, dataURL);
         setHS({ avt: 1 });
         toast("Đã lưu ảnh ✓");
-      } else if (small) {
-        toast("⚠️ Lỗi do DUNG LƯỢNG ảnh (ghi nhỏ thì OK)");
       } else {
-        toast("⚠️ Máy chủ chặn ghi — do QUYỀN/RLS hoặc kết nối");
+        toast("⚠️ Vẫn quá lớn — báo mình để nén nhỏ hơn");
       }
     } catch { toast("⚠️ Lưu ảnh lỗi"); }
     setBusy(false);
