@@ -200,6 +200,9 @@ export function useStore() {
     if (prev?.chiPhi?.length) {
       data.chiPhi = prev.chiPhi.filter((c) => c.loai === "CO_DINH").map((c) => ({ id: uid(), noiDung: c.noiDung, soTien: c.soTien, nguoiChi: c.nguoiChi, loai: "CO_DINH", daTra: 0 }));
     }
+    if (prev?.thuNgoai?.length) {
+      data.thuNgoai = prev.thuNgoai.filter((k) => k.coDinh).map((k) => ({ id: uid(), ten: k.ten, soTien: k.soTien, thucThu: 0, nguoiThu: k.nguoiThu || "A", coDinh: true }));
+    }
     upMData(data);
     toast(`Đã tạo tháng ${month}/${year}.`);
     logAction(`Tạo bảng thu tháng ${month}/${year}`);
