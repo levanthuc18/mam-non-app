@@ -387,6 +387,19 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
     display: "flex", alignItems: "center", justifyContent: "center"
   });
 
+  // Nút hành động có icon + chữ (khối phải)
+  const actBtn = (bg, color, border, disabled) => ({
+    display: "inline-flex", alignItems: "center", gap: 3,
+    padding: "5px 7px", borderRadius: 8,
+    border: border ? `1px solid ${C.line}` : "none",
+    background: disabled ? C.line : bg,
+    color: disabled ? C.sub : color,
+    opacity: disabled ? 0.5 : 1,
+    cursor: disabled ? "default" : "pointer",
+    fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, lineHeight: 1
+  });
+  const paidFull = !isChuaThu && !isThieu && !isThua;
+
   return (
     <div style={{
       backgroundColor: "#FFFFFF",
@@ -399,53 +412,67 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       flexDirection: "column"
     }}>
 
-      {/* HÀNG 1: Avatar + Tên/Lớp(+Miễn giảm) | Trạng thái + Tiền */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Avatar hs={r.hs} size={38} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-            <span style={{ fontSize: 14.5, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
-            {hasDiscount && (
-              <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>🎁 Miễn giảm</span>
+      {/* HÀNG NỘI DUNG: 2 KHỐI DỌC TRÁI / PHẢI */}
+      <div style={{ display: "flex", alignItems: "stretch", gap: 10 }}>
+
+        {/* KHỐI TRÁI: thông tin HS + chip */}
+        <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <Avatar hs={r.hs} size={44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
+                {hasDiscount && (
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}>🎁</span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: "#6B7280", minWidth: 0 }}>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
+                {r.hs.pl !== "Bthg" && (<><span style={{ color: "#D1D5DB" }}>•</span><PLBadge pl={r.hs.pl} /></>)}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, scrollbarWidth: "none" }}>
+            <span style={chipStyle}>HP {fmtK(hocPhi)}</span>
+            <span style={chipStyle}>Ăn {fmtK(tienAn)}</span>
+            {phuThu > 0 && <span style={chipStyle}>PT {fmtK(phuThu)}</span>}
+            {truAnItems.map(([label, val], i) => (
+              <span key={i} style={{ ...chipStyle, background: C.coralSoft, color: C.coral }}>{label} {fmtK(Math.abs(val))}</span>
+            ))}
+            {noCu !== 0 && (
+              <span style={{ ...chipStyle, background: noCu > 0 ? C.coralSoft : C.greenSoft, color: noCu > 0 ? C.coral : C.green }}>
+                {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
+              </span>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: "#6B7280", minWidth: 0 }}>
-            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
-            {r.hs.pl !== "Bthg" && (<><span style={{ color: "#D1D5DB" }}>•</span><PLBadge pl={r.hs.pl} /></>)}
-          </div>
         </div>
 
-        {/* Trạng thái + số tiền (không còn chấm màu) */}
-        <div style={{ flexShrink: 0, textAlign: "right" }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusText}</div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginTop: 1, whiteSpace: "nowrap" }}>
-            {isChuaThu ? `${fmt(tongPhaiThu)}đ` :
-             isThieu ? `${fmt(r.conNo)}đ` :
-             isThua ? `+${fmt(-r.conNo)}đ` : `${fmt(thucThu)}đ`}
-          </div>
-        </div>
-      </div>
+        {/* VẠCH NGĂN */}
+        <div style={{ width: 1, alignSelf: "stretch", background: C.line, flexShrink: 0 }} />
 
-      {/* HÀNG 2: CHIP TIỀN (trái, vuốt ngang) | 4 nút icon nhỏ (phải) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, scrollbarWidth: "none" }}>
-          <span style={chipStyle}>HP {fmtK(hocPhi)}</span>
-          <span style={chipStyle}>Ăn {fmtK(tienAn)}</span>
-          {phuThu > 0 && <span style={chipStyle}>PT {fmtK(phuThu)}</span>}
-          {truAnItems.map(([label, val], i) => (
-            <span key={i} style={{ ...chipStyle, background: C.coralSoft, color: C.coral }}>{label} {fmtK(Math.abs(val))}</span>
-          ))}
-          {noCu !== 0 && (
-            <span style={{ ...chipStyle, background: noCu > 0 ? C.coralSoft : C.greenSoft, color: noCu > 0 ? C.coral : C.green }}>
-              {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
-            </span>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-          <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={iconBtn(C.amber, "#fff", false, locked)}>💰</button>
-          <button onClick={() => onViewPhieu(r)} style={iconBtn("#DBEAFE", "#2563EB")}>📄</button>
-          <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={iconBtn("#FFF9EE", C.amber, true, locked)}>✏️</button>
-          <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={{ ...iconBtn(C.card, C.sub, true), transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</button>
+        {/* KHỐI PHẢI: trạng thái + tiền + nút */}
+        <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: statusColor, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusText}</span>
+          </div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#111827", whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}đ` :
+             isThieu ? `Còn thiếu: ${fmt(r.conNo)}đ` :
+             isThua ? `Dư: ${fmt(-r.conNo)}đ` : `Đã thu: ${fmt(thucThu)}đ`}
+          </div>
+          <div style={{ display: "flex", gap: 3, justifyContent: "flex-end", overflowX: "auto", scrollbarWidth: "none", maxWidth: "100%" }}>
+            <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={actBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
+              <span style={{ fontSize: 12 }}>💰</span>{paidFull ? "Thu thêm" : "Thu"}
+            </button>
+            <button onClick={() => onViewPhieu(r)} style={actBtn("#DBEAFE", "#2563EB")}>
+              <span style={{ fontSize: 12 }}>📄</span>Phiếu
+            </button>
+            <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={actBtn("#FFF9EE", C.amber, true, locked)}>
+              <span style={{ fontSize: 12 }}>✏️</span>Sửa
+            </button>
+            <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={{ ...actBtn(C.card, C.sub, true), padding: "5px 6px", transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</button>
+          </div>
         </div>
       </div>
 
