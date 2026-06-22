@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, sGet, sSet, sDel, sProbe, toast } from "./lib.js";
+import { C, font, sGet, sSet, sDel, toast } from "./lib.js";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
 const GT_AVA = {
@@ -111,12 +111,12 @@ function AvatarCropper({ src, onCancel, onSave }) {
   const wheel = (e) => { if (!nat) return; e.preventDefault(); zoomCenter(scale * (e.deltaY < 0 ? 1.08 : 0.92)); };
 
   const save = () => {
-    const OUT = 96, r = OUT / VIEW;
+    const OUT = 256, r = OUT / VIEW;
     const c = document.createElement("canvas"); c.width = OUT; c.height = OUT;
     const ctx = c.getContext("2d");
     ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, OUT, OUT);
     ctx.drawImage(imgRef.current, ox * r, oy * r, nat.w * scale * r, nat.h * scale * r);
-    onSave(c.toDataURL("image/jpeg", 0.45));
+    onSave(c.toDataURL("image/jpeg", 0.7));
   };
 
   return (
@@ -160,15 +160,14 @@ export function AvatarEditor({ hs, setHS }) {
 
   const onSave = async (dataURL) => {
     setCropSrc(null); setBusy(true);
-    const kb = (dataURL.length / 1024).toFixed(1);
     try {
-      const r = await sProbe(avtKey(hs.id), dataURL);
-      if (r.ok) {
+      const ok = await sSet(avtKey(hs.id), dataURL);
+      if (ok) {
         AVT_CACHE.set(hs.id, dataURL);
         setHS({ avt: 1 });
-        toast(`Đã lưu ảnh ✓ (${kb}KB)`);
+        toast("Đã lưu ảnh ✓");
       } else {
-        toast(`Lỗi ${r.status}: ${r.text || "?"} (ảnh ${kb}KB)`);
+        toast("⚠️ Lưu ảnh thất bại, thử lại");
       }
     } catch { toast("⚠️ Lưu ảnh lỗi"); }
     setBusy(false);
