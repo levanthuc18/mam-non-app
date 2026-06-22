@@ -728,11 +728,21 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const [showNgayAn, setShowNgayAn] = useState(false);
   const [fastMode, setFastMode] = useState(false);
   const [fastCount, setFastCount] = useState(0);
+  const fastPrev = useRef({});
   const onFastThu = (r) => {
+    if (r.tongPhaiThu <= 0) return; // không thu cháu phải thu 0đ / đang dư
     const old = r.rec.thucThu || 0;
+    fastPrev.current[r.hs.id] = old;
     setRec(r.hs.id, { thucThu: r.tongPhaiThu });
     setFastCount((c) => c + 1);
-    toast(`Đã thu đủ ${fmt(r.tongPhaiThu)} — ${r.hs.ten}`, () => { setRec(r.hs.id, { thucThu: old }); setFastCount((c) => Math.max(0, c - 1)); });
+    toast(`Đã thu đủ ${fmt(r.tongPhaiThu)} — ${r.hs.ten}`, () => onFastUndo(r.hs.id));
+  };
+  const onFastUndo = (id) => {
+    if (!(id in fastPrev.current)) return;
+    const old = fastPrev.current[id];
+    delete fastPrev.current[id];
+    setRec(id, { thucThu: old });
+    setFastCount((c) => Math.max(0, c - 1));
   };
   const [thuLimit, setThuLimit] = useState(50);
   const inputRefs = useRef({});
@@ -874,23 +884,31 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         }
         // CHẾ ĐỘ QUÉT THU: dòng rút gọn
         const dThu = r.rec.thucThu || 0;
-        const pf = r.conNo <= 0 && dThu > 0;
+        const khoiThu = r.tongPhaiThu <= 0;            // 0đ hoặc đang dư → khỏi thu
+        const pf = r.conNo <= 0 && dThu > 0;           // đã thu đủ thật
+        const done = pf || khoiThu;
+        const justPaid = r.hs.id in fastPrev.current;  // vừa thu trong phiên này
         return (
-          <div key={r.hs.id} style={{ background: pf ? C.greenSoft : C.card, opacity: pf ? 0.72 : 1, borderRadius: 12, border: `1px solid ${C.line}`, borderLeft: `5px solid ${pf ? C.green : C.coral}`, marginBottom: 8, padding: "9px 11px", display: "flex", alignItems: "center", gap: 10, transition: "all .25s" }}>
+          <div key={r.hs.id} style={{ background: done ? C.greenSoft : C.card, opacity: done ? 0.72 : 1, borderRadius: 12, border: `1px solid ${C.line}`, borderLeft: `5px solid ${done ? C.green : C.coral}`, marginBottom: 8, padding: "9px 11px", display: "flex", alignItems: "center", gap: 10, transition: "all .25s" }}>
             <Avatar hs={r.hs} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.hs.ten}</div>
               <div style={{ fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0, marginRight: 2 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: pf ? C.green : C.coral }}>{pf ? "ĐÃ ĐỦ" : "Phải thu"}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, whiteSpace: "nowrap" }}>{fmt(pf ? dThu : r.tongPhaiThu)}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: done ? C.green : C.coral }}>{pf ? "ĐÃ ĐỦ" : khoiThu ? "KHỎI THU" : "Phải thu"}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, whiteSpace: "nowrap" }}>{pf ? fmt(dThu) : khoiThu ? (r.conNo < 0 ? `Dư ${fmt(-r.conNo)}` : "0") : fmt(r.tongPhaiThu)}</div>
             </div>
-            {pf ? (
-              <button disabled style={{ flexShrink: 0, width: 72, height: 46, borderRadius: 10, border: `1.5px solid ${C.green}`, background: "#fff", color: C.green, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                <span style={{ fontSize: 15, lineHeight: 1 }}>✓</span>
-                <span style={{ fontSize: 9.5, fontWeight: 700 }}>Đã đủ</span>
-              </button>
+            {done ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                <button disabled style={{ width: justPaid ? 56 : 72, height: 46, borderRadius: 10, border: `1.5px solid ${khoiThu ? C.line : C.green}`, background: "#fff", color: khoiThu ? C.sub : C.green, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>✓</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700 }}>{khoiThu ? "Khỏi" : "Đủ"}</span>
+                </button>
+                {justPaid && (
+                  <button onClick={() => onFastUndo(r.hs.id)} title="Hoàn tác" style={{ width: 36, height: 46, borderRadius: 10, border: `1.5px solid ${C.line}`, background: "#fff", color: C.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>↩</button>
+                )}
+              </div>
             ) : (
               <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={{ flexShrink: 0, width: 72, height: 46, borderRadius: 10, border: "none", background: C.green, color: "#fff", cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1, boxShadow: "0 2px 6px rgba(16,185,129,.25)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                 <span style={{ fontSize: 15, lineHeight: 1 }}>⚡</span>
@@ -956,7 +974,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
                 <button onClick={() => { setShowNgayAn(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
                   <span>🍽️</span> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
                 </button>
-                <button onClick={() => { setFastMode(v => !v); setFastCount(0); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
                   <span>⚡</span> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
                 </button>
                 <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.green : C.gray, display: "flex", alignItems: "center", gap: 8 }}>
