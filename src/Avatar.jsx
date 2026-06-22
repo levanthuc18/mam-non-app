@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, sGet, sSet, sDel, toast } from "./lib.js";
+import { C, font, sGet, sSet, sDel, sProbe, toast } from "./lib.js";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
 const GT_AVA = {
@@ -162,13 +162,13 @@ export function AvatarEditor({ hs, setHS }) {
     setCropSrc(null); setBusy(true);
     const kb = (dataURL.length / 1024).toFixed(1);
     try {
-      const ok = await sSet(avtKey(hs.id), dataURL);
-      if (ok) {
+      const r = await sProbe(avtKey(hs.id), dataURL);
+      if (r.ok) {
         AVT_CACHE.set(hs.id, dataURL);
         setHS({ avt: 1 });
         toast(`Đã lưu ảnh ✓ (${kb}KB)`);
       } else {
-        toast(`⚠️ Ảnh ${kb}KB vẫn bị từ chối`);
+        toast(`Lỗi ${r.status}: ${r.text || "?"} (ảnh ${kb}KB)`);
       }
     } catch { toast("⚠️ Lưu ảnh lỗi"); }
     setBusy(false);
