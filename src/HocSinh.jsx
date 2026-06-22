@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
-import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, Avatar, useStickyShrink, StickyBar } from "./ui.jsx";
+import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, useStickyShrink, StickyBar } from "./ui.jsx";
+import { Avatar } from "./Avatar.jsx";
 import { ImportHSExcel } from "./CaiDat.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
 
