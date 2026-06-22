@@ -362,196 +362,96 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
     gap: 2
   });
 
-  // Style chung cho Chip tiền
+  // Style chung cho Chip tiền (đã cân nhỏ lại)
   const chipStyle = {
-    fontSize: 10, 
-    fontWeight: 600, 
-    background: "#F3F4F6", 
-    color: C.sub, 
-    padding: "4px 8px", 
-    borderRadius: 6, 
+    fontSize: 9.5,
+    fontWeight: 600,
+    background: "#F3F4F6",
+    color: C.sub,
+    padding: "3px 7px",
+    borderRadius: 6,
     flexShrink: 0,
     display: "inline-block",
     whiteSpace: "nowrap"
   };
 
+  // Nút hành động dạng icon nhỏ
+  const iconBtn = (bg, color, border, disabled) => ({
+    width: 30, height: 30, borderRadius: 7,
+    border: border ? `1px solid ${C.line}` : "none",
+    background: disabled ? C.line : bg,
+    color: disabled ? C.sub : color,
+    opacity: disabled ? 0.5 : 1,
+    cursor: disabled ? "default" : "pointer",
+    flexShrink: 0, fontSize: 14, lineHeight: 1, padding: 0,
+    display: "flex", alignItems: "center", justifyContent: "center"
+  });
+
   return (
     <div style={{
       backgroundColor: "#FFFFFF",
       borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
+      padding: 10,
+      marginBottom: 10,
       borderLeft: `5px solid ${borderLeftColor}`,
       boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
       display: "flex",
       flexDirection: "column"
     }}>
-      
-      {/* HÀNG 1: HEADER (Avatar + Tên | Lớp + Tag) */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1, paddingRight: 8 }}>
-          <div style={{ marginRight: 8, flexShrink: 0 }}>
-            <Avatar hs={r.hs} size={36} />
+
+      {/* HÀNG 1: Avatar + Tên/Lớp(+Miễn giảm) | Trạng thái+Tiền | Nút icon */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Avatar hs={r.hs} size={38} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 14.5, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.hs.ten}</span>
+            {hasDiscount && (
+              <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "1px 6px", borderRadius: 5, whiteSpace: "nowrap" }}>🎁 Miễn giảm</span>
+            )}
           </div>
-          <span style={{ 
-            fontSize: 15, fontWeight: 700, color: "#111827", 
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", 
-            maxWidth: "75%" 
-          }}>
-            {r.hs.ten}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: "#6B7280", minWidth: 0 }}>
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
+            <span style={{ color: "#D1D5DB" }}>•</span>
+            <PLBadge pl={r.hs.pl} />
+          </div>
         </div>
-        
-        <div style={{ 
-          fontSize: 12.5, color: "#6B7280", fontWeight: 400, flexShrink: 0, 
-          display: "flex", alignItems: "center", gap: 4 
-        }}>
-          <span>{r.lop?.ten}</span>
-          <span style={{ color: "#D1D5DB" }}>•</span>
-          <PLBadge pl={r.hs.pl} />
+
+        {/* Trạng thái + số tiền */}
+        <div style={{ flexShrink: 0, textAlign: "right" }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusIcon} {statusText}</div>
+          <div style={{ fontSize: 13.5, fontWeight: 800, color: "#111827", marginTop: 1, whiteSpace: "nowrap" }}>
+            {isChuaThu ? `${fmt(tongPhaiThu)}đ` :
+             isThieu ? `${fmt(r.conNo)}đ` :
+             isThua ? `+${fmt(-r.conNo)}đ` : `${fmt(thucThu)}đ`}
+          </div>
+        </div>
+
+        {/* Cụm nút icon nhỏ — Thu luôn hiện */}
+        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+          <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={iconBtn(C.amber, "#fff", false, locked)}>💰</button>
+          <button onClick={() => onViewPhieu(r)} style={iconBtn("#DBEAFE", "#2563EB")}>📄</button>
+          <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={iconBtn("#FFF9EE", C.amber, true, locked)}>✏️</button>
+          <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={{ ...iconBtn(C.card, C.sub, true), transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "none" }}>▼</button>
         </div>
       </div>
 
-      {/* HÀNG CẢNH BÁO NGHIỆP VỤ (Nợ cũ lớn / Miễn giảm) */}
-      {(hasLargeDebt || hasDiscount) && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          {hasLargeDebt && (
-            <span style={{ 
-              fontSize: 10, fontWeight: 700, color: "#D97706", 
-              background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "1px 6px", borderRadius: 6 
-            }}>
-              ⚠ Nợ cũ lớn: {fmtK(noCu)}
-            </span>
-          )}
-          {hasDiscount && (
-            <span style={{ 
-              fontSize: 10, fontWeight: 700, color: "#D97706", 
-              background: "#FEF3C7", border: `1px solid #FDE68A`, 
-              padding: "1px 6px", borderRadius: 6 
-            }}>
-              ⚠ Miễn giảm
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* HÀNG 2: CHIP TIỀN (Vuốt ngang) */}
-      <div style={{ 
-        display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, 
-        marginBottom: 8, scrollbarWidth: "none", 
-        "-webkit-overflow-scrolling": "touch", 
-        "&::-webkit-scrollbar": { display: "none" } 
+      {/* HÀNG 2: CHIP TIỀN (vuốt ngang) */}
+      <div style={{
+        display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 4,
+        marginTop: 8, scrollbarWidth: "none"
       }}>
         <span style={chipStyle}>HP {fmtK(hocPhi)}</span>
         <span style={chipStyle}>Ăn {fmtK(tienAn)}</span>
-        
-        {phuThu > 0 && (
-          <span style={chipStyle}>PT {fmtK(phuThu)}</span>
-        )}
-        
+        {phuThu > 0 && <span style={chipStyle}>PT {fmtK(phuThu)}</span>}
         {truAnItems.map(([label, val], i) => (
-          <span key={i} style={{ 
-            ...chipStyle, 
-            background: C.coralSoft, color: C.coral 
-          }}>
-            {label} {fmtK(Math.abs(val))}
-          </span>
+          <span key={i} style={{ ...chipStyle, background: C.coralSoft, color: C.coral }}>{label} {fmtK(Math.abs(val))}</span>
         ))}
-        
         {noCu !== 0 && (
-          <span style={{ 
-            ...chipStyle,
-            background: noCu > 0 ? C.coralSoft : C.greenSoft,
-            color: noCu > 0 ? C.coral : C.green
-          }}>
+          <span style={{ ...chipStyle, background: noCu > 0 ? C.coralSoft : C.greenSoft, color: noCu > 0 ? C.coral : C.green }}>
             {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
           </span>
         )}
       </div>
-
-      {/* HÀNG 3: TRẠNG THÁI & NÚT HÀNH ĐỘNG */}
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-  
-  {/* BÊN TRÁI: Trạng thái + số tiền */}
-  <div style={{ minWidth: 0, paddingRight: 8 }}>
-    <div style={{ fontSize: 12.5, fontWeight: 600, color: statusColor }}>
-      {statusIcon} {statusText}
-    </div>
-    <div style={{ fontSize: 14.5, fontWeight: 700, color: "#111827", marginTop: 2 }}>
-      {isChuaThu ? `• Phải thu: ${fmt(tongPhaiThu)}đ` :
-       isThieu ? `• Còn thiếu: ${fmt(r.conNo)}đ` :
-       isThua ? `• Dư: ${fmt(-r.conNo)}đ` : "• Đã thu đủ"}
-    </div>
-    {isThieu && <div style={{ fontSize: 10, color: C.sub, marginTop: 2 }}>Đã thu: {fmt(thucThu)}đ</div>}
-  </div>
-
-  {/* BÊN PHẢI: Cụm 4 nút bấm */}
-  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-    {!locked ? (
-      <button onClick={() => onThuTien(r)} style={{
-        width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
-        background: C.amber, color: "#fff", cursor: "pointer", flexShrink: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
-      }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>💰</span>
-        <span style={{ fontSize: 9, fontWeight: 700 }}>Thu</span>
-      </button>
-    ) : (
-      <button disabled style={{
-        width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
-        background: C.line, color: C.sub, opacity: 0.5, cursor: "default", flexShrink: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
-      }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>💰</span>
-        <span style={{ fontSize: 9, fontWeight: 700 }}>Thu</span>
-      </button>
-    )}
-
-    <button onClick={() => onViewPhieu(r)} style={{
-      width: 36, padding: "3px 2px", borderRadius: 6, border: "none",
-      background: "#DBEAFE", color: "#2563EB", cursor: "pointer", flexShrink: 0,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
-    }}>
-      <span style={{ fontSize: 14, lineHeight: 1 }}>📄</span>
-      <span style={{ fontSize: 9, fontWeight: 700 }}>Phiếu</span>
-    </button>
-
-    {!locked ? (
-      <button onClick={() => onQuickEdit(r)} style={{
-        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
-        background: "#FFF9EE", color: C.amber, cursor: "pointer", flexShrink: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
-      }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>✏️</span>
-        <span style={{ fontSize: 9, fontWeight: 700 }}>Sửa</span>
-      </button>
-    ) : (
-      <button disabled style={{
-        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
-        background: C.card, color: C.sub, opacity: 0.5, cursor: "default", flexShrink: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2
-      }}>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>✏️</span>
-        <span style={{ fontSize: 9, fontWeight: 700 }}>Sửa</span>
-      </button>
-    )}
-
-    <button 
-      onClick={() => setExpandId(isExpanded ? null : r.hs.id)} 
-      style={{
-        width: 36, padding: "3px 2px", borderRadius: 6, border: `1px solid ${C.line}`,
-        background: C.card, color: C.sub, cursor: "pointer", flexShrink: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
-        transition: "transform .2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)"
-      }}
-    >
-      <span style={{ fontSize: 14, lineHeight: 1 }}>▼</span>
-      <span style={{ fontSize: 9, fontWeight: 700 }}>Xem</span>
-    </button>
-  </div>
-
-</div>
 
       {/* KHỐI CHI TIẾT RỘNG RÃNG KHI BẮM XEM */}
       {isExpanded && (
