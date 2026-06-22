@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, sGet, sSet, sDel } from "./lib.js";
+import { C, font, sGet, sSet, sDel, toast } from "./lib.js";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
 const GT_AVA = {
@@ -161,10 +161,11 @@ export function AvatarEditor({ hs, setHS }) {
   const onSave = async (dataURL) => {
     setCropSrc(null); setBusy(true);
     try {
-      await sSet(avtKey(hs.id), dataURL);
+      const ok = await sSet(avtKey(hs.id), dataURL);
       AVT_CACHE.set(hs.id, dataURL);
       setHS({ avt: 1 });
-    } catch {}
+      toast(ok ? "Đã lưu ảnh ✓" : "⚠️ Lưu ảnh lên máy chủ thất bại");
+    } catch { toast("⚠️ Lưu ảnh lỗi"); }
     setBusy(false);
   };
 
