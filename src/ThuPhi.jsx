@@ -4,8 +4,9 @@ import {
   KHOAN
 } from "./lib.js";
 import {
-  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, Avatar
+  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote
 } from "./ui.jsx";
+import { Avatar } from "./Avatar.jsx";
 
 /* ============================================================
    TIỆN ÍCH
@@ -92,15 +93,10 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
    2. BOTTOM SHEET THU TIỀN
    ============================================================ */
 function ThuTienSheet({ r, open, onClose, setRec }) {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
 
-  useEffect(() => {
-    if (open) {
-      setAmount(r?.rec?.thucThu || 0);
-      setPt("tm");
-    }
-  }, [open, r?.hs?.id]);
+  useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -113,76 +109,44 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   };
 
   return (
-    <BottomSheet open={true} onClose={onClose} title={`💰 THU TIỀN — ${r.hs.ten.toUpperCase()}`}>
-      <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
+      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 28px", boxShadow: "0 -4px 24px rgba(0,0,0,.18)" }}>
+        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
 
-        {/* Thông tin HS */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: C.sm, borderBottom: `1px solid ${C.line}` }}>
-          <Avatar hs={r.hs} size={40} />
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{r.hs.ten}</div>
-            <div style={{ fontSize: 13, color: C.sub }}>{r.lop?.ten}</div>
-          </div>
-        </div>
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>Phải thu:</div>
+        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 28, color: C.coral, marginBottom: 16 }}>{fmt(r.tongPhaiThu)}đ</div>
 
-        {/* Phải thu */}
-        <div style={{ background: C.coralSoft, borderRadius: 10, padding: "12px 14px" }}>
-          <div style={{ fontSize: 12, color: C.sub, marginBottom: 2 }}>Phải thu</div>
-          <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 26, color: C.coral }}>{fmt(r.tongPhaiThu)}đ</div>
-        </div>
-
-        {/* Nút nhanh */}
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <button onClick={handleThuDu} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Thu đủ</button>
           <button onClick={handleThuTron} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Thu tròn</button>
         </div>
 
-        {/* Nhập thực thu */}
-        <div>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu</div>
-          <input
-            type="number" inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-            style={{
-              width: "100%", padding: "14px 12px", borderRadius: 12,
-              border: `1.5px solid ${C.pine}`, fontSize: 18,
-              fontFamily: font.display, fontWeight: 700, color: C.ink,
-              textAlign: "right", outline: "none"
-            }}
-          />
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 6 }}>Thực thu:</div>
+        <input
+          type="number" inputMode="numeric"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0"
+          style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
+        />
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          <label onClick={() => setPt("tm")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "tm" ? C.pine : C.line}`, background: pt === "tm" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
+            <input type="radio" checked={pt === "tm"} onChange={() => setPt("tm")} style={{ accentColor: C.pine }} /> Tiền mặt
+          </label>
+          <label onClick={() => setPt("ck")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "ck" ? C.pine : C.line}`, background: pt === "ck" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
+            <input type="radio" checked={pt === "ck"} onChange={() => setPt("ck")} style={{ accentColor: C.pine }} /> Chuyển khoản
+          </label>
         </div>
 
-        {/* Phương thức */}
-        <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { key: "tm", label: "💵 Tiền mặt" },
-            { key: "ck", label: "🏦 Chuyển khoản" }
-          ].map(({ key, label }) => (
-            <label key={key} onClick={() => setPt(key)} style={{
-              flex: 1, display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 12px", borderRadius: 10,
-              border: `1.5px solid ${pt === key ? C.pine : C.line}`,
-              background: pt === key ? C.pineSoft : C.card,
-              cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink
-            }}>
-              <input type="radio" checked={pt === key} onChange={() => setPt(key)} style={{ accentColor: C.pine }} />
-              {label}
-            </label>
-          ))}
-        </div>
-
-        {/* Xác nhận */}
-        <button onClick={handleConfirm} style={{
-          width: "100%", padding: "14px 0", borderRadius: 12,
-          border: "none", background: C.amber, color: "#fff",
-          fontWeight: 800, fontSize: 16, cursor: "pointer"
-        }}>XÁC NHẬN THU</button>
+        <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
       </div>
-    </BottomSheet>
+    </div>
   );
 }
+
 /* ============================================================
    3. QUICK EDIT SHEET
    ============================================================ */
@@ -377,17 +341,9 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
     !isTruAn(d)
   ).reduce((a, b) => a + b[1], 0);
 
-      const noCu = r.noTruoc || 0;
-  const hasEdited = useMemo(() => {
-    if (!r?.rec) return false;
-    for (const k of KHOAN) {
-      if (k.key === "tienAn") continue; // ⬅️ BỎ QUA tiền ăn
-      const val = r.rec?.khoan?.[k.key] ?? 0;
-      const def = r.rec?.khoanDefault?.[k.key] ?? 0;
-      if (val !== def) return true;
-    }
-    return false;
-  }, [r]);
+  const noCu = r.noTruoc || 0;
+  const hasLargeDebt = noCu > 500000;
+  const hasDiscount = dong.some(d => d[1] < 0 && !isTruAn(d));
 
   // Style cho các nút bấm (có chứa chữ ở dưới)
   const btnStyle = (bg, color, isBorder) => ({
@@ -457,15 +413,26 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
       </div>
 
       {/* HÀNG CẢNH BÁO NGHIỆP VỤ (Nợ cũ lớn / Miễn giảm) */}
-      {hasEdited && (
+      {(hasLargeDebt || hasDiscount) && (
         <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
-          <span style={{ 
-            fontSize: 10, fontWeight: 700, color: "#D97706", 
-            background: "#FEF3C7", border: `1px solid #FDE68A`, 
-            padding: "1px 6px", borderRadius: 6 
-          }}>
-            ⚠ Đã sửa tay
-          </span>
+          {hasLargeDebt && (
+            <span style={{ 
+              fontSize: 10, fontWeight: 700, color: "#D97706", 
+              background: "#FEF3C7", border: `1px solid #FDE68A`, 
+              padding: "1px 6px", borderRadius: 6 
+            }}>
+              ⚠ Nợ cũ lớn: {fmtK(noCu)}
+            </span>
+          )}
+          {hasDiscount && (
+            <span style={{ 
+              fontSize: 10, fontWeight: 700, color: "#D97706", 
+              background: "#FEF3C7", border: `1px solid #FDE68A`, 
+              padding: "1px 6px", borderRadius: 6 
+            }}>
+              ⚠ Miễn giảm
+            </span>
+          )}
         </div>
       )}
 
