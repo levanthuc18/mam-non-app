@@ -469,18 +469,14 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
             <span style={{ fontSize: 12, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusText}</span>
           </div>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: "#111827", whiteSpace: "nowrap" }}>
-            {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}đ` :
-             isThieu ? `Còn thiếu: ${fmt(r.conNo)}đ` :
-             isThua ? `Dư: ${fmt(-r.conNo)}đ` : `Đã thu: ${fmt(thucThu)}đ`}
+            {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}` :
+             isThieu ? `Còn thiếu: ${fmt(r.conNo)}` :
+             isThua ? `Dư: ${fmt(-r.conNo)}` : `Đã thu: ${fmt(thucThu)}`}
           </div>
           <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
             <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
               <span style={{ fontSize: 13, lineHeight: 1 }}>💰</span>
               <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
-            </button>
-            <button onClick={() => onViewPhieu(r)} style={colBtn("#DBEAFE", "#2563EB")}>
-              <span style={{ fontSize: 13, lineHeight: 1 }}>📄</span>
-              <span style={{ fontSize: 8.5, fontWeight: 700 }}>Phiếu</span>
             </button>
             <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn("#FFF9EE", C.amber, true, locked)}>
               <span style={{ fontSize: 13, lineHeight: 1 }}>✏️</span>
@@ -513,6 +509,9 @@ function HSCardV1({ r, locked, onThuTien, onQuickEdit, onViewPhieu, setRec, expa
             <span>TỔNG CỘNG HÓA ĐƠN</span>
             <span>{fmt(tongPhaiThu)}đ</span>
           </div>
+          <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: "1px solid #BFDBFE", background: "#DBEAFE", color: "#2563EB", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <span style={{ fontSize: 15 }}>📄</span> Xem phiếu thu
+          </button>
         </div>
       )}
     </div>
