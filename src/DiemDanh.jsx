@@ -239,20 +239,30 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
       {mode === "ngay" ? (
         <>
-          <Card style={{ marginBottom: 12, padding: "14px", border: `1.5px solid ${C.pine}`, background: C.pineSoft }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 24, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 40, height: 40, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
+          <Card style={{ marginBottom: 12, padding: "12px 12px", border: `1.5px solid ${C.pine}`, background: C.pineSoft }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
               <label style={{ position: "relative", textAlign: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                  <span style={{ fontSize: 18 }}>📅</span>{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
+                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  <span style={{ fontSize: 17 }}>📅</span>{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
                 </div>
-                <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3 }}>{dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}</div>
                 <input type="date" value={`${year}-${String(month).padStart(2, "0")}-${String(viewDay).padStart(2, "0")}`} onChange={(e) => { const v = e.target.value.split("-").map(Number); if (!v[0]) return; setYear(v[0]); setMonth(v[1]); setViewDay(v[2]); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", border: "none" }} />
               </label>
-              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 24, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 40, height: 40, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
+              {/* Icon ngày lễ (chỉ admin) */}
+              {dow !== 0 && !locked && !isGV && (
+                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>🎌</button>
+              )}
+              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
-            {dow !== 0 && !locked && !isGV && <button onClick={() => toggleLe(viewDay)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: isLeNgay ? C.amber : C.amberSoft, color: isLeNgay ? "#fff" : C.amber }}>{isLeNgay ? "✓ Đang là ngày lễ — chạm để bỏ" : "📅 Đặt ngày này là ngày lễ (nghỉ cả trường)"}</button>}
-            {dow !== 0 && !isLeNgay && soNghiNgay > 0 && <button onClick={() => setChiVang((v) => !v)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: `1.5px solid ${chiVang ? C.coral : C.line}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? "#fff" : C.coral }}>{chiVang ? "↩ Xem tất cả các cháu" : `👀 Chỉ xem cháu nghỉ (${soNghiNgay})`}</button>}
+            {/* Dòng sĩ số + chip lọc cháu nghỉ ngang hàng */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
+              <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amber : C.sub, fontWeight: 600 }}>
+                {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "🎌 Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
+              </span>
+              {dow !== 0 && !isLeNgay && soNghiNgay > 0 && (
+                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : "#fff", color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : `👀 Cháu nghỉ (${soNghiNgay})`}</button>
+              )}
+            </div>
           </Card>
           
           {isGV && dow !== 0 && !isLeNgay && <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ width: "100%", marginBottom: 10, padding: "10px 0", borderRadius: 11, border: `1.5px dashed ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body }}>➕ Báo cháu mới (chưa có trong danh sách)</button>}
