@@ -218,10 +218,11 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       {openDD && (<>
       {/* THANH TÌM KIẾM & LỚP */}
-      {isGV && <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
-            👩‍🏫 {gvTen} — Lớp {lopTen}
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 4, fontWeight: 500 }}>
-              {studentRows.length} cháu trong lớp · Toàn trường {students.filter(s => TT_THU_PHI[s.trangThai]).length} cháu đang học
+      {isGV && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
+            <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>👩‍🏫 {gvTen} — Lớp {lopTen}</div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: soNghiNgay > 0 ? C.coral : C.green }}>{soNghiNgay > 0 ? `Nghỉ ${soNghiNgay}/${studentRows.length}` : `Đủ ${studentRows.length}`}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: (lastSaved && !dirty) ? C.green : C.amber, marginTop: 1 }}>{(lastSaved && !dirty) ? `✓ Đã điểm danh · ${String(lastSaved.getHours()).padStart(2,"0")}:${String(lastSaved.getMinutes()).padStart(2,"0")}` : "⏳ Chưa điểm danh"}</div>
             </div>
           </div>}
       {isGV && <SearchBar value={search} onChange={setSearch} />}
@@ -254,18 +255,24 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               )}
               <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
-            {/* Dòng sĩ số + chip lọc cháu nghỉ ngang hàng */}
+            {/* Dòng dưới: GV = Báo cháu mới + chip nghỉ; Admin = sĩ số + chip nghỉ */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
-              <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amber : C.sub, fontWeight: 600 }}>
-                {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "🎌 Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
-              </span>
+              {isGV ? (
+                dow !== 0 && !isLeNgay ? (
+                  <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: "#fff", color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap" }}>➕ Báo cháu mới</button>
+                ) : (
+                  <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "🎌 Ngày lễ — nghỉ cả trường"}</span>
+                )
+              ) : (
+                <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amber : C.sub, fontWeight: 600 }}>
+                  {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "🎌 Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
+                </span>
+              )}
               {dow !== 0 && !isLeNgay && soNghiNgay > 0 && (
                 <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : "#fff", color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : `👀 Cháu nghỉ (${soNghiNgay})`}</button>
               )}
             </div>
           </Card>
-          
-          {isGV && dow !== 0 && !isLeNgay && <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ width: "100%", marginBottom: 10, padding: "10px 0", borderRadius: 11, border: `1.5px dashed ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body }}>➕ Báo cháu mới (chưa có trong danh sách)</button>}
           
           {dow === 0 || isLeNgay ? (
             <div style={{ textAlign: "center", color: isLeNgay ? C.amber : C.gray, fontSize: 13.5, padding: 24 }}>{isLeNgay ? "Ngày lễ — cả trường nghỉ, không điểm danh." : "Chủ nhật — không điểm danh."}</div>
