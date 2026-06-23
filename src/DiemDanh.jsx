@@ -98,7 +98,7 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
   );
 }
 
-export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students, onSelectStudent }) {
+export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, setMonth, setYear, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students, onSelectStudent }) {
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const days = new Date(year, month, 0).getDate();
@@ -224,10 +224,9 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               {studentRows.length} cháu trong lớp · Toàn trường {students.filter(s => TT_THU_PHI[s.trangThai]).length} cháu đang học
             </div>
           </div>}
-      {!isGV && <SearchBar value={search} onChange={setSearch} />}
+      {isGV && <SearchBar value={search} onChange={setSearch} />}
       <div ref={sentinelRef} style={{ height: 1 }} />
       <StickyBar shrunk={shrunk}>
-        {!isGV && <Chips items={chipsLop} val={lopFilter} set={setLopFilter} compact />}
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <button onClick={() => setMode("ngay")} style={{ flex: 1, padding: "6px 0", borderRadius: 9, border: `1.5px solid ${mode === "ngay" ? C.pine : C.line}`, background: mode === "ngay" ? C.pine : C.card, color: mode === "ngay" ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Theo ngày</button>
           <button onClick={() => setMode("thang")} style={{ flex: 1, padding: "6px 0", borderRadius: 9, border: `1.5px solid ${mode === "thang" ? C.pine : C.line}`, background: mode === "thang" ? C.pine : C.card, color: mode === "thang" ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Cả tháng (bảng)</button>
@@ -240,16 +239,18 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
       {mode === "ngay" ? (
         <>
-          <Card style={{ marginBottom: 12, padding: "16px 14px", border: `1.5px solid ${C.pineSoft}` }}>
+          <Card style={{ marginBottom: 12, padding: "14px", border: `1.5px solid ${C.pine}`, background: C.pineSoft }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 28, lineHeight: 1, color: C.pine, border: "none", background: "none", cursor: "pointer", padding: "0 8px" }}>‹</button>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 22, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.ink }}>{dowLabel}, {viewDay}/{month}</div>
-                <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>{dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}</div>
-              </div>
-              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 28, lineHeight: 1, color: C.pine, border: "none", background: "none", cursor: "pointer", padding: "0 8px" }}>›</button>
+              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 24, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 40, height: 40, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
+              <label style={{ position: "relative", textAlign: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  <span style={{ fontSize: 18 }}>📅</span>{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: C.sub, marginTop: 3 }}>{dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}</div>
+                <input type="date" value={`${year}-${String(month).padStart(2, "0")}-${String(viewDay).padStart(2, "0")}`} onChange={(e) => { const v = e.target.value.split("-").map(Number); if (!v[0]) return; setYear(v[0]); setMonth(v[1]); setViewDay(v[2]); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", border: "none" }} />
+              </label>
+              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 24, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 40, height: 40, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
-            <input type="range" min={1} max={days} value={viewDay} onChange={(e) => setViewDay(Number(e.target.value))} style={{ width: "100%", marginTop: 10, accentColor: C.pine }} />
             {dow !== 0 && !locked && !isGV && <button onClick={() => toggleLe(viewDay)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: isLeNgay ? C.amber : C.amberSoft, color: isLeNgay ? "#fff" : C.amber }}>{isLeNgay ? "✓ Đang là ngày lễ — chạm để bỏ" : "📅 Đặt ngày này là ngày lễ (nghỉ cả trường)"}</button>}
             {dow !== 0 && !isLeNgay && soNghiNgay > 0 && <button onClick={() => setChiVang((v) => !v)} style={{ width: "100%", marginTop: 8, padding: "8px 0", borderRadius: 9, border: `1.5px solid ${chiVang ? C.coral : C.line}`, cursor: "pointer", fontWeight: 700, fontSize: 12.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? "#fff" : C.coral }}>{chiVang ? "↩ Xem tất cả các cháu" : `👀 Chỉ xem cháu nghỉ (${soNghiNgay})`}</button>}
           </Card>
