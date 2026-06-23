@@ -195,8 +195,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
   return (
     <>
-      {/* 1. KHỐI TỔNG QUAN QUẢN LÝ (thu gọn/mở) */}
-      <DiemDanhTongHop 
+      {/* 1. KHỐI TỔNG QUAN QUẢN LÝ (ẩn với GV) */}
+      {!isGV && <DiemDanhTongHop 
         students={students} 
         classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
         ddData={ddData} 
@@ -208,18 +208,19 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         collapsed={!openTQ}
         onToggle={() => setOpenTQ(v => !v)}
         ddTimes={ddTimes}
-      />
+      />}
 
       {/* 2. KHỐI ĐIỂM DANH (thu gọn/mở) */}
-      <div onClick={() => setOpenDD(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", padding: "6px 4px", marginBottom: openDD ? 8 : 4 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.pine }}>🎯 Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
-        <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{openDD ? "Thu gọn ▲" : `${studentRows.length} cháu · ${soNghiNgay} nghỉ · Mở rộng ▼`}</span>
+      <div onClick={() => setOpenDD(v => !v)} style={{ position: "relative", textAlign: "center", cursor: "pointer", padding: "8px 4px", marginBottom: openDD ? 8 : 4 }}>
+        <div style={{ fontWeight: 800, fontSize: 18, color: C.pine }}>🎯 Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
+        {!openDD && <div style={{ fontSize: 12, color: C.sub, marginTop: 2, fontWeight: 600 }}>{studentRows.length} cháu · {soNghiNgay} nghỉ · Mở rộng ▼</div>}
+        {openDD && <span style={{ position: "absolute", right: 6, top: 12, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>Thu gọn ▲</span>}
       </div>
 
       {openDD && (<>
       {/* THANH TÌM KIẾM & LỚP */}
       {isGV && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
-            <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>👩‍🏫 {gvTen} — Lớp {lopTen}</div>
+            <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>👩‍🏫 {gvTen}</div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: soNghiNgay > 0 ? C.coral : C.green }}>{soNghiNgay > 0 ? `Nghỉ ${soNghiNgay}/${studentRows.length}` : `Đủ ${studentRows.length}`}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: (lastSaved && !dirty) ? C.green : C.amber, marginTop: 1 }}>{(lastSaved && !dirty) ? `✓ Đã điểm danh · ${String(lastSaved.getHours()).padStart(2,"0")}:${String(lastSaved.getMinutes()).padStart(2,"0")}` : "⏳ Chưa điểm danh"}</div>
