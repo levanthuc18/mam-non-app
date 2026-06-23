@@ -21,8 +21,10 @@ function Donut({ pct, color, size = 60 }) {
 }
 
 // Bảng tổng hợp điểm danh các lớp (Sửa lại layout theo ảnh)
-function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter, collapsed, onToggle }) {
+function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter, collapsed, onToggle, ddTimes }) {
   const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
+  const dt = ddTimes || {};
+  const lopTime = (id) => { const iso = dt[id]; if (!iso) return null; const d = new Date(iso); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
   const stats = effClasses.map(c => {
     const hsInClass = students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === c.id && TT_THU_PHI[s.trangThai]);
     let nghi = 0;
@@ -36,7 +38,7 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
   const totalNghi = stats.reduce((a, c) => a + c.nghi, 0);
   const totalDiHoc = totalHS - totalNghi;
   const pct = totalHS > 0 ? Math.round(totalDiHoc / totalHS * 100) : 100;
-  const daDD = lastSaved ? effClasses.length : stats.filter(c => c.nghi > 0).length;
+  const daDD = effClasses.filter(c => dt[c.id]).length;
   const fmtTime = (d) => d ? `Lúc ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : "Chưa xác nhận";
 
   return (
@@ -80,8 +82,11 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
               onClick={() => setLopFilter(c.id)} 
               style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", cursor: "pointer" }}
             >
-              <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
-              <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700 }}>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
+                <span style={{ fontSize: 11.5, color: lopTime(c.id) ? C.sub : C.amber, marginLeft: 8 }}>{lopTime(c.id) ? `🕒 ${lopTime(c.id)}` : "• chưa điểm danh"}</span>
+              </div>
+              <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700, flexShrink: 0 }}>
                 {c.nghi > 0 ? `Nghỉ ${c.nghi}/${c.siSo}` : `Đủ ${c.siSo}`}
               </span>
             </div>
@@ -105,6 +110,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const [lastSaved, setLastSaved] = useState(null);
   const [openTQ, setOpenTQ] = useState(!isGV);
   const [openDD, setOpenDD] = useState(true);
+  const [ddTimes, setDdTimes] = useState({});
   const [chiVang, setChiVang] = useState(false); 
   const baoLops = chipsLop.filter(([id]) => id !== "all");
   const [baoOpen, setBaoOpen] = useState(false);
@@ -129,8 +135,13 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       setSaveState("ok");
       const now = new Date();
       setLastSaved(now);
-      const prevTs = (await sGet(`mn5:ddts:${ym}`)) || {};
-      sSet(`mn5:ddts:${ym}`, { ...prevTs, [viewDay]: now.toISOString() });
+      const eff = isGV ? gvLopId : lopFilter;
+      const lopIds = eff === "all" ? [...new Set(studentRows.map((r) => r.lopId))] : [eff];
+      const prev = (await sGet(`mn5:ddts:${ym}`)) || {};
+      const dayMap = { ...(prev[viewDay] || {}) };
+      lopIds.forEach((id) => { dayMap[id] = now.toISOString(); });
+      sSet(`mn5:ddts:${ym}`, { ...prev, [viewDay]: dayMap });
+      setDdTimes(dayMap);
     } else {
       setSaveState("err");
     }
@@ -138,9 +149,16 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   useEffect(() => {
     setSaveState(null); setChiVang(false);
     let alive = true;
-    sGet(`mn5:ddts:${ym}`).then((m) => { if (alive) setLastSaved(m && m[viewDay] ? new Date(m[viewDay]) : null); });
+    const eff = isGV ? gvLopId : lopFilter;
+    sGet(`mn5:ddts:${ym}`).then((m) => {
+      if (!alive) return;
+      const dayMap = (m && m[viewDay]) || {};
+      setDdTimes(dayMap);
+      const iso = eff === "all" ? Object.values(dayMap).sort().slice(-1)[0] : dayMap[eff];
+      setLastSaved(iso ? new Date(iso) : null);
+    });
     return () => { alive = false; };
-  }, [viewDay, mode, ym]);
+  }, [viewDay, mode, ym, lopFilter, isGV, gvLopId]);
 
   const studentRows = useMemo(() => {
     const s = noDau(search);
@@ -187,6 +205,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         setLopFilter={setLopFilter}
         collapsed={!openTQ}
         onToggle={() => setOpenTQ(v => !v)}
+        ddTimes={ddTimes}
       />
 
       {/* 2. KHỐI ĐIỂM DANH (thu gọn/mở) */}
