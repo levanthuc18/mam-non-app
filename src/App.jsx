@@ -237,6 +237,7 @@ export default function App() {
             allRows={store.ddRows} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter}
             search={search} setSearch={setSearch} ddData={store.ddData} upDDData={store.upDDData}
             leData={store.leData} upLeData={store.upLeData} year={store.year} month={store.month}
+            setMonth={store.setMonth} setYear={store.setYear}
             locked={store.nextChot} ddLockReason={store.nextChot} isWide={isWide} ym={store.ym}
             isGV={isGV} gvLopId={gvLopId} gvTen={gvTen} students={students} 
             onSelectStudent={setViewStudentId}
