@@ -111,6 +111,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const [openTQ, setOpenTQ] = useState(!isGV);
   const [openDD, setOpenDD] = useState(true);
   const [ddTimes, setDdTimes] = useState({});
+  const [dirty, setDirty] = useState(false);
   const [chiVang, setChiVang] = useState(false); 
   const baoLops = chipsLop.filter(([id]) => id !== "all");
   const [baoOpen, setBaoOpen] = useState(false);
@@ -132,7 +133,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     setSaveState("saving");
     const ok = await upDDData(att); 
     if (ok) {
-      setSaveState("ok");
+      setSaveState(null);
+      setDirty(false);
       const now = new Date();
       setLastSaved(now);
       const eff = isGV ? gvLopId : lopFilter;
@@ -147,7 +149,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     }
   };
   useEffect(() => {
-    setSaveState(null); setChiVang(false);
+    setSaveState(null); setChiVang(false); setDirty(false);
     let alive = true;
     const eff = isGV ? gvLopId : lopFilter;
     sGet(`mn5:ddts:${ym}`).then((m) => {
@@ -173,7 +175,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     if (nhap !== 1 && d < nhap) return; 
     if (nhap === 99) return;             
     const cur = { ...(att[sid] || {}) }; if (cur[d]) delete cur[d]; else cur[d] = true; upDDData({ ...att, [sid]: cur });
-    setSaveState(null); 
+    setSaveState(null); setDirty(true); 
   };
   
   const toggleLe = (d) => {
@@ -273,7 +275,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
                     <div style={{ fontSize: 12, color: C.sub }}>{r.lop?.ten}{chuaNhap && <span style={{ color: C.amber, marginLeft: 4 }}>· nhập {nhap}</span>}{chuaNhapThang && <span style={{ color: C.amber, marginLeft: 4 }}>· chưa nhập</span>}</div>
                   </div>
                   <Badge s={disabled ? { t: "—", c: C.gray, bg: C.graySoft } : nghi ? { t: "Nghỉ", c: C.coral, bg: C.coralSoft } : { t: "Đi học", c: C.green, bg: C.greenSoft }} />
-                  {isGV && <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: "none", background: "none", color: C.gray, fontSize: 20, fontWeight: 700, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}>⋮</button>}
+                  {isGV && <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 9, fontFamily: font.body }}>Khác</button>}
                 </div>
               );
             })
@@ -290,8 +292,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               <span style={{ flex: 1 }}>⚠️ Chưa lưu được — kiểm tra mạng rồi thử lại</span>
               <button onClick={xacNhanDD} style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: C.coral, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, flexShrink: 0 }}>Thử lại</button>
             </div>
-          ) : saveState === "ok" ? (
-            <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>{mode === "ngay" ? `✓ Đã lưu điểm danh ${dowLabel}, ${viewDay}/${month}` : `✓ Đã lưu điểm danh tháng ${month}`}</div>
+          ) : (lastSaved && !dirty) ? (
+            <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>✓ Đã điểm danh{mode === "ngay" ? ` ${dowLabel}, ${viewDay}/${month}` : ` tháng ${month}`} · Lúc {String(lastSaved.getHours()).padStart(2,"0")}:{String(lastSaved.getMinutes()).padStart(2,"0")}</div>
           ) : (
             <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>{saveState === "saving" ? "💾 Đang lưu…" : "✓ Xác nhận đã điểm danh"}</button>
           )}
