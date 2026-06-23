@@ -21,7 +21,7 @@ function Donut({ pct, color, size = 60 }) {
 }
 
 // Bảng tổng hợp điểm danh các lớp (Sửa lại layout theo ảnh)
-function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter }) {
+function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter, collapsed, onToggle }) {
   const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
   const stats = effClasses.map(c => {
     const hsInClass = students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === c.id && TT_THU_PHI[s.trangThai]);
@@ -40,7 +40,21 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
   const fmtTime = (d) => d ? `Lúc ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : "Chưa xác nhận";
 
   return (
-    <Card style={{ marginBottom: 12, padding: 14 }}>
+    <Card style={{ marginBottom: 12, padding: collapsed ? "11px 14px" : 14 }}>
+      {/* TIÊU ĐỀ KHỐI + CÔNG TẮC */}
+      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: collapsed ? 0 : 12 }}>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.pine }}>📊 Tổng quan quản lý</div>
+        <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{collapsed ? "Chi tiết ▼" : "Thu gọn ▲"}</span>
+      </div>
+
+      {collapsed ? (
+        <div style={{ marginTop: 8, fontSize: 13.5, fontWeight: 600 }}>
+          <span style={{ color: pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral, fontWeight: 800 }}>{pct}% đi học</span>
+          <span style={{ color: C.sub, fontWeight: 500 }}> · {totalDiHoc} đi học · </span>
+          <span style={{ color: totalNghi > 0 ? C.coral : C.sub }}>{totalNghi} nghỉ</span>
+          <span style={{ color: C.sub, fontWeight: 500 }}> · {fmtTime(lastSaved)}</span>
+        </div>
+      ) : (<>
       {/* Layout chia 2 cột: Biểu đồ (1/3) và Thông tin (2/3) */}
       <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
         <div style={{ flex: "0 0 33%", display: "flex", justifyContent: "center" }}>
@@ -74,6 +88,7 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
           ))}
         </div>
       )}
+      </>)}
     </Card>
   );
 }
@@ -88,6 +103,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const { sentinelRef, shrunk } = useStickyShrink();
   const [saveState, setSaveState] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
+  const [openTQ, setOpenTQ] = useState(!isGV);
+  const [openDD, setOpenDD] = useState(true);
   const [chiVang, setChiVang] = useState(false); 
   const baoLops = chipsLop.filter(([id]) => id !== "all");
   const [baoOpen, setBaoOpen] = useState(false);
@@ -110,12 +127,20 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     const ok = await upDDData(att); 
     if (ok) {
       setSaveState("ok");
-      setLastSaved(new Date());
+      const now = new Date();
+      setLastSaved(now);
+      const prevTs = (await sGet(`mn5:ddts:${ym}`)) || {};
+      sSet(`mn5:ddts:${ym}`, { ...prevTs, [viewDay]: now.toISOString() });
     } else {
       setSaveState("err");
     }
   };
-  useEffect(() => { setSaveState(null); setLastSaved(null); setChiVang(false); }, [viewDay, mode]); 
+  useEffect(() => {
+    setSaveState(null); setChiVang(false);
+    let alive = true;
+    sGet(`mn5:ddts:${ym}`).then((m) => { if (alive) setLastSaved(m && m[viewDay] ? new Date(m[viewDay]) : null); });
+    return () => { alive = false; };
+  }, [viewDay, mode, ym]);
 
   const studentRows = useMemo(() => {
     const s = noDau(search);
@@ -150,7 +175,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
   return (
     <>
-      {/* 1. CARD TỔNG HỢP ĐIỂM DANH NGÀY (ĐƯA LÊN ĐẦU TIÊN) */}
+      {/* 1. KHỐI TỔNG QUAN QUẢN LÝ (thu gọn/mở) */}
       <DiemDanhTongHop 
         students={students} 
         classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
@@ -160,9 +185,18 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         isGV={isGV} gvLopId={gvLopId} 
         lastSaved={lastSaved}
         setLopFilter={setLopFilter}
+        collapsed={!openTQ}
+        onToggle={() => setOpenTQ(v => !v)}
       />
 
-      {/* 2. THANH TÌM KIẾM & LỚP */}
+      {/* 2. KHỐI ĐIỂM DANH (thu gọn/mở) */}
+      <div onClick={() => setOpenDD(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", padding: "6px 4px", marginBottom: openDD ? 8 : 4 }}>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.pine }}>🎯 Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
+        <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{openDD ? "Thu gọn ▲" : `${studentRows.length} cháu · ${soNghiNgay} nghỉ · Mở rộng ▼`}</span>
+      </div>
+
+      {openDD && (<>
+      {/* THANH TÌM KIẾM & LỚP */}
       {isGV && <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
             👩‍🏫 {gvTen} — Lớp {lopTen}
             <div style={{ fontSize: 12, color: C.sub, marginTop: 4, fontWeight: 500 }}>
@@ -244,6 +278,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
           )}
         </div>
       )}
+      </>)}
 
       <BottomSheet open={baoOpen} onClose={() => { setBaoOpen(false); setBaoView("menu"); }} title={baoView === "moi" ? "Báo cháu mới" : baoView === "chuyenlop" ? `Báo chuyển lớp: ${baoHs?.ten || ""}` : `Báo về: ${baoHs?.ten || ""}`}>
         {baoView === "menu" && (<div>
