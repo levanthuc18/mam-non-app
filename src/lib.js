@@ -8,6 +8,7 @@ export const C = {
   blueA: "#2F6FBF", blueASoft: "#E7F0FB",
   violetB: "#8A56B8", violetBSoft: "#F2EAFA",
   gold: "#C99A2E", goldSoft: "#FBF1D8",
+  orange: "#FF5722", orangeSoft: "#FFEDE6",
 // --- Hệ thống Grid 8px (Mới bổ sung) ---
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, r: 16, r_kpi: 20
 };
