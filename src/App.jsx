@@ -11,6 +11,9 @@ import { CaiDat } from "./CaiDat.jsx";
 import { HocSinhTab } from "./HocSinh.jsx"; // 1. ĐÃ THÊM IMPORT
 import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
+import { Splash } from "./Splash.jsx";
+import { LoginScreen } from "./LoginScreen.jsx";
+import { Logo } from "./Brand.jsx";
 
 function ConfirmHost() {
   const [state, setState] = useState(null);
@@ -44,38 +47,6 @@ function ToastHost() {
   );
 }
 
-function LoginScreen({ meta, onLogin }) {
-  const [mode, setMode] = useState(null);
-  const [pin, setPin] = useState("");
-  const [err, setErr] = useState("");
-  const tryAdmin = () => { if (pin.trim() === "1989") onLogin({ role: "admin" }); else setErr("Mã quản lý không đúng"); };
-  const tryGV = () => { const gv = meta?.giaoVien?.find((g) => g.pin === pin.trim()); if (gv) onLogin({ role: "gv", gvId: gv.id, ten: gv.ten, lopId: gv.lopId }); else setErr("PIN không đúng"); };
-  const lopTen = (id) => meta?.classes.find((c) => c.id === id)?.ten || "?";
-  return (
-    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: font.body }}>
-      <div style={{ background: C.card, borderRadius: 20, padding: "30px 26px", width: "100%", maxWidth: 360, boxShadow: "0 8px 30px rgba(0,0,0,.08)", textAlign: "center" }}>
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 22, color: C.pine }}>{meta?.tenTruong || "Mầm Non"}</div>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 22 }}>Quản lý điểm danh & thu phí</div>
-        {!mode ? (
-          <>
-            <button onClick={() => { setMode("admin"); setPin(""); setErr(""); }} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer", marginBottom: 12 }}>👩‍💼 Quản lý (Kế toán)</button>
-            <button onClick={() => { setMode("gv"); setPin(""); setErr(""); }} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.blueA}`, background: C.card, color: C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>👩‍🏫 Giáo viên điểm danh</button>
-          </>
-        ) : (
-          <>
-            <div style={{ textAlign: "left", marginBottom: 8, fontSize: 13, fontWeight: 700, color: C.sub }}>{mode === "admin" ? "🔐 Nhập mã quản lý" : "👩‍🏫 Nhập PIN giáo viên"}</div>
-            <input type="password" inputMode="numeric" autoFocus value={pin} onChange={(e) => { setPin(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && (mode === "admin" ? tryAdmin() : tryGV())} placeholder={mode === "admin" ? "Mã quản lý" : "PIN của bạn"} style={{ width: "100%", padding: "12px", borderRadius: 10, border: `1.5px solid ${err ? C.coral : C.line}`, fontSize: 16, fontFamily: font.body, outline: "none", textAlign: "center", letterSpacing: 4 }} />
-            {err && <div style={{ fontSize: 12.5, color: C.coral, marginTop: 6 }}>{err}</div>}
-            <button onClick={mode === "admin" ? tryAdmin : tryGV} style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: mode === "admin" ? C.pine : C.blueA, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 12 }}>Vào</button>
-            <button onClick={() => { setMode(null); setPin(""); setErr(""); }} style={{ width: "100%", padding: "8px 0", borderRadius: 10, border: "none", background: "none", color: C.sub, fontSize: 13, cursor: "pointer", marginTop: 6 }}>‹ Quay lại</button>
-            {mode === "gv" && meta?.giaoVien?.length > 0 && <div style={{ marginTop: 12, fontSize: 11, color: C.gray, lineHeight: 1.6 }}>{meta.giaoVien.map((g) => <div key={g.id}>{g.ten} · lớp {lopTen(g.lopId)}</div>)}</div>}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function NotificationSheet({ open, onClose, alerts, onAction }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="🔔 Trung tâm thông báo">
@@ -104,6 +75,7 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
 export default function App() {
   const [tab, setTab] = useState("home"); 
   const [auth, setAuth] = useState(null);
+  const [splashDone, setSplashDone] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [phieuId, setPhieuId] = useState(null);
@@ -136,6 +108,7 @@ export default function App() {
 
   useEffect(() => { (async () => { const a = await sGet("mn5:auth"); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); })(); }, []);
 
+  if (!splashDone) return <Splash onDone={() => setSplashDone(true)} />;
   if (loading || !meta || !students)
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, color: C.sub, fontFamily: font.body }}>Đang tải dữ liệu…</div>;
   if (!auth) return <LoginScreen meta={meta} onLogin={login} />;
@@ -174,11 +147,14 @@ export default function App() {
 
       <div className="no-print" style={{ background: C.pine, padding: "16px", color: "#fff", minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ background: "#fff", borderRadius: 12, padding: 5, flexShrink: 0, lineHeight: 0, boxShadow: "0 1px 4px rgba(0,0,0,.12)" }}><Logo mark w={30} /></div>
+            <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
             <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
               {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} đang học · ${meta.classes.length} lớp`}
               {store.locked && <span>· 🔒</span>}
+            </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -191,7 +167,7 @@ export default function App() {
             {isAdmin && sysAlerts.length > 0 && (
               <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 14, cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 🔔
-                <span style={{ position: "absolute", top: -2, right: -2, background: C.coral, color: "#fff", fontSize: 9, fontWeight: 800, width: 14, height: 14, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{sysAlerts.length}</span>
+                <span style={{ position: "absolute", top: -2, right: -2, background: C.orange, color: "#fff", fontSize: 9, fontWeight: 800, width: 14, height: 14, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{sysAlerts.length}</span>
               </button>
             )}
             
