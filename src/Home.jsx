@@ -13,7 +13,7 @@ const ringTextStyle = (size) => ({
 const ringSubTextStyle = (size) => ({ fontSize: size * 0.125, fill: C.sub });
 
 // 1. COMPONENT RING MỚI (Hạ size, thêm isGhost)
-function Ring({ pct, color, size = 82, stroke = 9, isGhost = false, subText }) {
+function Ring({ pct, color, size = 82, stroke = 9, isGhost = false }) {
   const r = (size - stroke) / 2, circ = 2 * Math.PI * r;
   const off = circ * (1 - Math.min(100, Math.max(0, pct)) / 100);
   const cx = size / 2;
@@ -27,8 +27,8 @@ function Ring({ pct, color, size = 82, stroke = 9, isGhost = false, subText }) {
       <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={ringTextStyle(size)}>
         {isGhost ? "—" : `${pct}%`}
       </text>
-        <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" style={ringSubTextStyle(size)}>
-        {isGhost ? "Chờ DD" : (subText || "Đi học")}
+      <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" style={ringSubTextStyle(size)}>
+        {isGhost ? "Chờ DD" : "Đi học"}
       </text>
     </svg>
   );
@@ -76,7 +76,7 @@ function AttendanceCard({ today, month, onDetail }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         {/* 2. Truyền flag isGhost xuống Ring */}
-             <Ring pct={currentData.pct} color={ringColor} isGhost={!!currentData.ghost} subText={tab === "today" ? currentData.subText : undefined} />
+        <Ring pct={currentData.pct} color={ringColor} isGhost={!!currentData.ghost} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {currentData.ghost ? (
             <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5 }}>{currentData.ghost}</div>
@@ -290,11 +290,13 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
 
   return (
     <div style={{ paddingBottom: C.lg, marginTop: C.md }}>
-            <AttendanceCard
+      <AttendanceCard
         today={{
           pct: pctToday, di: diHocHomNay, nghi: nghiHomNay,
           ghost: N === 0 ? (isGV ? "Lớp chưa điểm danh hôm nay." : "Chưa lớp nào điểm danh hôm nay.") : null,
-          subText: isGV ? (N >= 1 ? "Đã điểm danh" : "Chưa điểm danh") : `${N}/${M} lớp`,
+          note: isGV ? (N >= 1 ? "Đã điểm danh hôm nay" : "Chưa điểm danh") : `${N}/${M} lớp đã điểm danh`,
+          noteColor: (isGV ? N >= 1 : allConfirmed) ? C.green : C.amber,
+          noteIcon: (isGV ? N >= 1 : allConfirmed) ? "check" : null,
         }}
         month={{ pct: pctMonth, di: diMonth, nghi: absMonth, note: "Đã trừ Chủ nhật & ngày lễ", noteColor: C.sub }}
         onDetail={() => setTab("dd")}
