@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { C, font, fmt } from "../lib.js";
+import { C, font, fmt, printWithName, fileName } from "../lib.js";
 import { BottomSheet } from "../ui.jsx";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
@@ -62,14 +62,17 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
       }
     });
 
+    const lopName = selectedLop === "all" ? "Tất cả lớp" : (meta.classes.find((c) => c.id === selectedLop)?.ten || "");
+    const printTitle = fileName(`Học phí - ${lopName} - T${month}.${year}`);
+
     if (changed) {
       upMeta({ ...meta, soBienLai: newSoBienLai });
       upMData({ ...mData, fees: newFees });
-      setTimeout(() => window.print(), 300);
+      printWithName(printTitle, 300);
     } else {
-      window.print();
+      printWithName(printTitle, 0);
     }
-  }, [rowsToPrint, mData, meta, upMeta, upMData]);
+  }, [rowsToPrint, mData, meta, upMeta, upMData, selectedLop, month, year]);
 
   const singleRow = singleId ? allRows.find((r) => r.hs.id === singleId && r.coRec) : null;
 
