@@ -145,33 +145,33 @@ export default function App() {
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
       `}</style>
 
-      <div className="no-print" style={{ background: C.pine, padding: "16px", color: "#fff", minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+      <div className="no-print" style={{ background: C.bg, padding: "14px 16px", color: C.ink, minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "center", borderBottom: `1px solid ${C.line}` }}>
         <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <div style={{ background: "#fff", borderRadius: 12, padding: 5, flexShrink: 0, lineHeight: 0, boxShadow: "0 1px 4px rgba(0,0,0,.12)" }}><Logo mark w={30} /></div>
+            <Logo mark style={{ height: 34, width: "auto", flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
-            <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
-              {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} đang học · ${meta.classes.length} lớp`}
+            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: C.pine, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+              {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} học sinh · ${meta.classes.length} lớp`}
               {store.locked && <span>· 🔒</span>}
             </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 2, background: "rgba(255,255,255,.16)", borderRadius: 999, padding: "4px 4px" }}>
-              <button onClick={prevM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
-              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center", color: "#fff", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{store.month}/{store.year} <span style={{ fontSize: 9, opacity: 0.8 }}>▾</span></button>
-              <button onClick={nextM} style={{ color: "#fff", fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>›</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 2, background: C.graySoft, border: `1px solid ${C.line}`, borderRadius: 999, padding: "4px 4px" }}>
+              <button onClick={prevM} style={{ color: C.sub, fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
+              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center", color: C.ink, background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{store.month}/{store.year} <span style={{ fontSize: 9, color: C.sub }}>▾</span></button>
+              <button onClick={nextM} style={{ color: C.sub, fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>›</button>
             </div>
             
             {isAdmin && sysAlerts.length > 0 && (
-              <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 14, cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                🔔
-                <span style={{ position: "absolute", top: -2, right: -2, background: C.orange, color: "#fff", fontSize: 9, fontWeight: 800, width: 14, height: 14, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{sysAlerts.length}</span>
+              <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "none", border: "none", borderRadius: 8, padding: "5px 7px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={C.pine} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                <span style={{ position: "absolute", top: -1, right: -1, background: C.orange, color: "#fff", fontSize: 9, fontWeight: 800, minWidth: 15, height: 15, padding: "0 3px", borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${C.bg}` }}>{sysAlerts.length}</span>
               </button>
             )}
             
-            <button onClick={logout} title="Đăng xuất" style={{ background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.3)", color: "#fff", borderRadius: 8, padding: "5px 9px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>↩</button>
+            <button onClick={logout} title="Đăng xuất" style={{ background: "none", border: `1px solid ${C.line}`, color: C.sub, borderRadius: 8, padding: "5px 9px", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>↩</button>
           </div>
         </div>
       </div>
