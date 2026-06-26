@@ -1,3 +1,4 @@
+import { Logo } from "./Brand.jsx";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   C, font, fmt, binOf, ask, toast, logAction, uid,
@@ -20,7 +21,9 @@ export function QRBox({ bank, amount, noiDung }) {
 
 export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, year, upMeta, mData, upMData }) {
   const nguoiThu = phieuRow.hs.nguoiThu;
-  const bienLai = phieuRow.rec.bienLai || null; 
+  const bienLai = phieuRow.rec.bienLai || null;
+  const namHoc = month >= 8 ? `${year}–${year + 1}` : `${year - 1}–${year}`;
+
   const inPhieu = () => {
     if (!bienLai) {
       const next = (meta.soBienLai?.[nguoiThu] || 0) + 1;
@@ -32,41 +35,105 @@ export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, y
       window.print();
     }
   };
+
   return (
     <>
       <select className="no-print" value={phieuRow.hs.id} onChange={(e) => setPhieuId(e.target.value)} style={{ width: "100%", padding: "11px 12px", borderRadius: 12, marginBottom: 14, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: C.card }}>
         {allRows.filter((r) => r.coRec).map((r) => <option key={r.hs.id} value={r.hs.id}>{r.hs.ten} — {r.lop?.ten}</option>)}
       </select>
-      <div id="phieu-in" style={{ background: "#FFFEF9", borderRadius: 4, padding: "0 0 18px", boxShadow: "0 4px 18px rgba(28,53,48,.12)" }}>
-        <div style={{ height: 10, background: `linear-gradient(45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%), linear-gradient(-45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%)`, backgroundColor: C.bg, backgroundSize: "14px 20px" }} />
-        <div style={{ padding: "14px 20px 0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-            <div style={{ fontSize: 11, color: C.sub }}>{bienLai ? <b style={{ color: C.ink, fontSize: 12 }}>{bienLai}</b> : "Số: (cấp khi in)"}</div>
-            <div style={{ fontSize: 11, color: C.sub }}>Ngày: {new Date().toLocaleDateString("vi-VN")}</div>
+
+      <div id="phieu-in" style={{ background: "#FFFEF9", padding: "0 0 12px" }}>
+        <div style={{ height: 8, background: `linear-gradient(45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%), linear-gradient(-45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%)`, backgroundColor: C.bg, backgroundSize: "14px 20px" }} />
+
+        <div style={{ maxWidth: 400, margin: "0 auto", padding: "10px 14px 0" }}>
+          {/* Vùng 1: Số & Ngày */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.sub, marginBottom: 8 }}>
+            <div>{bienLai ? <b style={{ color: C.ink, fontSize: 11 }}>{bienLai}</b> : "Số: ................."}</div>
+            <div>Ngày {new Date().getDate()} thg {(new Date().getMonth() + 1).toString().padStart(2, '0')} n {new Date().getFullYear()}</div>
           </div>
-          <div style={{ textAlign: "center", marginBottom: 12 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: C.pine }}>PHIẾU THU HỌC PHÍ</div>
-            <div style={{ fontSize: 12.5, color: C.sub }}>Tháng {month}/{year} — {meta.tenTruong}</div>
+
+          {/* Vùng 2: Logo + Thông tin trường */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "12px", marginBottom: 10 }}>
+            <div style={{ flexShrink: 0 }}>
+              <Logo mark={false} w={85} />
+            </div>
+            <div style={{ paddingLeft: 2, fontFamily: '"Times New Roman", Times, Georgia, serif', fontSize: "11px", color: C.ink, lineHeight: "1.35", fontWeight: "bold" }}>
+              <div style={{ fontSize: "12.5px" }}>{meta.tenTruong || "Mầm Non Tuổi Thần Tiên"}</div>
+              <div>Địa chỉ: {meta.diaChi || "Lạc Nông- Mai Đình- Sóc Sơn - Hà Nội"}</div>
+              <div>Điện thoại: {meta.dienThoai || "0945.958.222"}</div>
+            </div>
           </div>
-          <div style={{ fontSize: 13.5, marginBottom: 10 }}><b>{phieuRow.hs.ten}</b> · {phieuRow.lop?.ten} · Mã {phieuRow.hs.id.toUpperCase()}</div>
-          <div style={{ fontSize: 13.5 }}>
-            {phieuRow.ps.dong.map(([l, v], i) => (<div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3.5px 0", borderBottom: `1px dotted ${C.line}` }}><span style={{ color: C.sub }}>{l}</span><span>{fmt(v)}</span></div>))}
-            {phieuRow.noTruoc !== 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "3.5px 0", borderBottom: `1px dotted ${C.line}`, color: phieuRow.noTruoc > 0 ? C.coral : C.green }}><span>{phieuRow.noTruoc > 0 ? "Nợ tháng trước" : "Dư tháng trước"}</span><span>{phieuRow.noTruoc > 0 ? fmt(phieuRow.noTruoc) : "−" + fmt(-phieuRow.noTruoc)}</span></div>}
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 3px", fontFamily: font.display, fontWeight: 800, fontSize: 16 }}><span>TỔNG PHẢI THU</span><span>{fmt(phieuRow.tongPhaiThu)} đ</span></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span style={{ color: C.sub }}>Đã thu</span><span>{fmt(phieuRow.rec.thucThu)} đ</span></div>
-            {phieuRow.conNo !== 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: phieuRow.conNo > 0 ? C.coral : C.amber, fontWeight: 600 }}><span>{phieuRow.conNo > 0 ? "Còn nợ" : "Thu thừa"}</span><span>{fmt(Math.abs(phieuRow.conNo))} đ</span></div>}
+
+          {/* Vùng 3: Tiêu đề */}
+          <div style={{ textAlign: "center", marginBottom: 4 }}>
+            <div style={{ fontFamily: font.display, fontWeight: 900, fontSize: 17, color: C.ink, letterSpacing: "0.5px" }}>
+              PHIẾU THÔNG BÁO HỌC PHÍ
+            </div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink, marginTop: 2 }}>
+              Tháng {month < 10 ? `0${month}` : month} năm {year}
+            </div>
+            <div style={{ fontSize: 10.5, color: C.sub, marginTop: 1, fontStyle: "italic", fontWeight: 500 }}>
+              Năm học {namHoc}
+            </div>
           </div>
+
+          {/* Vùng 4: Đường kẻ */}
+          <div style={{ margin: "10px 0 6px", borderTop: `1px solid ${C.line || "#E2E8F0"}` }} />
+
+          {/* Vùng 5: Thông tin học sinh */}
+          <div style={{ fontSize: 12.5, color: C.ink, lineHeight: "1.5", marginTop: 4 }}>
+            <div>Họ và tên trẻ: <b>{phieuRow.hs.ten}</b></div>
+            <div>Lớp: <b>{phieuRow.lop?.ten || "Sơn Ca"}</b></div>
+          </div>
+
+          {/* Bảng phí chi tiết */}
+          <div style={{ fontSize: 13, marginTop: 10 }}>
+            {phieuRow.ps.dong.map(([l, v], i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3.5px 0", borderBottom: `1px dotted ${C.line}` }}>
+                <span style={{ color: C.sub }}>{l}</span>
+                <span>{fmt(v)}</span>
+              </div>
+            ))}
+            {phieuRow.noTruoc !== 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3.5px 0", borderBottom: `1px dotted ${C.line}`, color: phieuRow.noTruoc > 0 ? C.coral : C.green }}>
+                <span>{phieuRow.noTruoc > 0 ? "Nợ tháng trước" : "Dư tháng trước"}</span>
+                <span>{phieuRow.noTruoc > 0 ? fmt(phieuRow.noTruoc) : "−" + fmt(-phieuRow.noTruoc)}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0 3px", fontFamily: font.display, fontWeight: 800, fontSize: 16 }}>
+              <span>TỔNG PHẢI THU</span>
+              <span>{fmt(phieuRow.tongPhaiThu)} đ</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span style={{ color: C.sub }}>Đã thu</span>
+              <span>{fmt(phieuRow.rec.thucThu)} đ</span>
+            </div>
+            {phieuRow.conNo !== 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: phieuRow.conNo > 0 ? C.coral : C.amber, fontWeight: 600 }}>
+                <span>{phieuRow.conNo > 0 ? "Còn nợ" : "Thu thừa"}</span>
+                <span>{fmt(Math.abs(phieuRow.conNo))} đ</span>
+              </div>
+            )}
+          </div>
+
+          {/* QR + Thông tin chuyển khoản */}
           <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: C.pineSoft, display: "flex", gap: 12, alignItems: "center" }}>
             <QRBox bank={meta.bank[nguoiThu]} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} />
-            <div style={{ fontSize: 12.5, lineHeight: 1.5 }}><b>Chuyển khoản cho {nguoiThu}</b><br />{meta.bank[nguoiThu].chu}<br />{meta.bank[nguoiThu].stk} · {meta.bank[nguoiThu].nh}</div>
+            <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+              <b>Chuyển khoản cho {nguoiThu}</b><br />
+              {meta.bank[nguoiThu].chu}<br />
+              {meta.bank[nguoiThu].stk} · {meta.bank[nguoiThu].nh}
+            </div>
           </div>
         </div>
       </div>
-      <button className="no-print" onClick={inPhieu} style={{ marginTop: 14, width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>{bienLai ? "🖨 In / Lưu PDF" : "✓ Cấp số biên lai & In"}</button>
+
+      <button className="no-print" onClick={inPhieu} style={{ marginTop: 14, width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+        {bienLai ? "🖨 In / Lưu PDF" : "✓ Cấp số biên lai & In"}
+      </button>
     </>
   );
 }
-
 export function Donut({ pct, color, size = 76 }) {
   const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
   const dash = circ * Math.min(100, pct) / 100;
