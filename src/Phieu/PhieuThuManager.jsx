@@ -234,103 +234,22 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
         </div>
       )}
 
-      {/* Xuất dữ liệu + Xem trước - 2 cột */}
-      <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr" : "1fr", gap: 12 }}>
-        {/* Xuất dữ liệu */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setShowExportMenu((v) => !v)}
-            style={{ 
-              width: "100%", 
-              padding: "12px", 
-              borderRadius: 10, 
-              border: `1.5px solid ${C.line}`, 
-              background: C.card, 
-              color: C.ink, 
-              fontWeight: 700, 
-              fontSize: 13, 
-              cursor: "pointer", 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "space-between" 
-            }}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span>⬇️</span> Xuất dữ liệu
-            </span>
-            <span style={{ fontSize: 10 }}>▾</span>
-          </button>
-          {showExportMenu && (
-            <div style={{ 
-              position: "absolute", 
-              top: "calc(100% + 4px)", 
-              left: 0, 
-              right: 0, 
-              background: "#fff", 
-              border: `1.5px solid ${C.line}`, 
-              borderRadius: 10, 
-              boxShadow: "0 4px 16px rgba(0,0,0,.1)", 
-              zIndex: 50, 
-              overflow: "hidden" 
-            }}>
-              {[
-                { icon: "📄", label: "Tải file PDF (Tất cả)" },
-                { icon: "🖼", label: "Tải ảnh từng học sinh (ZIP)" },
-                { icon: "🖼", label: "Tải ảnh cả lớp (ZIP)" },
-                { icon: "📊", label: "Xuất Excel tổng hợp" },
-              ].map((item, i) => (
-                <button 
-                  key={i} 
-                  style={{ 
-                    width: "100%", 
-                    textAlign: "left", 
-                    padding: "10px 12px", 
-                    border: "none", 
-                    background: "none", 
-                    cursor: "pointer", 
-                    fontSize: 13, 
-                    color: C.ink, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: 8, 
-                    borderBottom: i < 3 ? `1px solid ${C.line}` : "none" 
-                  }} 
-                  onClick={() => setShowExportMenu(false)}
-                >
-                  <span>{item.icon}</span> {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Xem trước khi in - nút */}
-        <button
-          onClick={() => { 
-            const el = document.querySelector('.preview-area');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          style={{ 
-            width: "100%", 
-            padding: "12px", 
-            borderRadius: 10, 
-            border: `1.5px solid ${C.pine}`, 
-            background: C.pineSoft, 
-            color: C.pine, 
-            fontWeight: 700, 
-            fontSize: 13, 
-            cursor: "pointer", 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center",
-            gap: 6
-          }}
-        >
-          <span>👁</span> Xem trước khi in
-          <span style={{ fontSize: 11, opacity: 0.8 }}>{rowsToPrint.length} phiếu</span>
-        </button>
-      </div>
-
+      {/* Xem trước khi in */}
+      <button
+        onClick={() => {
+          const el = document.querySelector('.preview-area');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }}
+        style={{
+          width: "100%", padding: "12px", borderRadius: 10,
+          border: `1.5px solid ${C.pine}`, background: C.pineSoft,
+          color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+        }}
+      >
+        <span>👁</span> Xem trước khi in
+        <span style={{ fontSize: 11, opacity: 0.8 }}>{rowsToPrint.length} phiếu</span>
+      </button>
       {/* Danh sách lớp */}
       <ClassList meta={meta} rows={rowsToPrint} selectedLop={selectedLop} onSelectLop={setSelectedLop} />
 
