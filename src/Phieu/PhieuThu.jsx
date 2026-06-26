@@ -72,7 +72,7 @@ export function PhieuThu({
 
             <div style={{ margin: "8px 0 6px", borderTop: `1px solid ${C.line || "#E2E8F0"}` }} />
             <div style={{ fontSize: 12, color: C.ink, lineHeight: "1.4", marginBottom: 6 }}>
-              <div>Họ và tên trẻ: <b>{phieuRow.hs.ten}</b></div><div>Họ và tên trẻ: <b style={{ fontSize: 15 }}>{phieuRow.hs.ten}</b></div>
+             <div>Họ và tên trẻ: <b style={{ fontSize: 15 }}>{phieuRow.hs.ten}</b></div>
               <div>Lớp: <b>{phieuRow.lop?.ten || "Sóc Nhí"}</b></div>
             </div>
 
