@@ -419,11 +419,14 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          .print-only { display: block !important; }
           body { background: #fff !important; }
+          /* Ẩn hẳn giao diện quản lý + preview để không chiếm trang */
+          .phieu-manager { display: none !important; }
+          /* Hiện khối in */
           * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible !important; }
-          .print-area { 
+          .print-only, .print-only * { visibility: visible !important; }
+          .print-only { 
+            display: block !important;
             position: absolute; 
             left: 0; 
             top: 0; 
