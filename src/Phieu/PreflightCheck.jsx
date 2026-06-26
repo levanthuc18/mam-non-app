@@ -5,19 +5,16 @@ export function PreflightCheck({ rows, meta, onViewIssues }) {
     hsId: r.hs.id,
     ten: r.hs.ten,
     hasQR: !!(meta.bank?.[r.hs.nguoiThu]?.stk && meta.bank?.[r.hs.nguoiThu]?.nh),
-    hasPhone: !!r.hs.dienThoai,
     hasBL: !!r.rec?.bienLai,
     hasName: !!r.hs.ten,
     hasLop: !!r.lop?.ten,
   }));
 
   const noQR = checks.filter((c) => !c.hasQR);
-  const noPhone = checks.filter((c) => !c.hasPhone);
   const noBL = checks.filter((c) => !c.hasBL);
   const issues = [];
 
   if (noQR.length) issues.push({ type: "warning", icon: "🟠", msg: `${noQR.length} phiếu chưa có QR ngân hàng`, detail: noQR });
-  if (noPhone.length) issues.push({ type: "warning", icon: "🟠", msg: `${noPhone.length} phiếu chưa có số điện thoại`, detail: noPhone });
   if (noBL.length) issues.push({ type: "info", icon: "🔵", msg: `${noBL.length} phiếu chưa có số biên lai (sẽ cấp khi in)`, detail: noBL });
 
   const ready = issues.length === 0;
