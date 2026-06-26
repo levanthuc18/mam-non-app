@@ -1,24 +1,25 @@
-import { useState } from "react";
-import { C, font, fmt, binOf } from "../lib.js";
+import { C, font, fmt } from "../lib.js";
 import { Logo } from "../Brand.jsx";
+import { QRBox } from "./QRBox.jsx";
 
-export function QRBox({ bank, amount, noiDung }) {
-  const bin = binOf(bank?.nh);
-  const [err, setErr] = useState(false);
-  if (!bin || !bank?.stk || err) {
-    return <div style={{ width: 88, height: 88, borderRadius: 8, background: "#fff", border: `1.5px solid ${C.pine}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.sub, textAlign: "center", flexShrink: 0, padding: 4 }}>{bin ? "QR" : "QR (ngân hàng chưa hỗ trợ)"}</div>;
-  }
-  const url = `https://img.vietqr.io/image/${bin}-${bank.stk}-compact.png?` + (amount > 0 ? `amount=${Math.round(amount)}&` : "") + `addInfo=${encodeURIComponent(noiDung || "")}`;
-  return <img src={url} alt="QR chuyển khoản" onError={() => setErr(true)} style={{ width: 88, height: 88, borderRadius: 8, background: "#fff", border: `1.5px solid ${C.pine}`, flexShrink: 0, objectFit: "contain" }} />;
-}
-
-export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, year, upMeta, mData, upMData, isBatch = false }) {
+export function PhieuThu({ 
+  phieuRow, 
+  allRows = [], 
+  setPhieuId = null, 
+  meta, 
+  month, 
+  year, 
+  upMeta = null, 
+  mData = null, 
+  upMData = null, 
+  isBatch = false 
+}) {
   const nguoiThu = phieuRow.hs.nguoiThu;
   const bienLai = phieuRow.rec.bienLai || null;
   const namHoc = month >= 8 ? `${year}–${year + 1}` : `${year - 1}–${year}`;
 
   const inPhieu = () => {
-    if (!bienLai) {
+    if (!bienLai && upMeta && upMData) {
       const next = (meta.soBienLai?.[nguoiThu] || 0) + 1;
       const bl = `BL-${nguoiThu}-${String(next).padStart(4, "0")}`;
       upMeta({ ...meta, soBienLai: { ...(meta.soBienLai || {}), [nguoiThu]: next } });
@@ -38,21 +39,19 @@ export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, y
             html, body { height: 99%; overflow: hidden; }
             #phieu-in { box-shadow: none !important; background: #fff !important; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
             .no-print { display: none !important; }
-            .batch-print-area { display: none !important; }
           }
         `}</style>
       )}
 
-      {!isBatch && (
+      {!isBatch && setPhieuId && (
         <select className="no-print" value={phieuRow.hs.id} onChange={(e) => setPhieuId(e.target.value)} style={{ width: "100%", padding: "11px 12px", borderRadius: 12, marginBottom: 14, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: C.card }}>
           {allRows.filter((r) => r.coRec).map((r) => <option key={r.hs.id} value={r.hs.id}>{r.hs.ten} — {r.lop?.ten}</option>)}
         </select>
       )}
 
       <div id="phieu-in" style={{ background: "#FFFEF9", padding: "0 0 10px", minHeight: "135mm", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-        {/* Khối nội dung chính */}
         <div>
-          <div className="no-print" style={{ height: 6, background: `linear-gradient(45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%), linear-gradient(-45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%)`, backgroundColor: C.bg, backgroundSize: "14px 20px" }} />
+          {!isBatch && <div className="no-print" style={{ height: 6, background: `linear-gradient(45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%), linear-gradient(-45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%)`, backgroundColor: C.bg, backgroundSize: "14px 20px" }} />}
           
           <div style={{ maxWidth: 420, margin: "0 auto", padding: "8px 10px 0" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: 10 }}>
