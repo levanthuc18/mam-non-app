@@ -7,6 +7,7 @@ import { AnimatedCounter } from "./AnimatedCounter.jsx";
 import { PreflightCheck } from "./PreflightCheck.jsx";
 import { ClassList } from "./ClassList.jsx";
 import { PrintPreview } from "./PrintPreview.jsx";
+import { sharePhieuAnh } from "./shareImage.js";
 
 const FILTER_DEFS = [
   { key: "onlyConNo", label: "Chỉ in học sinh còn nợ" },
@@ -25,6 +26,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
   const [singleId, setSingleId] = useState(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
+  const [sharingSingle, setSharingSingle] = useState(false);
   
   useEffect(() => {
     if (phieuId) {
@@ -86,26 +88,32 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
   if (mode === "single" && singleRow) {
     return (
       <div>
-        <button 
-          onClick={() => setMode("manager")} 
-          className="no-print" 
-          style={{ 
-            marginBottom: 12, 
-            padding: "8px 14px", 
-            borderRadius: 10, 
-            border: `1.5px solid ${C.line}`, 
-            background: C.card, 
-            color: C.ink, 
-            fontWeight: 700, 
-            fontSize: 13, 
-            cursor: "pointer", 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 6 
-          }}
-        >
-          ❮ Quay lại quản lý in
-        </button>
+        <div className="no-print" style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <button
+            onClick={() => setMode("manager")}
+            style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            ❮ Quay lại quản lý in
+          </button>
+          <button
+            onClick={async () => {
+              if (sharingSingle) return;
+              setSharingSingle(true);
+              const node = document.getElementById("phieu-in");
+              const ten = singleRow.hs.ten || "Học sinh";
+              const lop = singleRow.lop?.ten || "";
+              const fn = fileName(`${lop ? lop + " - " : ""}${ten} - T${month}.${year}`) + ".png";
+              const res = await sharePhieuAnh(node, { filename: fn, title: `Phiếu học phí — ${ten}`, text: `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}` });
+              setSharingSingle(false);
+              if (!res.ok) alert("Không tạo được ảnh, thử lại nhé.");
+              else if (res.mode === "download") alert("Thiết bị không hỗ trợ chia sẻ trực tiếp — ảnh đã được tải về.");
+            }}
+            disabled={sharingSingle}
+            style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: sharingSingle ? C.graySoft : C.pine, color: sharingSingle ? C.gray : "#fff", fontWeight: 700, fontSize: 13, cursor: sharingSingle ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {sharingSingle ? "⏳ Đang tạo ảnh..." : "📤 Chia sẻ ảnh phiếu"}
+          </button>
+        </div>
         <PhieuThu
           phieuRow={singleRow}
           allRows={allRows}
