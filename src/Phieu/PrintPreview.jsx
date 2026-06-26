@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { C, font } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
+import { sharePhieuAnh } from "./shareImage.js";
 
 export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, includeTongHop, page, onPageChange }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalPage, setModalPage] = useState(0);
+  const [sharing, setSharing] = useState(false);
+  const captureRef = useRef(null);
   const totalPages = rows.length + (includeTongHop ? 1 : 0);
 
   const getPageContent = (p) => {
@@ -139,7 +142,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 ✕
               </button>
             </div>
-            <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}` }}>
+            <div ref={captureRef} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}`, background: "#fff" }}>
               {(() => {
                 const mc = getPageContent(modalPage);
                 return mc.type === "phieu" ? (
@@ -163,7 +166,53 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 );
               })()}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}>
+
+            {/* Nút chia sẻ ảnh */}
+            <button
+              onClick={async () => {
+                if (sharing) return;
+                setSharing(true);
+                const mc = getPageContent(modalPage);
+                const safe = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+                let filename, title, text;
+                if (mc.type === "phieu") {
+                  const ten = mc.row.hs.ten || "hoc-sinh";
+                  filename = `phieu_${safe(ten)}_${month}-${year}.png`;
+                  title = `Phiếu học phí — ${ten}`;
+                  text = `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}`;
+                } else {
+                  filename = `tong-hop_${month}-${year}.png`;
+                  title = "Bảng tổng hợp học phí";
+                  text = `Bảng tổng hợp học phí tháng ${month}/${year}`;
+                }
+                const res = await sharePhieuAnh(captureRef.current, { filename, title, text });
+                setSharing(false);
+                if (!res.ok) alert("Không tạo được ảnh, thử lại nhé.");
+                else if (res.mode === "download") alert("Thiết bị không hỗ trợ chia sẻ trực tiếp — ảnh đã được tải về.");
+              }}
+              disabled={sharing}
+              style={{
+                width: "100%",
+                marginTop: 12,
+                padding: "13px 0",
+                borderRadius: 12,
+                border: "none",
+                background: sharing ? C.graySoft : C.pine,
+                color: sharing ? C.gray : "#fff",
+                fontFamily: font.display,
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: sharing ? "default" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              {sharing ? "⏳ Đang tạo ảnh..." : "📤 Chia sẻ ảnh phiếu"}
+            </button>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
               <button 
                 onClick={() => modalPage > 0 && setModalPage(modalPage - 1)} 
                 disabled={modalPage === 0} 
