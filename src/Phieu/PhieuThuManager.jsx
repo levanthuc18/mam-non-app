@@ -234,22 +234,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
         </div>
       )}
 
-      {/* Xem trước khi in */}
-      <button
-        onClick={() => {
-          const el = document.querySelector('.preview-area');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-        style={{
-          width: "100%", padding: "12px", borderRadius: 10,
-          border: `1.5px solid ${C.pine}`, background: C.pineSoft,
-          color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6
-        }}
-      >
-        <span>👁</span> Xem trước khi in
-        <span style={{ fontSize: 11, opacity: 0.8 }}>{rowsToPrint.length} phiếu</span>
-      </button>
+      
       {/* Danh sách lớp */}
       <ClassList meta={meta} rows={rowsToPrint} selectedLop={selectedLop} onSelectLop={setSelectedLop} />
 
