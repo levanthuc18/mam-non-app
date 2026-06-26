@@ -6,7 +6,8 @@ import { HomeTab } from "./Home.jsx";
 import { ThuPhiTab } from "./ThuPhi.jsx";
 import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
-import { PhieuThu, DashTab } from "./TongQuan.jsx";
+import { DashTab } from "./TongQuan.jsx";
+import { PhieuThu } from "./Phieu/PhieuThu.jsx";
 import { CaiDat } from "./CaiDat.jsx";
 import { HocSinhTab } from "./HocSinh.jsx"; // 1. ĐÃ THÊM IMPORT
 import { StudentProfile } from "./StudentProfile.jsx";
