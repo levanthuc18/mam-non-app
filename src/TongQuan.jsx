@@ -110,7 +110,7 @@ export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, y
             </div>
             {phieuRow.conNo !== 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: phieuRow.conNo > 0 ? C.coral : C.amber, fontWeight: 600 }}>
-                <span>{phieuRow.conNo > 0 ? "Còn nợ" : "Thu thừa"}</span>
+                <span>{phieuRow.conNo > 0 ? "Còn lại cần đóng" : "Thu thừa"}</span>
                 <span>{fmt(Math.abs(phieuRow.conNo))} đ</span>
               </div>
             )}
@@ -120,9 +120,19 @@ export function PhieuThu({ phieuRow, allRows, setPhieuId, getLop, meta, month, y
           <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: C.pineSoft, display: "flex", gap: 12, alignItems: "center" }}>
             <QRBox bank={meta.bank[nguoiThu]} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} />
             <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
-              <b>Chuyển khoản cho {nguoiThu}</b><br />
+              <b>Thông tin tài khoản</b><br />
               {meta.bank[nguoiThu].chu}<br />
               {meta.bank[nguoiThu].stk} · {meta.bank[nguoiThu].nh}
+            </div>
+          </div>
+
+          {/* Ghi chú cuối phiếu */}
+          <div style={{ marginTop: 14, padding: "8px 12px", backgroundColor: "#F8FAFC", borderRadius: 6, fontSize: 10.5, color: C.sub || "#64748B", lineHeight: "1.5", textAlign: "center" }}>
+            <div style={{ marginBottom: 4 }}>
+              Các bậc phụ huynh vui lòng đóng tiền học cho bé từ ngày <b>01/{month < 10 ? `0${month}` : month}</b> đến ngày <b>10/{month < 10 ? `0${month}` : month}</b> tại văn phòng hoặc trực tiếp cho giáo viên tại lớp.
+            </div>
+            <div style={{ fontStyle: "italic", fontWeight: 500 }}>
+              Quý phụ huynh vui lòng kiểm tra thông tin trước khi thanh toán. Xin chân thành cảm ơn!
             </div>
           </div>
         </div>
