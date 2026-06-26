@@ -1,15 +1,13 @@
 import { Logo } from "./Brand.jsx";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  C, font, fmt, binOf, ask, toast, logAction, uid,
-  LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec, noDau,
+  C, font, fmt, ask, toast, logAction, uid,
+  LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec,
   sGet, sList
 } from "./lib.js";
 import {
   Card, BottomSheet, NumInput, ABBtn, Badge
 } from "./ui.jsx";
-import { PhieuThu } from "./Phieu/PhieuThu.jsx";
-import { BatchPrint } from "./Phieu/BatchPrint.jsx";
 
 export function Donut({ pct, color, size = 76 }) {
   const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
@@ -23,7 +21,7 @@ export function Donut({ pct, color, size = 76 }) {
   );
 }
 
-export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta, setTab, phieuRow, setPhieuId }) {
+export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta, setTab }) {
   const [openCards, setOpenCards] = useState(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("dashOpenCards") : null;
     if (saved) { try { return JSON.parse(saved); } catch {} }
@@ -45,7 +43,6 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [sheetCP, setSheetCP] = useState(false);
   const [sheetLN, setSheetLN] = useState(false);
   const [sheetLS, setSheetLS] = useState(false);
-  const [showBatchPrint, setShowBatchPrint] = useState(false);
 
   useEffect(() => {
     let huy = false;
@@ -277,46 +274,6 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
             </div>
           )}
         </div>
-      )}
-
-      {/* ===== PHẦN PHIẾU THU / IN THEO LỚP ===== */}
-      {showBatchPrint ? (
-        <BatchPrint 
-          allRows={allRows} 
-          meta={meta} month={month} year={year} 
-          mData={mData} upMData={upMData} upMeta={upMeta}
-          onClose={() => setShowBatchPrint(false)} 
-        />
-      ) : (
-        <>
-          <button 
-            onClick={() => setShowBatchPrint(true)} 
-            className="no-print" 
-            style={{ 
-              width: "100%", 
-              padding: "11px", 
-              borderRadius: 12, 
-              marginBottom: 14, 
-              marginTop: 12,
-              border: `1.5px dashed ${C.pine}`, 
-              background: C.pineSoft, 
-              color: C.pine, 
-              fontWeight: 700, 
-              fontSize: 14, 
-              cursor: "pointer" 
-            }}
-          >
-            🗂 In theo lớp / In tất cả
-          </button>
-
-          <PhieuThu 
-            phieuRow={phieuRow} 
-            allRows={allRows} 
-            setPhieuId={setPhieuId}
-            meta={meta} month={month} year={year} 
-            mData={mData} upMData={upMData} upMeta={upMeta}
-          />
-        </>
       )}
 
       <BottomSheet open={sheetCB} onClose={() => setSheetCB(false)} title={`Cảnh báo bất thường — T${month}/${year}`}>
