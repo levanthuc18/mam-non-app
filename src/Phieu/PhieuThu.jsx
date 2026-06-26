@@ -1,4 +1,4 @@
-import { C, font, fmt } from "../lib.js";
+import { C, font, fmt, printWithName, fileName } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { QRBox } from "./QRBox.jsx";
 
@@ -19,14 +19,15 @@ export function PhieuThu({
   const namHoc = month >= 8 ? `${year}–${year + 1}` : `${year - 1}–${year}`;
 
   const inPhieu = () => {
+    const printTitle = fileName(`${phieuRow.lop?.ten ? phieuRow.lop.ten + " - " : ""}${phieuRow.hs.ten} - T${month}.${year}`);
     if (!bienLai && upMeta && upMData) {
       const next = (meta.soBienLai?.[nguoiThu] || 0) + 1;
       const bl = `BL-${nguoiThu}-${String(next).padStart(4, "0")}`;
       upMeta({ ...meta, soBienLai: { ...(meta.soBienLai || {}), [nguoiThu]: next } });
       upMData({ ...mData, fees: { ...mData.fees, [phieuRow.hs.id]: { ...mData.fees[phieuRow.hs.id], bienLai: bl } } });
-      setTimeout(() => window.print(), 100);
+      printWithName(printTitle, 100);
     } else {
-      window.print();
+      printWithName(printTitle, 0);
     }
   };
 
