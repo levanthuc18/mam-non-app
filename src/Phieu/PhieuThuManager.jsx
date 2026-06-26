@@ -132,7 +132,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
             if (first) { setSingleId(first.hs.id); setMode("single"); } 
           }}
           style={{ 
-            padding: "12px 8px", 
+            padding: "9px 8px", 
             borderRadius: 12, 
             border: "none", 
             background: C.pine, 
@@ -155,7 +155,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
         <button
           onClick={() => { setPreviewPage(0); }}
           style={{ 
-            padding: "12px 8px", 
+            padding: "9px 8px", 
             borderRadius: 12, 
             border: `2px solid ${C.amber}`, 
             background: "#fff", 
@@ -239,14 +239,13 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
       <ClassList meta={meta} rows={rowsToPrint} selectedLop={selectedLop} onSelectLop={setSelectedLop} />
 
       {/* Tổng quan toàn trường */}
-      <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "14px" }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 10 }}>
+      <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "10px" }}>
+        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 8 }}>
           TỔNG QUAN TOÀN TRƯỜNG
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, textAlign: "center" }}>
           <div>
-            <div style={{ fontSize: 11, color: C.sub }}>Tổng số</div>
-            <div style={{ fontSize: 11, color: C.sub }}>học sinh</div>
+            <div style={{ fontSize: 11, color: C.sub }}>Số HS</div>
             <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginTop: 4 }}>
               <AnimatedCounter value={rowsToPrint.length} />
             </div>
