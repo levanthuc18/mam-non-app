@@ -114,7 +114,7 @@ export function PhieuThu({
 
         <div style={{ maxWidth: 420, margin: "0 auto", padding: "0 10px", width: "100%" }}>
           <div style={{ padding: "6px 8px", backgroundColor: "#F8FAFC", borderRadius: 4, fontSize: 10, color: C.sub || "#64748B", lineHeight: "1.4", textAlign: "center", marginBottom: 8 }}>
-            <div style={{ marginBottom: 2 }}>Đóng tiền từ ngày <b>01/{month < 10 ? `0${month}` : month}</b> đến <b>10/{month < 10 ? `0${month}` : month}</b> tại văn phòng hoặc giáo viên tại lớp.</div>
+            <div style={{ marginBottom: 2 }}>Phụ huynh đóng tiền từ ngày <b>01/{month < 10 ? `0${month}` : month}</b> đến <b>10/{month < 10 ? `0${month}` : month}</b> tại văn phòng hoặc giáo viên tại lớp.</div>
             <div style={{ fontStyle: "italic", fontWeight: 500 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 9.5, color: C.sub, paddingTop: 4, borderTop: `1px dashed ${C.line || "#E2E8F0"}` }}>
