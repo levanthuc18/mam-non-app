@@ -275,7 +275,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
       tasks.push({
         id: "task_thu",
         type: isOverdue ? "danger" : "warning",
-        text: `${chuaThu} học sinh chưa đóng học phí (Hạn: ngày ${deadline}/${month})`,
+        text: `${chuaThu} học sinh chưa đóng học phí (Hạn:${deadline}/${month})`,
         action: () => { setTab("thu"); setThuFilter("chuaThu"); }
       });
     }
@@ -309,15 +309,15 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
       {/* UI Khu vực "Việc cần xử lý hôm nay" */}
       {isAdmin && todayTasks.length > 0 && (
         <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md, border: `1px solid ${C.line}` }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: C.sub, marginBottom: 12, letterSpacing: "0.5px" }}>📋 VIỆC CẦN XỬ LÝ HÔM NAY</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 12, color: C.sub, marginBottom: 8, letterSpacing: "0.5px" }}>📋 VIỆC CẦN XỬ LÝ</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {todayTasks.map((t) => (
-              <div key={t.id} onClick={t.action} className="active-press-shadow" style={{ 
-                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, 
+                <div key={t.id} onClick={t.action} className="active-press-shadow" style={{ 
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, 
                 background: t.type === "danger" ? C.coralSoft : C.amberSoft, cursor: "pointer", transition: "transform 0.1s ease" 
               }}>
                 <span style={{ width: 7, height: 7, borderRadius: 99, background: t.type === "danger" ? C.coral : C.amber, flexShrink: 0 }} />
-                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.ink }}>{t.text}</div>
+                 <div style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: C.ink, lineHeight: 1.4 }}>{t.text}</div>
                 <Icon name="chevronRight" size={14} color={C.sub} />
               </div>
             ))}
