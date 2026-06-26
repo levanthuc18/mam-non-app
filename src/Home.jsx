@@ -12,17 +12,24 @@ const ringTextStyle = (size) => ({
 });
 const ringSubTextStyle = (size) => ({ fontSize: size * 0.125, fill: C.sub });
 
-function Ring({ pct, color, size = 96, stroke = 11 }) {
+// 1. COMPONENT RING MỚI (Hạ size, thêm isGhost)
+function Ring({ pct, color, size = 82, stroke = 9, isGhost = false }) {
   const r = (size - stroke) / 2, circ = 2 * Math.PI * r;
   const off = circ * (1 - Math.min(100, Math.max(0, pct)) / 100);
   const cx = size / 2;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
       <circle cx={cx} cy={cx} r={r} fill="none" stroke={C.line} strokeWidth={stroke} />
-      <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
-        strokeDasharray={circ} strokeDashoffset={off} transform={`rotate(-90 ${cx} ${cx})`} />
-      <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={ringTextStyle(size)}>{pct}%</text>
-      <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" style={ringSubTextStyle(size)}>Đi học</text>
+      {!isGhost && (
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={off} transform={`rotate(-90 ${cx} ${cx})`} />
+      )}
+      <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={ringTextStyle(size)}>
+        {isGhost ? "—" : `${pct}%`}
+      </text>
+      <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" style={ringSubTextStyle(size)}>
+        {isGhost ? "Chờ DD" : "Đi học"}
+      </text>
     </svg>
   );
 }
@@ -44,7 +51,7 @@ function StatRow({ color, label, value }) {
   );
 }
 
-// ===== Thẻ điểm danh (donut + Đi học / Nghỉ) =====
+// ===== Thẻ điểm danh =====
 function AttendanceCard({ today, month, onDetail }) {
   const [tab, setTab] = useState("today");
   const currentData = tab === "today" ? today : month;
@@ -68,7 +75,8 @@ function AttendanceCard({ today, month, onDetail }) {
         </button>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <Ring pct={currentData.pct} color={ringColor} />
+        {/* 2. Truyền flag isGhost xuống Ring */}
+        <Ring pct={currentData.pct} color={ringColor} isGhost={!!currentData.ghost} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {currentData.ghost ? (
             <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5 }}>{currentData.ghost}</div>
@@ -90,35 +98,37 @@ function AttendanceCard({ today, month, onDetail }) {
   );
 }
 
-// ===== Ô chức năng (icon nét trong nền mềm) =====
-const tileStyle = {
-  flex: "1 1 44%", minWidth: 0, background: C.card, border: `1px solid ${C.line}`, borderRadius: 20,
-  padding: 16, textAlign: "left", cursor: "pointer", boxShadow: "0 2px 10px rgba(20,60,48,.05)",
-  display: "flex", flexDirection: "column", gap: 12,
-};
-
-function Tile({ name, tint, iconColor, title, sub, onClick }) {
+// 3. COMPONENT TILE MỚI (Hỗ trợ fullWidth và hiển thị sub tối đa 2 dòng)
+function Tile({ name, tint, iconColor, title, sub, onClick, fullWidth = false }) {
   return (
-    <button onClick={onClick} style={tileStyle}>
+    <button onClick={onClick} className="active-press-shadow" style={{
+      minWidth: 0, background: C.card, border: `1px solid ${C.line}`, borderRadius: 20,
+      padding: 16, textAlign: "left", cursor: "pointer", boxShadow: "0 2px 10px rgba(20,60,48,.05)",
+      display: "flex", flexDirection: "column", gap: 12,
+      flex: fullWidth ? "1 1 100%" : "1 1 44%",
+      transition: "transform 0.1s ease"
+    }}>
       <div style={{ width: 44, height: 44, borderRadius: 13, background: tint, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Icon name={name} size={22} color={iconColor} />
       </div>
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, width: "100%" }}>
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>
+        <div style={{ 
+          fontSize: 12.5, color: C.sub, marginTop: 4, fontWeight: 600,
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal" 
+        }}>{sub}</div>
       </div>
     </button>
   );
 }
 
-// ===== Cảnh báo =====
+// Giữ lại AlertRow để dự phòng (không dùng trong UI mới)
 function AlertRow({ type, message, actionLabel, onAction }) {
   const colors = useMemo(() => ({
     danger: { bg: C.coralSoft, border: "#FFD7D7", fg: C.coral, btn: "#E4573D" },
     warning: { bg: C.amberSoft, border: "#EAD8A0", fg: "#7A5E12", btn: C.amber },
   }), []);
   const c = colors[type] || colors.warning;
-  
   return (
     <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: C.r, padding: C.md, marginBottom: C.sm, display: "flex", alignItems: "center", gap: C.md }}>
       <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{message}</div>
@@ -153,17 +163,15 @@ function RecentActivity({ onSeeAll }) {
 
 // ===== Component chính =====
 export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile }) {
-  const { allRows, students, month, year, ddData, leData } = store;
+  const { allRows, students, meta, month, year, ddData, leData } = store;
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
   const gvLopId = auth?.lopId;
 
-  // Khai báo 1 lần object Date duy nhất
   const today = useMemo(() => new Date(), []);
   const todayStr = today.getDate();
   const ymStr = `${year}-${String(month).padStart(2, '0')}`;
 
-  // 1. Lọc dữ liệu cơ bản theo quyền
   const { visibleStudents, visibleRows } = useMemo(() => {
     const vStudents = isGV ? students.filter(s => lopOfMonth(s, ymStr) === gvLopId) : students;
     const vRows = isGV ? allRows.filter(r => r.lopId === gvLopId) : allRows;
@@ -172,7 +180,6 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
 
   const recRows0 = useMemo(() => visibleRows.filter((r) => r.coRec), [visibleRows]);
 
-  // 2. Tính toán Tài chính
   const finances = useMemo(() => {
     const canThuAll = recRows0.reduce((a, r) => a + r.tongPhaiThu, 0);
     const daThuAll = recRows0.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
@@ -183,11 +190,9 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
     return { canThuAll, daThuAll, noRows, soPhieu, chuaThu, ngayAn0 };
   }, [recRows0]);
 
-  // 3. Thống kê học sinh
   const dashTong = visibleStudents.length;
   const dashDangHoc = useMemo(() => visibleStudents.filter((s) => s.trangThai === "Đang học").length, [visibleStudents]);
 
-  // 4. Điểm danh hôm nay
   const clsOf = (s) => lopOfMonth(s, ymStr);
   const activeStudents = useMemo(() => visibleStudents.filter(s => TT_THU_PHI[s.trangThai]), [visibleStudents]);
   const classesWithStudents = useMemo(() => [...new Set(activeStudents.map(clsOf))].filter(Boolean), [activeStudents]);
@@ -210,17 +215,14 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
     const nghiHomNay = confirmedActive.filter(s => ddData?.[s.id]?.[todayStr]).length;
     const diHocHomNay = confirmedActive.length - nghiHomNay;
     const pctToday = confirmedActive.length > 0 ? Math.round(diHocHomNay / confirmedActive.length * 100) : 0;
-    
     return { N, allConfirmed, nghiHomNay, diHocHomNay, pctToday };
   }, [ddtsToday, isGV, gvLopId, classesWithStudents, M, activeStudents, ddData, todayStr]);
 
-  // 5. Điểm danh cả tháng (trừ CN + ngày lễ)
   const monthStats = useMemo(() => {
     const daysInMonth = new Date(year, month, 0).getDate();
     const isCurMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
     const lastDay = isCurMonth ? todayStr : daysInMonth;
     let schoolDays = 0, absMonth = 0;
-    
     for (let d = 1; d <= lastDay; d++) {
       const dow = new Date(year, month - 1, d).getDay();
       if (dow === 0 || leData?.[d]) continue;
@@ -230,11 +232,9 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
     const monthTotal = schoolDays * dashDangHoc;
     const diMonth = Math.max(0, monthTotal - absMonth);
     const pctMonth = monthTotal > 0 ? Math.round(diMonth / monthTotal * 100) : 0;
-    
     return { absMonth, diMonth, pctMonth };
   }, [year, month, today, todayStr, leData, activeStudents, ddData, dashDangHoc]);
 
-  // State nhật ký
   const [logOpen, setLogOpen] = useState(false);
   const [fullLog, setFullLog] = useState([]);
   const openFullLog = async () => { 
@@ -245,14 +245,51 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
 
   const vnd = (n) => (n || 0).toLocaleString("vi-VN") + " đ";
 
-  // Trích xuất biến để JSX gọn gàng
   const { N, allConfirmed, nghiHomNay, diHocHomNay, pctToday } = todayStats;
   const { absMonth, diMonth, pctMonth } = monthStats;
   const { daThuAll, noRows, soPhieu, chuaThu, ngayAn0 } = finances;
 
+  // 4. ENGINE TỰ ĐỘNG TÍNH "VIỆC CẦN XỬ LÝ HÔM NAY"
+  const todayTasks = useMemo(() => {
+    const tasks = [];
+    const deadline = meta?.deadlineThuPhi || 10; 
+    const currentDay = today.getDate();
+
+    if (!isAdmin) return tasks;
+
+    if (N < M) {
+      tasks.push({
+        id: "task_dd",
+        type: "danger",
+        text: `${M - N} lớp chưa hoàn thành điểm danh hôm nay`,
+        action: () => setTab("dd")
+      });
+    }
+
+    if (chuaThu > 0) {
+      const isOverdue = currentDay > deadline;
+      tasks.push({
+        id: "task_thu",
+        type: isOverdue ? "danger" : "warning",
+        text: `${chuaThu} học sinh chưa đóng học phí (Hạn: ngày ${deadline}/${month})`,
+        action: () => { setTab("thu"); setThuFilter("chuaThu"); }
+      });
+    }
+
+    if (ngayAn0 > 0) {
+      tasks.push({
+        id: "task_ngayan",
+        type: "warning",
+        text: `${ngayAn0} học sinh chưa được cấu hình tính tiền ăn`,
+        action: () => setTab("thu")
+      });
+    }
+
+    return tasks;
+  }, [isAdmin, N, M, chuaThu, ngayAn0, meta, today, month, setTab, setThuFilter]);
+
   return (
     <div style={{ paddingBottom: C.lg, marginTop: C.md }}>
-      {/* Thẻ điểm danh */}
       <AttendanceCard
         today={{
           pct: pctToday, di: diHocHomNay, nghi: nghiHomNay,
@@ -265,12 +302,23 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
         onDetail={() => setTab("dd")}
       />
 
-      {/* Cảnh báo (Admin) */}
-      {isAdmin && (chuaThu > 0 || ngayAn0 > 0) && (
-        <div style={{ marginBottom: C.md }}>
-          {chuaThu > 0 && <AlertRow type="danger" message={`${chuaThu} HS chưa thu đủ tiền tháng ${month}`} actionLabel="Thu ngay" onAction={() => { setTab("thu"); setThuFilter("chuaThu"); }} />}
-          {ngayAn0 > 0 && <AlertRow type="warning" message={`${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền ăn)`} actionLabel="Cập nhật" onAction={() => setTab("thu")} />}
-        </div>
+      {/* 5. UI KHU VỰC "VIỆC CẦN XỬ LÝ HÔM NAY" */}
+      {isAdmin && todayTasks.length > 0 && (
+        <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md, border: `1px solid ${C.line}` }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.sub, marginBottom: 12, letterSpacing: "0.5px" }}>📋 VIỆC CẦN XỬ LÝ HÔM NAY</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {todayTasks.map((t) => (
+              <div key={t.id} onClick={t.action} className="active-press-shadow" style={{ 
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, 
+                background: t.type === "danger" ? C.coralSoft : C.amberSoft, cursor: "pointer", transition: "transform 0.1s ease" 
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: 99, background: t.type === "danger" ? C.coral : C.amber, flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.ink }}>{t.text}</div>
+                <Icon name="chevronRight" size={14} color={C.sub} />
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* Lưới chức năng */}
@@ -282,18 +330,23 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
             <Tile name="barChart" tint={C.orangeSoft} iconColor={C.orange} title="Báo cáo" sub="Xem chi tiết" onClick={() => setTab("dash")} />
           </>
         )}
-        <Tile name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh"
+        
+        {/* 6. THÊM PROP FULLWIDTH CHO Ô ĐIỂM DANH */}
+        <Tile 
+          fullWidth
+          name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh"
           sub={isGV
-            ? (N >= 1 ? "Đã điểm danh" : "Chưa điểm danh")
-            : (allConfirmed ? `Nghỉ ${nghiHomNay}/${activeStudents.length}` : `Chưa điểm danh đủ (${N}/${M})`)}
-          onClick={() => setTab("dd")} />
+            ? (N >= 1 ? "Đã điểm danh hoàn tất" : "Lớp chưa tiến hành điểm danh")
+            : (allConfirmed ? `Hệ thống ổn định (Nghỉ ${nghiHomNay}/${activeStudents.length})` : `Chưa điểm danh đủ (${N}/${M} lớp)`)}
+          onClick={() => setTab("dd")} 
+        />
+        
         <Tile name="users" tint={C.greenSoft} iconColor={C.pine} title={isGV ? "Lớp tôi" : "Học sinh"} sub={`${dashTong} học sinh`} onClick={() => setTab("hs")} />
         {isAdmin && (
           <Tile name="receipt" tint={C.orangeSoft} iconColor={C.orange} title="Phiếu thu" sub={`${soPhieu} đã thu`} onClick={() => setTab("phieu")} />
         )}
       </div>
 
-      {/* Hoạt động gần đây (Admin) */}
       {isAdmin && <RecentActivity onSeeAll={openFullLog} />}
 
       <BottomSheet open={logOpen} onClose={() => setLogOpen(false)} title="Nhật ký thao tác">
