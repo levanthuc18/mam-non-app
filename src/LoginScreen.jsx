@@ -14,10 +14,10 @@ export function LoginScreen({ meta, onLogin }) {
 
   return (
     <div style={{
-      position: "relative", overflow: "hidden", minHeight: "100vh",
+      position: "relative", overflow: "hidden", height: "100dvh", minHeight: "100dvh",
       background: "linear-gradient(165deg,#EAF3EE 0%,#E4EEF3 55%,#EAF0F3 100%)",
       fontFamily: font.body, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", padding: "24px 22px 170px",
+      alignItems: "center", justifyContent: "center", padding: "20px 22px 132px",
     }}>
       <style>{`
         @keyframes ttFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -31,9 +31,9 @@ export function LoginScreen({ meta, onLogin }) {
 
       {/* nội dung */}
       <div style={{ position: "relative", width: "100%", maxWidth: 320, textAlign: "center", animation: "ttFade .5s ease both" }}>
-        <div style={{ display: "flex", justifyContent: "center" }}><Logo w={178} /></div>
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.ink, marginTop: 10 }}>{meta?.tenTruong || "Mầm Non"}</div>
-        <div style={{ fontSize: 13, color: C.sub, marginBottom: 24 }}>Quản lý điểm danh & thu phí</div>
+        <div style={{ display: "flex", justifyContent: "center" }}><Logo w={178} style={{ width: "min(158px, 42vw)" }} /></div>
+        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: "clamp(16px,4.6vw,20px)", color: C.ink, marginTop: 10 }}>{meta?.tenTruong || "Mầm Non"}</div>
+        <div style={{ fontSize: 13, color: C.sub, marginBottom: 18 }}>Quản lý điểm danh & thu phí</div>
 
         {!mode ? (
           <>
@@ -59,10 +59,10 @@ export function LoginScreen({ meta, onLogin }) {
       </div>
 
       {/* cảnh trường dưới đáy */}
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 150, pointerEvents: "none" }}>
-        <Grass h={80} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: 14, display: "flex", justifyContent: "center" }}>
-          <School w={300} />
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 124, pointerEvents: "none" }}>
+        <Grass h={66} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }} />
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 12, display: "flex", justifyContent: "center" }}>
+          <School w={248} />
         </div>
       </div>
     </div>
