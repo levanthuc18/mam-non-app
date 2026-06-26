@@ -241,6 +241,8 @@ export default function App() {
             mData={store.mData}
             upMData={store.upMData}
             upMeta={store.upMeta}
+            phieuId={phieuId}
+            clearPhieuId={() => setPhieuId(null)}
           />
         )}
         
