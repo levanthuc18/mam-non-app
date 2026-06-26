@@ -179,7 +179,7 @@ export default function App() {
               </button>
             )}
             
-            <button onClick={logout} title="Đăng xuất" style={{ background: "none", border: `1px solid ${C.line}`, color: C.sub, borderRadius: 8, padding: "5px 9px", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>↩</button>
+            
           </div>
         </div>
       </div>
