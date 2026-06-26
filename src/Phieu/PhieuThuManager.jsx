@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { C, font, fmt, printWithName, fileName } from "../lib.js";
 import { BottomSheet } from "../ui.jsx";
 import { PhieuThu } from "./PhieuThu.jsx";
@@ -14,7 +14,7 @@ const FILTER_DEFS = [
   { key: "onlyChuaGuiZalo", label: "Chỉ in học sinh chưa gửi Zalo" },
 ];
 
-export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, upMeta }) {
+export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, upMeta, phieuId, clearPhieuId }) {
   const [selectedLop, setSelectedLop] = useState("all");
   const [filters, setFilters] = useState({ onlyConNo: true, onlyChuaDong: false, onlyChuaGuiZalo: false });
   const [includeTongHop, setIncludeTongHop] = useState(true);
@@ -25,7 +25,14 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
   const [singleId, setSingleId] = useState(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
-
+  
+  useEffect(() => {
+    if (phieuId) {
+      const found = allRows.find((r) => r.hs.id === phieuId && r.coRec);
+      if (found) { setSingleId(phieuId); setMode("single"); }
+      if (clearPhieuId) clearPhieuId();
+    }
+  }, [phieuId]);
   const isWide = typeof window !== "undefined" && window.innerWidth >= 820;
   const activeFilterCount = FILTER_DEFS.filter((f) => filters[f.key]).length;
   const chipBtn = { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", minWidth: 0 };
