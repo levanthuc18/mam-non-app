@@ -59,7 +59,7 @@ function AttendanceCard({ today, month, onDetail }) {
   
   return (
     <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
         <div style={{ display: "flex", gap: 4, background: C.graySoft, borderRadius: 99, padding: 3 }}>
           {[["today", "Hôm nay"], ["month", "Tháng này"]].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} style={{ 
@@ -74,6 +74,11 @@ function AttendanceCard({ today, month, onDetail }) {
           Chi tiết <Icon name="chevronRight" size={15} color={C.pine} />
         </button>
       </div>
+      {currentData.note && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: currentData.noteColor || C.sub }}>
+          {currentData.noteIcon && <Icon name={currentData.noteIcon} size={15} color={currentData.noteColor || C.sub} />}{currentData.note}
+        </div>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         {/* 2. Truyền flag isGhost xuống Ring */}
         <Ring pct={currentData.pct} color={ringColor} isGhost={!!currentData.ghost} />
@@ -83,17 +88,13 @@ function AttendanceCard({ today, month, onDetail }) {
           ) : (
             <>
               <StatRow color={C.green} label="Đi học" value={currentData.di} />
-              <div style={{ height: 12 }} />
+              <div style={{ height: 6 }} />
               <StatRow color={C.coral} label="Nghỉ" value={currentData.nghi} />
             </>
           )}
         </div>
       </div>
-      {currentData.note && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: currentData.noteColor || C.sub }}>
-          {currentData.noteIcon && <Icon name={currentData.noteIcon} size={15} color={currentData.noteColor || C.sub} />}{currentData.note}
-        </div>
-      )}
+      
     </Card>
   );
 }
