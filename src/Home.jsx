@@ -33,7 +33,7 @@ function StatRow({ color, label, value }) {
 function AttendanceCard({ today, month, onDetail }) {
   const [tab, setTab] = useState("today");
   const d = tab === "today" ? today : month;
-  const ringColor = d.pct >= 90 ? C.green : d.pct >= 70 ? C.amber : C.coral;
+  const ringColor = d.ghost ? C.gray : d.pct >= 90 ? C.green : d.pct >= 70 ? C.amber : C.coral;
   return (
     <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
@@ -47,11 +47,22 @@ function AttendanceCard({ today, month, onDetail }) {
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         <Ring pct={d.pct} color={ringColor} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <StatRow color={C.green} label="Đi học" value={d.di} />
-          <div style={{ height: 12 }} />
-          <StatRow color={C.coral} label="Nghỉ" value={d.nghi} />
+          {d.ghost ? (
+            <div style={{ fontSize: 14, color: C.sub, lineHeight: 1.5 }}>{d.ghost}</div>
+          ) : (
+            <>
+              <StatRow color={C.green} label="Đi học" value={d.di} />
+              <div style={{ height: 12 }} />
+              <StatRow color={C.coral} label="Nghỉ" value={d.nghi} />
+            </>
+          )}
         </div>
       </div>
+      {d.note && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: d.noteColor || C.sub }}>
+          {d.noteIcon && <Icon name={d.noteIcon} size={15} color={d.noteColor || C.sub} />}{d.note}
+        </div>
+      )}
     </Card>
   );
 }
@@ -127,13 +138,29 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
   const dashTong = visibleStudents.length;
   const dashDangHoc = visibleStudents.filter((s) => s.trangThai === "Đang học").length;
 
-  // Điểm danh hôm nay
+  // Điểm danh hôm nay — CHỈ tính lớp đã xác nhận điểm danh
+  const ymStr = `${year}-${String(month).padStart(2, '0')}`;
+  const clsOf = (s) => lopOfMonth(s, ymStr);
   const today = new Date();
   const todayStr = today.getDate();
   const activeStudents = visibleStudents.filter(s => TT_THU_PHI[s.trangThai]);
-  const diHocHomNay = activeStudents.filter(s => !ddData?.[s.id]?.[todayStr]).length;
-  const nghiHomNay = activeStudents.filter(s => ddData?.[s.id]?.[todayStr]).length;
-  const pctToday = activeStudents.length > 0 ? Math.round(diHocHomNay / activeStudents.length * 100) : 0;
+  const classesWithStudents = [...new Set(activeStudents.map(clsOf))].filter(Boolean);
+  const M = isGV ? 1 : classesWithStudents.length;
+
+  const [ddtsToday, setDdtsToday] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    sGet(`mn5:ddts:${ymStr}`).then((m) => { if (alive) setDdtsToday((m && m[todayStr]) || {}); }).catch(() => { if (alive) setDdtsToday({}); });
+    return () => { alive = false; };
+  }, [ymStr, todayStr]);
+
+  const confirmedSet = new Set(Object.keys(ddtsToday || {}).filter(id => isGV ? id === gvLopId : classesWithStudents.includes(id)));
+  const N = confirmedSet.size;
+  const allConfirmed = M > 0 && N >= M;
+  const confirmedActive = activeStudents.filter(s => confirmedSet.has(clsOf(s)));
+  const nghiHomNay = confirmedActive.filter(s => ddData?.[s.id]?.[todayStr]).length;
+  const diHocHomNay = confirmedActive.length - nghiHomNay;
+  const pctToday = confirmedActive.length > 0 ? Math.round(diHocHomNay / confirmedActive.length * 100) : 0;
 
   // Điểm danh cả tháng (trừ CN + ngày lễ)
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -164,8 +191,14 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
     <div style={{ paddingBottom: C.lg, marginTop: C.md }}>
       {/* Thẻ điểm danh */}
       <AttendanceCard
-        today={{ pct: pctToday, di: diHocHomNay, nghi: nghiHomNay }}
-        month={{ pct: pctMonth, di: diMonth, nghi: absMonth }}
+        today={{
+          pct: pctToday, di: diHocHomNay, nghi: nghiHomNay,
+          ghost: N === 0 ? (isGV ? "Lớp chưa điểm danh hôm nay." : "Chưa lớp nào điểm danh hôm nay.") : null,
+          note: isGV ? (N >= 1 ? "Đã điểm danh hôm nay" : "Chưa điểm danh") : `${N}/${M} lớp đã điểm danh`,
+          noteColor: (isGV ? N >= 1 : allConfirmed) ? C.green : C.amber,
+          noteIcon: (isGV ? N >= 1 : allConfirmed) ? "check" : null,
+        }}
+        month={{ pct: pctMonth, di: diMonth, nghi: absMonth, note: "Đã trừ Chủ nhật & ngày lễ", noteColor: C.sub }}
         onDetail={() => setTab("dd")}
       />
 
@@ -186,7 +219,11 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
             <Tile name="barChart" tint={C.orangeSoft} iconColor={C.orange} title="Báo cáo" sub="Xem chi tiết" onClick={() => setTab("dash")} />
           </>
         )}
-        <Tile name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh" sub={nghiHomNay > 0 ? `Hôm nay nghỉ ${nghiHomNay}` : "Hôm nay đủ sĩ số"} onClick={() => setTab("dd")} />
+        <Tile name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh"
+          sub={isGV
+            ? (N >= 1 ? "Đã điểm danh" : "Chưa điểm danh")
+            : (allConfirmed ? `Nghỉ ${nghiHomNay}/${activeStudents.length}` : `Chưa điểm danh đủ (${N}/${M})`)}
+          onClick={() => setTab("dd")} />
         <Tile name="users" tint={C.greenSoft} iconColor={C.pine} title={isGV ? "Lớp tôi" : "Học sinh"} sub={`${dashTong} học sinh`} onClick={() => setTab("hs")} />
         {isAdmin && (
           <Tile name="receipt" tint={C.orangeSoft} iconColor={C.orange} title="Phiếu thu" sub={`${soPhieu} đã thu`} onClick={() => setTab("phieu")} />
