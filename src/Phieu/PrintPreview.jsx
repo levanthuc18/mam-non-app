@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { C, font } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
@@ -6,26 +6,13 @@ import { PhieuTongHop } from "./PhieuTongHop.jsx";
 export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, includeTongHop, page, onPageChange }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalPage, setModalPage] = useState(0);
-  const touchStart = useRef(null);
   const totalPages = rows.length + (includeTongHop ? 1 : 0);
-
-  const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientX; };
-  const handleTouchEnd = (e) => {
-    if (touchStart.current === null) return;
-    const diff = touchStart.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0 && page < totalPages - 1) onPageChange(page + 1);
-      else if (diff < 0 && page > 0) onPageChange(page - 1);
-    }
-    touchStart.current = null;
-  };
 
   const getPageContent = (p) => {
     if (p < rows.length) return { type: "phieu", row: rows[p], idx: p };
     return { type: "tonghop", idx: p };
   };
 
-  const current = getPageContent(page);
   const isWide = typeof window !== "undefined" && window.innerWidth >= 820;
 
   // Thumbnail: hiển thị rõ, scale vừa phải
@@ -45,7 +32,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
           <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: C.pine, display: "flex", alignItems: "center", gap: 6 }}>
             <span>👁</span> XEM TRƯỚC NỘI DUNG IN
           </div>
-          <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>Cuộn để xem toàn bộ nội dung trước khi in</div>
+          <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>Bấm vào trang để phóng to</div>
         </div>
         <span style={{ fontSize: 12, color: C.pine, fontWeight: 700 }}>Tổng cộng: {totalPages} trang</span>
       </div>
@@ -58,7 +45,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
           return (
             <button
               key={p}
-              onClick={() => onPageChange(p)}
+              onClick={() => { onPageChange(p); setModalPage(p); setModalOpen(true); }}
               style={{
                 flexShrink: 0, width: thumbW, height: thumbH, borderRadius: 10,
                 border: `2.5px solid ${active ? C.pine : "transparent"}`,
@@ -100,103 +87,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
         })}
       </div>
 
-      {/* Main preview - hiển thị to, rõ, không trắng */}
-      <div
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        style={{ background: C.card, borderRadius: 14, border: `1.5px solid ${C.line}`, padding: "16px", position: "relative" }}
-      >
-        {/* Pagination */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <button 
-            onClick={() => page > 0 && onPageChange(page - 1)} 
-            disabled={page === 0} 
-            style={{ 
-              background: "none", border: "none", 
-              color: page === 0 ? C.gray : C.pine, 
-              fontSize: 20, cursor: page === 0 ? "default" : "pointer", 
-              fontWeight: 700, padding: "4px 12px" 
-            }}
-          >
-            ❮
-          </button>
-          <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: C.ink }}>
-            Trang {page + 1} / {totalPages}
-          </span>
-          <button 
-            onClick={() => page < totalPages - 1 && onPageChange(page + 1)} 
-            disabled={page === totalPages - 1} 
-            style={{ 
-              background: "none", border: "none", 
-              color: page === totalPages - 1 ? C.gray : C.pine, 
-              fontSize: 20, cursor: page === totalPages - 1 ? "default" : "pointer", 
-              fontWeight: 700, padding: "4px 12px" 
-            }}
-          >
-            ❯
-          </button>
-        </div>
-
-        {/* Preview content - scale vừa đủ để đọc được */}
-        <div 
-          onClick={() => { setModalPage(page); setModalOpen(true); }} 
-          style={{ 
-            cursor: "zoom-in", 
-            borderRadius: 12, 
-            overflow: "hidden", 
-            border: `1.5px solid ${C.line}`, 
-            background: "#fff",
-            maxHeight: 520,
-            overflowY: "auto"
-          }}
-        >
-          <div style={{ 
-            transform: isWide ? "scale(0.75)" : "scale(0.55)", 
-            transformOrigin: "top center",
-            width: 420,
-            margin: "0 auto",
-            minHeight: 595
-          }}>
-            {current.type === "phieu" ? (
-              <PhieuThu 
-                phieuRow={current.row} 
-                meta={meta} 
-                month={month} 
-                year={year} 
-                mData={mData} 
-                upMData={upMData} 
-                upMeta={upMeta} 
-                isBatch={true} 
-              />
-            ) : (
-              <PhieuTongHop 
-                rows={rows} 
-                lopTen={meta.classes.find(c => c.id === rows[0]?.lopId)?.ten || "Tất cả"} 
-                month={month} 
-                year={year} 
-              />
-            )}
-          </div>
-        </div>
-
-        <button 
-          onClick={() => { setModalPage(page); setModalOpen(true); }} 
-          style={{ 
-            marginTop: 10, 
-            width: "100%", 
-            padding: "10px 0", 
-            borderRadius: 10, 
-            border: `1.5px solid ${C.pine}`, 
-            background: C.pineSoft, 
-            color: C.pine, 
-            fontWeight: 700, 
-            fontSize: 13, 
-            cursor: "pointer" 
-          }}
-        >
-          🔍 Phóng to trang này
-        </button>
-      </div>
+      {/* Main preview lớn đã bỏ - bấm thumbnail để phóng to */}
 
       {/* Modal phóng to full */}
       {modalOpen && (
