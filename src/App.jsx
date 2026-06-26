@@ -8,8 +8,9 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { DashTab } from "./TongQuan.jsx";
 import { PhieuThu } from "./Phieu/PhieuThu.jsx";
+import { BatchPrint } from "./Phieu/BatchPrint.jsx";  // ← THÊM IMPORT
 import { CaiDat } from "./CaiDat.jsx";
-import { HocSinhTab } from "./HocSinh.jsx"; // 1. ĐÃ THÊM IMPORT
+import { HocSinhTab } from "./HocSinh.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 import { Splash } from "./Splash.jsx";
@@ -87,6 +88,7 @@ export default function App() {
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
   const [viewStudentId, setViewStudentId] = useState(null); 
   const [notifOpen, setNotifOpen] = useState(false); 
+  const [batchOpen, setBatchOpen] = useState(false);  // ← THÊM STATE
   
   const store = useStore();
   const { meta, students, loading } = store;
@@ -229,8 +231,55 @@ export default function App() {
           />
         )}
         
-        {tab === "phieu" && store.mData && phieuRow && (
-          <PhieuThu phieuRow={phieuRow} allRows={store.allRows} setPhieuId={setPhieuId} getLop={store.getLop} meta={meta} month={store.month} year={store.year} upMeta={store.upMeta} mData={store.mData} upMData={store.upMData} />
+        {/* ===== TAB PHIẾU THU: In đơn + In theo lớp ===== */}
+        {tab === "phieu" && store.mData && (
+          <>
+            {batchOpen ? (
+              <BatchPrint 
+                allRows={store.allRows} 
+                meta={meta} 
+                month={store.month} 
+                year={store.year} 
+                mData={store.mData} 
+                upMData={store.upMData} 
+                upMeta={store.upMeta}
+                onClose={() => setBatchOpen(false)} 
+              />
+            ) : (
+              <>
+                <button 
+                  onClick={() => setBatchOpen(true)} 
+                  className="no-print" 
+                  style={{ 
+                    width: "100%", 
+                    padding: "11px", 
+                    borderRadius: 12, 
+                    marginBottom: 14, 
+                    border: `1.5px dashed ${C.pine}`, 
+                    background: C.pineSoft, 
+                    color: C.pine, 
+                    fontWeight: 700, 
+                    fontSize: 14, 
+                    cursor: "pointer" 
+                  }}
+                >
+                  🗂 In theo lớp / In tất cả
+                </button>
+                <PhieuThu 
+                  phieuRow={phieuRow} 
+                  allRows={store.allRows} 
+                  setPhieuId={setPhieuId} 
+                  getLop={store.getLop} 
+                  meta={meta} 
+                  month={store.month} 
+                  year={store.year} 
+                  upMeta={store.upMeta} 
+                  mData={store.mData} 
+                  upMData={store.upMData} 
+                />
+              </>
+            )}
+          </>
         )}
         
         {tab === "dash" && store.mData && (
@@ -245,7 +294,6 @@ export default function App() {
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
         )}
 
-        {/* 2. ĐÃ THÊM RENDER TAB HS */}
         {tab === "hs" && (
           <HocSinhTab 
             meta={meta} 
@@ -278,7 +326,6 @@ export default function App() {
         )}
       </div>
 
-      {/* 3. ĐÃ SỬA BOTTOM NAV ĐÚNG ID "hs" */}
       <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
