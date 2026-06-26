@@ -8,7 +8,7 @@ import { DiemDanhTab } from "./DiemDanh.jsx";
 import { CongNoTab } from "./CongNo.jsx";
 import { DashTab } from "./TongQuan.jsx";
 import { PhieuThu } from "./Phieu/PhieuThu.jsx";
-import { BatchPrint } from "./Phieu/BatchPrint.jsx";  // ← THÊM IMPORT
+import { PhieuThuManager } from "./Phieu/PhieuThuManager.jsx";
 import { CaiDat } from "./CaiDat.jsx";
 import { HocSinhTab } from "./HocSinh.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
@@ -88,7 +88,6 @@ export default function App() {
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
   const [viewStudentId, setViewStudentId] = useState(null); 
   const [notifOpen, setNotifOpen] = useState(false); 
-  const [batchOpen, setBatchOpen] = useState(false);  // ← THÊM STATE
   
   const store = useStore();
   const { meta, students, loading } = store;
@@ -120,7 +119,6 @@ export default function App() {
   const prevM = () => { if (store.month === 1) { store.setMonth(12); store.setYear(store.year - 1); } else store.setMonth(store.month - 1); };
   const nextM = () => { if (store.month === 12) { store.setMonth(1); store.setYear(store.year + 1); } else store.setMonth(store.month + 1); };
   const chipsLop = [["all", "Tất cả"], ...meta.classes.map((c) => [c.id, c.ten])];
-  const phieuRow = store.allRows.find((r) => r.hs.id === phieuId && r.coRec) || store.allRows.find((r) => r.coRec);
 
   const recRows0 = store.allRows.filter((r) => r.coRec);
   const chuaThu = recRows0.filter((r) => r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
@@ -232,54 +230,18 @@ export default function App() {
         )}
         
         {/* ===== TAB PHIẾU THU: In đơn + In theo lớp ===== */}
+                {/* ===== TAB PHIẾU THU: In đơn + In theo lớp ===== */}
+               {/* ===== TAB IN HỌC PHÍ ===== */}
         {tab === "phieu" && store.mData && (
-          <>
-            {batchOpen ? (
-              <BatchPrint 
-                allRows={store.allRows} 
-                meta={meta} 
-                month={store.month} 
-                year={store.year} 
-                mData={store.mData} 
-                upMData={store.upMData} 
-                upMeta={store.upMeta}
-                onClose={() => setBatchOpen(false)} 
-              />
-            ) : (
-              <>
-                <button 
-                  onClick={() => setBatchOpen(true)} 
-                  className="no-print" 
-                  style={{ 
-                    width: "100%", 
-                    padding: "11px", 
-                    borderRadius: 12, 
-                    marginBottom: 14, 
-                    border: `1.5px dashed ${C.pine}`, 
-                    background: C.pineSoft, 
-                    color: C.pine, 
-                    fontWeight: 700, 
-                    fontSize: 14, 
-                    cursor: "pointer" 
-                  }}
-                >
-                  🗂 In theo lớp / In tất cả
-                </button>
-                <PhieuThu 
-                  phieuRow={phieuRow} 
-                  allRows={store.allRows} 
-                  setPhieuId={setPhieuId} 
-                  getLop={store.getLop} 
-                  meta={meta} 
-                  month={store.month} 
-                  year={store.year} 
-                  upMeta={store.upMeta} 
-                  mData={store.mData} 
-                  upMData={store.upMData} 
-                />
-              </>
-            )}
-          </>
+          <PhieuThuManager
+            allRows={store.allRows}
+            meta={meta}
+            month={store.month}
+            year={store.year}
+            mData={store.mData}
+            upMData={store.upMData}
+            upMeta={store.upMeta}
+          />
         )}
         
         {tab === "dash" && store.mData && (
