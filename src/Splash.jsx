@@ -13,7 +13,7 @@ export function Splash({ onDone, ms = 2000, tenTruong = "Mầm Non Tuổi Thần
   return (
     <div style={{
       position: "relative", overflow: "hidden",
-      minHeight: "100vh", display: "flex", flexDirection: "column",
+      height: "100dvh", minHeight: "100dvh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", gap: 14,
       background: "linear-gradient(165deg,#EAF3EE 0%,#E4EEF3 55%,#EAF0F3 100%)",
       fontFamily: font.body, padding: 24,
@@ -31,8 +31,8 @@ export function Splash({ onDone, ms = 2000, tenTruong = "Mầm Non Tuổi Thần
       <Cloud w={96} style={{ position: "absolute", bottom: 120, right: -16, opacity: 0.6, animation: "ttFloat 6.5s ease-in-out infinite" }} />
 
       <div style={{ position: "relative", textAlign: "center", animation: "ttFade .6s ease both" }}>
-        <Logo w={216} />
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.ink, marginTop: 14 }}>{tenTruong}</div>
+        <Logo w={216} style={{ width: "min(216px, 48vw)" }} />
+        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: "clamp(16px,4.6vw,20px)", color: C.ink, marginTop: 14 }}>{tenTruong}</div>
       </div>
 
       <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 7, marginTop: 6, animation: "ttFade .7s .2s ease both" }}>
