@@ -29,6 +29,21 @@ export const MEM = {};
 export const CHOT_MEM = {};
 try { const _cm = (typeof localStorage !== "undefined") && localStorage.getItem("mn5:chotmem"); if (_cm) Object.assign(CHOT_MEM, JSON.parse(_cm)); } catch {}
 export function saveChotMem() { try { if (typeof localStorage !== "undefined") localStorage.setItem("mn5:chotmem", JSON.stringify(CHOT_MEM)); } catch {} }
+
+// Đặt tên file gợi ý khi In → Lưu PDF (dùng document.title), tự khôi phục sau khi in
+export function printWithName(name, delay = 0) {
+  try {
+    const prev = document.title;
+    if (name) document.title = name;
+    const restore = () => { document.title = prev; window.removeEventListener("afterprint", restore); };
+    window.addEventListener("afterprint", restore);
+    setTimeout(restore, 60000);
+    setTimeout(() => window.print(), delay);
+  } catch { try { window.print(); } catch {} }
+}
+
+// Dọn tên file: bỏ ký tự không hợp lệ, giữ tiếng Việt
+export function fileName(s) { return (s || "").replace(/[\/\\:*?"<>|]+/g, "").replace(/\s+/g, " ").trim(); }
 export let storageOK = true;
 
 export async function sGet(k) {
