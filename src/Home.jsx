@@ -1,36 +1,77 @@
 import { useState, useEffect } from "react";
 import { C, font, sGet, TT_THU_PHI, lopOfMonth } from "./lib.js";
 import { Card, BottomSheet } from "./ui.jsx";
+import { Icon } from "./Icon.jsx";
 
-// Hàm rút gọn số liệu .tr / .k
-const fmtKPI = (num) => {
-  if (!num) return "0đ";
-  if (num >= 1000000) {
-    const trieu = num / 1000000;
-    return trieu % 1 === 0 ? `${trieu}tr` : `${trieu.toFixed(1)}tr`;
-  }
-  if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
-  return num;
-};
-
-function KPICard({ icon, label, value, sub, progress, color, onClick }) {
+// ===== Vòng tròn tỉ lệ đi học =====
+function Ring({ pct, color, size = 96, stroke = 11 }) {
+  const r = (size - stroke) / 2, circ = 2 * Math.PI * r;
+  const off = circ * (1 - Math.min(100, Math.max(0, pct)) / 100);
+  const cx = size / 2;
   return (
-    <div onClick={onClick} style={{
-      width: 160, height: 120, flexShrink: 0, padding: C.md, borderRadius: C.r_kpi,
-      background: C.card, border: `1px solid ${C.line}`, display: "flex", flexDirection: "column", justifyContent: "space-between",
-      boxShadow: "0 2px 8px rgba(0,0,0,.08)", cursor: "pointer"
-    }}>
-      <div>
-        <div style={{ fontSize: 13, color: C.sub }}>{icon} {label}</div>
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 30, color: color || C.ink, marginTop: 2 }}>{value}</div>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke={C.line} strokeWidth={stroke} />
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={off} transform={`rotate(-90 ${cx} ${cx})`} />
+      <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontFamily: font.display, fontWeight: 800, fontSize: size * 0.27, fill: C.ink }}>{pct}%</text>
+      <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: size * 0.125, fill: C.sub }}>Đi học</text>
+    </svg>
+  );
+}
+
+function StatRow({ color, label, value }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ width: 11, height: 11, borderRadius: 99, background: color, flexShrink: 0 }} />
+      <span style={{ fontSize: 15, color: C.ink }}>{label}</span>
+      <span style={{ marginLeft: "auto", fontFamily: font.display, fontWeight: 800, fontSize: 19, color: C.ink }}>{value}</span>
+    </div>
+  );
+}
+
+// ===== Thẻ điểm danh (donut + Đi học / Nghỉ) =====
+function AttendanceCard({ today, month, onDetail }) {
+  const [tab, setTab] = useState("today");
+  const d = tab === "today" ? today : month;
+  const ringColor = d.pct >= 90 ? C.green : d.pct >= 70 ? C.amber : C.coral;
+  return (
+    <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8 }}>
+        <div style={{ display: "flex", gap: 4, background: C.graySoft, borderRadius: 99, padding: 3 }}>
+          {[["today", "Hôm nay"], ["month", "Tháng này"]].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)} style={{ border: "none", cursor: "pointer", borderRadius: 99, padding: "6px 13px", fontFamily: font.display, fontWeight: 700, fontSize: 13, background: tab === k ? C.pine : "transparent", color: tab === k ? "#fff" : C.sub }}>{l}</button>
+          ))}
+        </div>
+        <button onClick={onDetail} style={{ border: "none", background: "none", cursor: "pointer", color: C.pine, fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>Chi tiết <Icon name="chevronRight" size={15} color={C.pine} /></button>
       </div>
-      <div>
-        <div style={{ fontSize: 11, color: C.sub, marginBottom: 4 }}>{sub}</div>
-        <div style={{ height: 6, borderRadius: 99, background: C.line, overflow: "hidden" }}>
-          <div style={{ width: `${progress}%`, height: "100%", background: color || C.pine, borderRadius: 99 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <Ring pct={d.pct} color={ringColor} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <StatRow color={C.green} label="Đi học" value={d.di} />
+          <div style={{ height: 12 }} />
+          <StatRow color={C.coral} label="Nghỉ" value={d.nghi} />
         </div>
       </div>
-    </div>
+    </Card>
+  );
+}
+
+// ===== Ô chức năng (icon nét trong nền mềm) =====
+function Tile({ name, tint, iconColor, title, sub, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      flex: "1 1 44%", minWidth: 0, background: C.card, border: `1px solid ${C.line}`, borderRadius: 20,
+      padding: 16, textAlign: "left", cursor: "pointer", boxShadow: "0 2px 10px rgba(20,60,48,.05)",
+      display: "flex", flexDirection: "column", gap: 12,
+    }}>
+      <div style={{ width: 44, height: 44, borderRadius: 13, background: tint, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Icon name={name} size={22} color={iconColor} />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 16, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div>
+        <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>
+      </div>
+    </button>
   );
 }
 
@@ -41,86 +82,75 @@ function AlertRow({ type, message, actionLabel, onAction }) {
   };
   const c = colors[type] || colors.warning;
   return (
-    <div style={{
-      background: c.bg, border: `1px solid ${c.border}`, borderRadius: C.r,
-      padding: C.md, marginBottom: C.md, minHeight: 88,
-      display: "flex", alignItems: "center", gap: C.md
-    }}>
-      <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: c.fg }}>{message}</div>
-      <button onClick={onAction} style={{
-        flexShrink: 0, width: 120, height: 44, borderRadius: 12,
-        border: "none", background: c.btn, color: "#fff", fontWeight: 700, fontSize: 13,
-        cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,.1)"
-      }}>
-        {actionLabel}
-      </button>
+    <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: C.r, padding: C.md, marginBottom: C.sm, display: "flex", alignItems: "center", gap: C.md }}>
+      <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{message}</div>
+      <button onClick={onAction} style={{ flexShrink: 0, padding: "10px 16px", borderRadius: 12, border: "none", background: c.btn, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{actionLabel}</button>
     </div>
-  );
-}
-
-function QuickAction({ icon, label, bgColor, txtColor, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      height: 110, borderRadius: C.r, border: "none", background: bgColor,
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: C.sm,
-      cursor: "pointer", flex: "1 1 45%"
-    }}>
-      <div style={{ fontSize: 30 }}>{icon}</div>
-      <div style={{ fontSize: 15, fontWeight: 600, color: txtColor }}>{label}</div>
-    </button>
   );
 }
 
 function RecentActivity({ onSeeAll }) {
   const [log, setLog] = useState([]);
-  useEffect(() => { sGet("mn5:log").then(d => setLog((d || []).slice(0, 5))); }, []);
-  
+  useEffect(() => { sGet("mn5:log").then(d => setLog((d || []).slice(0, 5))).catch(() => {}); }, []);
   if (!log.length) return null;
   return (
-    <Card style={{ marginBottom: C.md, padding: C.md, borderRadius: C.r }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: C.md }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>🕐 Hoạt động gần đây</div>
-      </div>
+    <Card style={{ marginBottom: C.md, padding: C.md, borderRadius: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: C.ink, marginBottom: C.sm }}>Hoạt động gần đây</div>
       {log.map((e, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: C.sm, height: 50, borderBottom: i < log.length - 1 ? `1px solid ${C.line}` : "none" }}>
-          <span style={{ fontSize: 10 }}>🟢</span>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: C.sm, height: 46, borderBottom: i < log.length - 1 ? `1px solid ${C.line}` : "none" }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: C.green, flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: C.sub, whiteSpace: "nowrap" }}>{new Date(e.t).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}</span>
-          <span style={{ fontSize: 13, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b style={{color: e.who === "Admin" ? C.pine : C.blueA}}>{e.who}</b> · {e.act}</span>
+          <span style={{ fontSize: 13, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><b style={{ color: e.who === "Admin" ? C.pine : C.blueA }}>{e.who}</b> · {e.act}</span>
         </div>
       ))}
-      <button onClick={onSeeAll} style={{ width: "100%", marginTop: C.md, padding: C.sm + "px 0", background: "none", border: "none", color: C.pine, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
-        Xem tất cả nhật ký ›
-      </button>
+      <button onClick={onSeeAll} style={{ width: "100%", marginTop: C.sm, padding: "8px 0", background: "none", border: "none", color: C.pine, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Xem tất cả nhật ký ›</button>
     </Card>
   );
 }
 
 export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile }) {
-  const { tk, allRows, students, meta, month, year, mData, ddData } = store;
+  const { allRows, students, meta, month, year, ddData, leData } = store;
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
   const gvLopId = auth?.lopId;
 
-  // Lọc dữ liệu
   const visibleStudents = isGV ? students.filter(s => lopOfMonth(s, `${year}-${String(month).padStart(2, '0')}`) === gvLopId) : students;
   const visibleRows = isGV ? allRows.filter(r => r.lopId === gvLopId) : allRows;
   const recRows0 = visibleRows.filter((r) => r.coRec);
 
-  // KPI Logic
+  // Tài chính
   const canThuAll = recRows0.reduce((a, r) => a + r.tongPhaiThu, 0);
   const daThuAll = recRows0.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
-  const tyLeThu = canThuAll > 0 ? Math.round(daThuAll / canThuAll * 100) : 0;
   const noRows = recRows0.filter((r) => r.conNo > 0);
-  const conNoAll = noRows.reduce((a, r) => a + r.conNo, 0);
+  const soPhieu = recRows0.filter((r) => (r.rec.thucThu || 0) > 0).length;
 
   const dashTong = visibleStudents.length;
   const dashDangHoc = visibleStudents.filter((s) => s.trangThai === "Đang học").length;
+
+  // Điểm danh hôm nay
   const today = new Date();
   const todayStr = today.getDate();
-  const diHocHomNay = visibleStudents.filter(s => TT_THU_PHI[s.trangThai] && !ddData?.[s.id]?.[todayStr]).length;
-  const nghiHomNay = visibleStudents.filter(s => TT_THU_PHI[s.trangThai] && ddData?.[s.id]?.[todayStr]).length;
+  const activeStudents = visibleStudents.filter(s => TT_THU_PHI[s.trangThai]);
+  const diHocHomNay = activeStudents.filter(s => !ddData?.[s.id]?.[todayStr]).length;
+  const nghiHomNay = activeStudents.filter(s => ddData?.[s.id]?.[todayStr]).length;
+  const pctToday = activeStudents.length > 0 ? Math.round(diHocHomNay / activeStudents.length * 100) : 0;
 
-  // Alert Logic
+  // Điểm danh cả tháng (trừ CN + ngày lễ)
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const isCurMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
+  const lastDay = isCurMonth ? todayStr : daysInMonth;
+  let schoolDays = 0, absMonth = 0;
+  for (let d = 1; d <= lastDay; d++) {
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow === 0 || leData?.[d]) continue;
+    schoolDays++;
+    absMonth += activeStudents.filter(s => ddData?.[s.id]?.[d]).length;
+  }
+  const monthTotal = schoolDays * dashDangHoc;
+  const diMonth = Math.max(0, monthTotal - absMonth);
+  const pctMonth = monthTotal > 0 ? Math.round(diMonth / monthTotal * 100) : 0;
+
+  // Cảnh báo
   const chuaThu = recRows0.filter((r) => r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
   const ngayAn0 = recRows0.filter((r) => r.hs.pl !== "GV" && r.hs.pl !== "T7" && (r.rec.ngayAn || 0) === 0).length;
 
@@ -128,58 +158,51 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
   const [fullLog, setFullLog] = useState([]);
   const openFullLog = async () => { const all = await sGet("mn5:log") || []; setFullLog(all); setLogOpen(true); };
 
-  return (
-    <div style={{ paddingBottom: C.lg }}>
-      {/* 2. KPI CAROUSEL */}
-      <div style={{ display: "flex", overflowX: "auto", gap: C.md, paddingBottom: C.md, marginTop: C.md, scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-        {isAdmin ? (
-          <>
-            <KPICard icon="💰" label="Thu tháng" value={`${fmtKPI(daThuAll)}`} sub={`${fmtKPI(daThuAll)} / ${fmtKPI(canThuAll)}`} progress={tyLeThu} color={tyLeThu >= 80 ? C.green : C.amber} onClick={() => setTab("thu")} />
-            <KPICard icon="🔴" label="Cần thu" value={fmtKPI(conNoAll)} sub={`${noRows.length} HS đang nợ`} progress={100} color={C.coral} onClick={() => { setTab("thu"); setThuFilter("thieu"); }} />
-            <KPICard icon="👶" label="Đang học" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={dashTong > 0 ? 100 : 0} color={C.blueA} onClick={() => setTab("hs")} />
-          </>
-        ) : (
-          <>
-            <KPICard icon="👶" label="Sĩ số lớp" value={dashDangHoc} sub={`Tổng ${dashTong} HS`} progress={100} color={C.blueA} onClick={() => setTab("hs")} />
-            <KPICard icon="✓" label="Đi học hôm nay" value={diHocHomNay} sub={`Ngày ${todayStr}/${month}`} progress={diHocHomNay > 0 ? 100 : 0} color={C.green} onClick={() => setTab("dd")} />
-            <KPICard icon="✕" label="Nghỉ hôm nay" value={nghiHomNay} sub={`Ngày ${todayStr}/${month}`} progress={nghiHomNay > 0 ? 100 : 0} color={C.coral} onClick={() => setTab("dd")} />
-          </>
-        )}
-      </div>
+  const vnd = (n) => (n || 0).toLocaleString("vi-VN") + " đ";
 
-      {/* 3. KHỐI CẢNH BÁO (Chỉ Admin) */}
+  return (
+    <div style={{ paddingBottom: C.lg, marginTop: C.md }}>
+      {/* Thẻ điểm danh */}
+      <AttendanceCard
+        today={{ pct: pctToday, di: diHocHomNay, nghi: nghiHomNay }}
+        month={{ pct: pctMonth, di: diMonth, nghi: absMonth }}
+        onDetail={() => setTab("dd")}
+      />
+
+      {/* Cảnh báo (Admin) */}
       {isAdmin && (chuaThu > 0 || ngayAn0 > 0) && (
-        <div style={{ marginBottom: C.lg }}>
-          {chuaThu > 0 && <AlertRow type="danger" message={`${chuaThu} HS chưa thu đủ tiền tháng ${month}`} actionLabel="Thu ngay" onAction={() => setTab("thu")} />}
+        <div style={{ marginBottom: C.md }}>
+          {chuaThu > 0 && <AlertRow type="danger" message={`${chuaThu} HS chưa thu đủ tiền tháng ${month}`} actionLabel="Thu ngay" onAction={() => { setTab("thu"); setThuFilter("chuaThu"); }} />}
           {ngayAn0 > 0 && <AlertRow type="warning" message={`${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền ăn)`} actionLabel="Cập nhật" onAction={() => setTab("thu")} />}
         </div>
       )}
 
-      {/* 4. GRID TIỆN ÍCH (2x3) */}
+      {/* Lưới chức năng */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: C.md, marginBottom: C.lg }}>
         {isAdmin && (
           <>
-            <QuickAction icon="💰" label="Thu phí" bgColor={C.greenSoft} txtColor={C.green} onClick={() => setTab("thu")} />
-            <QuickAction icon="📊" label="Báo cáo" bgColor={C.pineSoft} txtColor={C.pine} onClick={() => setTab("dash")} />
-            <QuickAction icon="🧾" label="Phiếu thu" bgColor={C.graySoft} txtColor={C.ink} onClick={() => setTab("phieu")} />
-            <QuickAction icon="📕" label="Công nợ" bgColor={C.coralSoft} txtColor={C.coral} onClick={() => setTab("no")} />
+            <Tile name="wallet" tint={C.orangeSoft} iconColor={C.orange} title="Thu phí" sub={vnd(daThuAll)} onClick={() => setTab("thu")} />
+            <Tile name="coins" tint={C.orangeSoft} iconColor={C.orange} title="Công nợ" sub={`${noRows.length} học sinh`} onClick={() => setTab("no")} />
+            <Tile name="barChart" tint={C.orangeSoft} iconColor={C.orange} title="Báo cáo" sub="Xem chi tiết" onClick={() => setTab("dash")} />
           </>
         )}
-        <QuickAction icon="✓" label="Điểm danh" bgColor={C.pineSoft} txtColor={C.pine} onClick={() => setTab("dd")} />
-        <QuickAction icon="👶" label={isGV ? "Lớp tôi" : "Học sinh"} bgColor={C.amberSoft} txtColor={C.amber} onClick={() => setTab("hs")} />
+        <Tile name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh" sub={nghiHomNay > 0 ? `Hôm nay nghỉ ${nghiHomNay}` : "Hôm nay đủ sĩ số"} onClick={() => setTab("dd")} />
+        <Tile name="users" tint={C.greenSoft} iconColor={C.pine} title={isGV ? "Lớp tôi" : "Học sinh"} sub={`${dashTong} học sinh`} onClick={() => setTab("hs")} />
+        {isAdmin && (
+          <Tile name="receipt" tint={C.orangeSoft} iconColor={C.orange} title="Phiếu thu" sub={`${soPhieu} đã thu`} onClick={() => setTab("phieu")} />
+        )}
       </div>
 
-      {/* 5. HOẠT ĐỘNG GẦN ĐÂY (Chỉ Admin) */}
+      {/* Hoạt động gần đây (Admin) */}
       {isAdmin && <RecentActivity onSeeAll={openFullLog} />}
 
-      {/* MODAL Xem tất cả nhật ký */}
-      <BottomSheet open={logOpen} onClose={() => setLogOpen(false)} title="📜 Nhật ký thao tác">
+      <BottomSheet open={logOpen} onClose={() => setLogOpen(false)} title="Nhật ký thao tác">
         {fullLog.length === 0 ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Chưa có dữ liệu</div> : (
           <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
             {fullLog.map((e, i) => (
               <div key={i} style={{ display: "flex", gap: C.md, padding: `${C.md}px 0`, fontSize: 13, borderBottom: `1px solid ${C.line}` }}>
                 <span style={{ color: C.sub, whiteSpace: "nowrap", minWidth: 100 }}>{new Date(e.t).toLocaleString("vi-VN")}</span>
-                <span style={{ color: C.ink }}><b style={{color: e.who === "Admin" ? C.pine : C.blueA}}>{e.who}</b> · {e.act}</span>
+                <span style={{ color: C.ink }}><b style={{ color: e.who === "Admin" ? C.pine : C.blueA }}>{e.who}</b> · {e.act}</span>
               </div>
             ))}
           </div>
