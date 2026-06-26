@@ -105,7 +105,7 @@ function Tile({ name, tint, iconColor, title, sub, onClick, fullWidth = false })
       minWidth: 0, background: C.card, border: `1px solid ${C.line}`, borderRadius: 20,
       padding: 16, textAlign: "left", cursor: "pointer", boxShadow: "0 2px 10px rgba(20,60,48,.05)",
       display: "flex", flexDirection: "column", gap: 12,
-      flex: fullWidth ? "1 1 100%" : "1 1 44%",
+            width: "100%",
       transition: "transform 0.1s ease"
     }}>
       <div style={{ width: 44, height: 44, borderRadius: 13, background: tint, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -321,8 +321,8 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
         </Card>
       )}
 
-      {/* Lưới chức năng */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: C.md, marginBottom: C.lg }}>
+            {/* Lưới chức năng - 2 cột x 3 hàng */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: C.md, marginBottom: C.lg }}>
         {isAdmin && (
           <>
             <Tile name="wallet" tint={C.orangeSoft} iconColor={C.orange} title="Thu phí" sub={vnd(daThuAll)} onClick={() => setTab("thu")} />
@@ -332,8 +332,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
         )}
         
         {/* 6. THÊM PROP FULLWIDTH CHO Ô ĐIỂM DANH */}
-        <Tile 
-          fullWidth
+                <Tile 
           name="calendarCheck" tint={C.greenSoft} iconColor={C.pine} title="Điểm danh"
           sub={isGV
             ? (N >= 1 ? "Đã điểm danh hoàn tất" : "Lớp chưa tiến hành điểm danh")
