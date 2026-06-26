@@ -11,7 +11,12 @@ export async function sharePhieuAnh(node, { filename = "phieu.png", title = "Phi
 
   let blob;
   try {
-    blob = await toBlob(node, { pixelRatio: 2, backgroundColor: "#ffffff", cacheBust: true });
+    blob = await toBlob(node, {
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+      filter: (n) => !(n.classList && n.classList.contains("no-print")),
+    });
   } catch (e) {
     return { ok: false, reason: "render-fail", error: e };
   }
