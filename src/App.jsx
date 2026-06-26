@@ -136,11 +136,18 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font.body, color: C.ink }}>
-      <style>{`
+            <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
         input[type=number]::-webkit-inner-spin-button{display:none}
         *{box-sizing:border-box}
         button:active{transform:scale(0.97)}
+        .active-press-shadow {
+          will-change: transform;
+        }
+        .active-press-shadow:active {
+          transform: scale(0.97);
+          box-shadow: 0 1px 4px rgba(20, 60, 48, 0.02) !important;
+        }
         @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
