@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { C, font } from "../lib.js";
+import { C, font, fileName } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
 import { sharePhieuAnh } from "./shareImage.js";
@@ -173,15 +173,16 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 if (sharing) return;
                 setSharing(true);
                 const mc = getPageContent(modalPage);
-                const safe = (s) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
                 let filename, title, text;
                 if (mc.type === "phieu") {
-                  const ten = mc.row.hs.ten || "hoc-sinh";
-                  filename = `phieu_${safe(ten)}_${month}-${year}.png`;
+                  const ten = mc.row.hs.ten || "Học sinh";
+                  const lop = mc.row.lop?.ten || "";
+                  filename = fileName(`${lop ? lop + " - " : ""}${ten} - T${month}.${year}`) + ".png";
                   title = `Phiếu học phí — ${ten}`;
                   text = `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}`;
                 } else {
-                  filename = `tong-hop_${month}-${year}.png`;
+                  const lop = meta.classes.find((c) => c.id === rows[0]?.lopId)?.ten || "Tất cả lớp";
+                  filename = fileName(`Tổng hợp - ${lop} - T${month}.${year}`) + ".png";
                   title = "Bảng tổng hợp học phí";
                   text = `Bảng tổng hợp học phí tháng ${month}/${year}`;
                 }
