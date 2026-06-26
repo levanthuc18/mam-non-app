@@ -13,6 +13,7 @@ import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 import { Splash } from "./Splash.jsx";
 import { LoginScreen } from "./LoginScreen.jsx";
+import { Icon } from "./Icon.jsx";
 import { Logo } from "./Brand.jsx";
 
 function ConfirmHost() {
@@ -273,15 +274,15 @@ export default function App() {
       <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
-            ? [["home", "Trang chủ", "🏠"], ["thu", "Thu phí", "💰"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]] 
-            : [["home", "Trang chủ", "🏠"], ["dd", "Điểm danh", "✓"], ["hs", "Học sinh", "👶"], ["more", "Thêm", "☰"]]
+            ? [["home", "Trang chủ", "home"], ["thu", "Thu phí", "wallet"], ["dd", "Điểm danh", "calendarCheck"], ["hs", "Học sinh", "users"], ["more", "Thêm", "more"]] 
+            : [["home", "Trang chủ", "home"], ["dd", "Điểm danh", "calendarCheck"], ["hs", "Học sinh", "users"], ["more", "Thêm", "more"]]
           ).map(([id, lb, ic]) => (
             <button 
               key={id} 
               onClick={() => setTab(id)} 
-              style={{ flex: 1, padding: "9px 0 11px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500 }}
+              style={{ flex: 1, padding: "8px 0 10px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
             >
-              <div style={{ fontSize: 17, marginBottom: 2 }}>{ic}</div>{lb}
+              <Icon name={ic} size={22} color={tab === id ? C.pine : C.gray} strokeWidth={tab === id ? 2.4 : 2} />{lb}
             </button>
           ))}
         </div>
