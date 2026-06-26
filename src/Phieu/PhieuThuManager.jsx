@@ -1,11 +1,18 @@
 import { useState, useMemo, useCallback } from "react";
 import { C, font, fmt } from "../lib.js";
+import { BottomSheet } from "../ui.jsx";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
 import { AnimatedCounter } from "./AnimatedCounter.jsx";
 import { PreflightCheck } from "./PreflightCheck.jsx";
 import { ClassList } from "./ClassList.jsx";
 import { PrintPreview } from "./PrintPreview.jsx";
+
+const FILTER_DEFS = [
+  { key: "onlyConNo", label: "Chỉ in học sinh còn nợ" },
+  { key: "onlyChuaDong", label: "Chỉ in học sinh chưa đóng" },
+  { key: "onlyChuaGuiZalo", label: "Chỉ in học sinh chưa gửi Zalo" },
+];
 
 export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, upMeta }) {
   const [selectedLop, setSelectedLop] = useState("all");
@@ -16,8 +23,12 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
   const [showIssues, setShowIssues] = useState(false);
   const [mode, setMode] = useState("manager");
   const [singleId, setSingleId] = useState(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [lopSheetOpen, setLopSheetOpen] = useState(false);
 
   const isWide = typeof window !== "undefined" && window.innerWidth >= 820;
+  const activeFilterCount = FILTER_DEFS.filter((f) => filters[f.key]).length;
+  const chipBtn = { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", minWidth: 0 };
 
   const rowsToPrint = useMemo(() => {
     return allRows.filter((r) => {
@@ -163,65 +174,62 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
         </button>
       </div>
 
-      {/* Bộ lọc + Chọn lớp - 2 cột */}
-      <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr" : "1fr", gap: 12 }}>
-        {/* Bộ lọc */}
-        <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "12px 14px" }}>
-          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 10 }}>
-            BỘ LỌC TIẾT KIỆM GIẤY
+      {/* Bộ lọc + Chọn lớp */}
+      {isWide ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {/* Bộ lọc - dạng danh sách (máy tính) */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 10 }}>
+              BỘ LỌC TIẾT KIỆM GIẤY
+            </div>
+            {FILTER_DEFS.map((f) => (
+              <label 
+                key={f.key} 
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer", fontSize: 13, color: C.ink }}
+              >
+                <input
+                  type="checkbox"
+                  checked={filters[f.key]}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, [f.key]: e.target.checked }))}
+                  style={{ width: 18, height: 18, accentColor: C.pine, cursor: "pointer" }}
+                />
+                <span>{f.label}</span>
+              </label>
+            ))}
           </div>
-          {[
-            { key: "onlyConNo", label: "Chỉ in học sinh còn nợ" },
-            { key: "onlyChuaDong", label: "Chỉ in học sinh chưa đóng" },
-            { key: "onlyChuaGuiZalo", label: "Chỉ in học sinh chưa gửi Zalo" },
-          ].map((f) => (
-            <label 
-              key={f.key} 
-              style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 8, 
-                padding: "6px 0", 
-                cursor: "pointer", 
-                fontSize: 13, 
-                color: C.ink 
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={filters[f.key]}
-                onChange={(e) => setFilters((prev) => ({ ...prev, [f.key]: e.target.checked }))}
-                style={{ width: 18, height: 18, accentColor: C.pine, cursor: "pointer" }}
-              />
-              <span>{f.label}</span>
-            </label>
-          ))}
-        </div>
 
-        {/* Chọn lớp */}
-        <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "12px 14px" }}>
-          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 10 }}>
-            CHỌN LỚP
+          {/* Chọn lớp - dạng danh sách (máy tính) */}
+          <div style={{ background: C.card, border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13, color: C.pine, marginBottom: 10 }}>
+              CHỌN LỚP
+            </div>
+            <select
+              value={selectedLop}
+              onChange={(e) => { setSelectedLop(e.target.value); setPreviewPage(0); }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 14, color: C.ink, background: "#fff", fontFamily: font.body }}
+            >
+              <option value="all">Tất cả lớp ({meta.classes.length} lớp)</option>
+              {meta.classes.map((l) => <option key={l.id} value={l.id}>{l.ten}</option>)}
+            </select>
           </div>
-          <select
-            value={selectedLop}
-            onChange={(e) => { setSelectedLop(e.target.value); setPreviewPage(0); }}
-            style={{ 
-              width: "100%", 
-              padding: "10px 12px", 
-              borderRadius: 10, 
-              border: `1.5px solid ${C.line}`, 
-              fontSize: 14, 
-              color: C.ink, 
-              background: "#fff", 
-              fontFamily: font.body 
-            }}
-          >
-            <option value="all">Tất cả lớp ({meta.classes.length} lớp)</option>
-            {meta.classes.map((l) => <option key={l.id} value={l.id}>{l.ten}</option>)}
-          </select>
         </div>
-      </div>
+      ) : (
+        /* Điện thoại - chip mở BottomSheet (đồng bộ UX với tab Thu phí) */
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setFilterSheetOpen(true)} style={chipBtn}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              ⚙️ Bộ lọc{activeFilterCount ? ` (${activeFilterCount})` : ""}
+            </span>
+            <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+          </button>
+          <button onClick={() => setLopSheetOpen(true)} style={chipBtn}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {selectedLop === "all" ? "Tất cả lớp" : (meta.classes.find((c) => c.id === selectedLop)?.ten || "Chọn lớp")}
+            </span>
+            <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
+          </button>
+        </div>
+      )}
 
       {/* Xuất dữ liệu + Xem trước - 2 cột */}
       <div style={{ display: "grid", gridTemplateColumns: isWide ? "1fr 1fr" : "1fr", gap: 12 }}>
@@ -513,6 +521,54 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
           </div>
         )}
       </div>
+
+      {/* BottomSheet: Bộ lọc tiết kiệm giấy (điện thoại) */}
+      <BottomSheet open={filterSheetOpen} onClose={() => setFilterSheetOpen(false)} title="Bộ lọc tiết kiệm giấy">
+        <div>
+          {FILTER_DEFS.map((f) => {
+            const active = filters[f.key];
+            return (
+              <div
+                key={f.key}
+                onClick={() => setFilters((prev) => ({ ...prev, [f.key]: !prev[f.key] }))}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}
+              >
+                <div style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${active ? C.pine : C.line}`, background: active ? C.pine : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
+                  {active && <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1 }}>✓</span>}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink, transition: "color .2s" }}>{f.label}</div>
+              </div>
+            );
+          })}
+          <button
+            onClick={() => setFilterSheetOpen(false)}
+            style={{ width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}
+          >
+            Xong ({rowsToPrint.length} phiếu)
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* BottomSheet: Chọn lớp (điện thoại) */}
+      <BottomSheet open={lopSheetOpen} onClose={() => setLopSheetOpen(false)} title="Chọn lớp">
+        <div>
+          {[{ id: "all", ten: `Tất cả lớp (${meta.classes.length} lớp)` }, ...meta.classes].map((l) => {
+            const active = selectedLop === l.id;
+            return (
+              <div
+                key={l.id}
+                onClick={() => { setSelectedLop(l.id); setPreviewPage(0); setLopSheetOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}
+              >
+                <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "border-color .2s" }}>
+                  {active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink, transition: "color .2s" }}>{l.ten}</div>
+              </div>
+            );
+          })}
+        </div>
+      </BottomSheet>
 
       {/* Issues modal */}
       {showIssues && (
