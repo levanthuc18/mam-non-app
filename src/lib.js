@@ -1,18 +1,6 @@
-export const C = {
-  bg: "#F5F7F3", card: "#FFFFFF", ink: "#1C3530", sub: "#5C7068",
-  pine: "#176B5B", pineSoft: "#E2F0EB",
-  coral: "#D14B32", coralSoft: "#FBEAE5",
-  green: "#2E8F63", greenSoft: "#E4F3EA",
-  amber: "#A8731B", amberSoft: "#FBF1DC",
-  gray: "#8A938E", graySoft: "#EEF1EE", line: "#E3E8E2",
-  blueA: "#2F6FBF", blueASoft: "#E7F0FB",
-  violetB: "#8A56B8", violetBSoft: "#F2EAFA",
-  gold: "#C99A2E", goldSoft: "#FBF1D8",
-  orange: "#FF5722", orangeSoft: "#FFEDE6",
-// --- Hệ thống Grid 8px (Mới bổ sung) ---
-  xs: 4, sm: 8, md: 16, lg: 24, xl: 32, r: 16, r_kpi: 20
-};
-export const font = { display: "'Baloo 2', system-ui, sans-serif", body: "'Be Vietnam Pro', system-ui, sans-serif" };
+// Màu / font / radius / style chung gom ở theme.js (1 file để chỉnh sửa).
+import { C, font, R, SH, S } from "./theme.js";
+export { C, font, R, SH, S };
 export const fmt = (n) => (n < 0 ? "-" : "") + Math.abs(Math.round(n || 0)).toLocaleString("vi-VN");
 export const ymKey = (y, m) => `${y}-${String(m).padStart(2, "0")}`;
 export const stripYm = (d) => { if (!d) return d; const { __ym, ...rest } = d; return rest; };
