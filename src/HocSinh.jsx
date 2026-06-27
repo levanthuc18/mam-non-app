@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
 import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, useStickyShrink, StickyBar } from "./ui.jsx";
+import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
 import { ImportHSExcel } from "./CaiDat.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
@@ -79,7 +80,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
       <StickyBar shrunk={shrunk}>
         <div style={{ display: "flex", gap: 8, marginBottom: shrunk ? 0 : 10, flexWrap: "wrap" }}>
           <button onClick={() => setShowAddHS(!showAddHS)} style={{ flex: 1, padding: shrunk ? "9px 6px" : "11px 8px", borderRadius: 12, border: `1.5px solid ${showAddHS ? C.pine : C.line}`, background: showAddHS ? C.pine : C.card, color: showAddHS ? "#fff" : C.pine, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{shrunk ? "＋" : "＋ Thêm HS"}</button>
-          <button onClick={() => setShowImport(!showImport)} style={{ flex: 1, padding: shrunk ? "9px 6px" : "11px 8px", borderRadius: 12, border: `1.5px solid ${showImport ? C.blueA : C.line}`, background: showImport ? C.blueA : C.card, color: showImport ? "#fff" : C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{shrunk ? "📥" : "📥 Nhập CSV"}</button>
+          <button onClick={() => setShowImport(!showImport)} style={{ flex: 1, padding: shrunk ? "9px 6px" : "11px 8px", borderRadius: 12, border: `1.5px solid ${showImport ? C.blueA : C.line}`, background: showImport ? C.blueA : C.card, color: showImport ? "#fff" : C.blueA, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{shrunk ? <Icon name="download" size={15} color={showImport ? "#fff" : C.blueA} /> : <span style={{ display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="download" size={15} color={showImport ? "#fff" : C.blueA} /> Nhập CSV</span>}</button>
           <button onClick={() => { setBulkMode(!bulkMode); setSelectedHS([]); }} style={{ flex: "0 0 auto", padding: shrunk ? "9px 10px" : "11px 12px", borderRadius: 12, border: `1.5px solid ${bulkMode ? C.pine : C.line}`, background: bulkMode ? C.pine : C.card, color: bulkMode ? "#fff" : C.sub, fontFamily: font.display, fontWeight: 700, fontSize: shrunk ? 12 : 13.5, cursor: "pointer" }}>{bulkMode ? "⛔ Xong" : (shrunk ? "☑" : "☑ Chọn nhiều")}</button>
         </div>
       </StickyBar>
@@ -139,7 +140,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, padding: "8px 12px", background: C.pineSoft, borderRadius: 10, border: `1.5px solid #BFE0D4` }}>
           <button onClick={toggleSelectAll} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${allFilteredSelected ? C.pine : C.line}`, background: allFilteredSelected ? C.pine : C.card, color: C.pine, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{allFilteredSelected ? "✕ Bỏ chọn" : "✓ Chọn tất cả"}</button>
           {selectedHS.length > 0 && <span style={{ fontSize: 12, color: C.sub, flex: 1 }}><b>{selectedHS.length}</b> đã chọn</span>}
-          {selectedHS.length > 0 && <button onClick={() => setThaoTacOpen(true)} style={{ marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>⚙️ Thao tác</button>}
+          {selectedHS.length > 0 && <button onClick={() => setThaoTacOpen(true)} style={{ marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="settings" size={14} color="#fff" /> Thao tác</button>}
         </div>
       )}
 
@@ -255,14 +256,14 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
       {/* BOTTOM SHEET THAO TÁC HÀNG LOẠT */}
       <BottomSheet open={thaoTacOpen} onClose={closeThaoTac} title={ttView === "menu" ? `Thao tác cho ${selectedHS.length} HS` : ttView === "khac" ? `Khác — ${selectedHS.length} HS` : ttView === "lop" ? `Chuyển ${selectedHS.length} HS sang lớp` : ttView === "tt" ? `Đổi trạng thái ${selectedHS.length} HS` : ttView === "thu" ? `Đổi người thu ${selectedHS.length} HS` : ttView === "pl" ? `Đổi phân loại ${selectedHS.length} HS` : ttView === "gt" ? `Đổi giới tính ${selectedHS.length} HS` : ttView === "ngay" ? `Đặt ngày nhập học ${selectedHS.length} HS` : ttView === "ratruong" ? `Cho ${selectedHS.length} HS ra trường` : `Xóa vĩnh viễn ${selectedHS.length} HS`}>
         {ttView === "menu" && (<div>
-          {[["🏫", "Chuyển lớp", "lop"], ["🔖", "Đổi trạng thái", "tt"], ["💰", "Đổi người thu A/B", "thu"], ["🏷️", "Đổi phân loại", "pl"], ["⚥", "Đổi giới tính", "gt"], ["⚙️", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
-            <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>{ic}</span><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
+          {[["school", "Chuyển lớp", "lop"], ["bookmark", "Đổi trạng thái", "tt"], ["cash", "Đổi người thu A/B", "thu"], ["tag", "Đổi phân loại", "pl"], ["users", "Đổi giới tính", "gt"], ["settings", "Khác (ngày nhập học, ra trường, xóa)", "khac"]].map(([ic, lb, v]) => (
+            <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><Icon name={ic} size={19} color={C.pine} /><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
           ))}
         </div>)}
         {ttView === "khac" && (<div>
           <button onClick={() => setTtView("menu")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8, padding: 0 }}>‹ Quay lại</button>
-          {[["📅", "Đặt ngày nhập học", "ngay", false], ["🎓", "Cho ra trường", "ratruong", false], ["🗑", "Xóa vĩnh viễn", "xoa", true]].map(([ic, lb, v, dg]) => (
-            <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${dg ? C.coral : C.line}`, background: C.card, color: dg ? C.coral : C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>{ic}</span><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
+          {[["calendarCheck", "Đặt ngày nhập học", "ngay", false], ["graduationCap", "Cho ra trường", "ratruong", false], ["trash", "Xóa vĩnh viễn", "xoa", true]].map(([ic, lb, v, dg]) => (
+            <button key={v} onClick={() => setTtView(v)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${dg ? C.coral : C.line}`, background: C.card, color: dg ? C.coral : C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><Icon name={ic} size={19} color={dg ? C.coral : C.pine} /><span style={{ flex: 1 }}>{lb}</span><span style={{ color: C.gray }}>›</span></button>
           ))}
         </div>)}
         {ttView === "lop" && (<div>
@@ -300,7 +301,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
         </div>)}
         {ttView === "xoa" && (<div>
           <button onClick={() => setTtView("khac")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 10, padding: 0 }}>‹ Quay lại</button>
-          <div style={{ fontSize: 13, color: C.coral, fontWeight: 700, marginBottom: 6 }}>⚠️ Xóa vĩnh viễn {selectedHS.length} học sinh</div>
+          <div style={{ fontSize: 13, color: C.coral, fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}><Icon name="alertTriangle" size={15} color={C.coral} /> Xóa vĩnh viễn {selectedHS.length} học sinh</div>
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mất hẳn dữ liệu, không xem lại được. Gõ <b>XOA</b> để xác nhận.</div>
           <input value={xoaText} onChange={(e) => setXoaText(e.target.value)} placeholder="Gõ XOA" style={{ ...inp, width: "100%", marginBottom: 12, textAlign: "center", fontWeight: 700, letterSpacing: 2 }} />
           <button onClick={bulkDelete} disabled={xoaText.trim().toUpperCase() !== "XOA"} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: xoaText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: xoaText.trim().toUpperCase() === "XOA" ? "pointer" : "default", fontFamily: font.body }}>🗑 Xóa vĩnh viễn {selectedHS.length} HS</button>
