@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { C, font, PL_COLOR } from "./lib.js";
 
+// Emo — bọc emoji cho căn giữa, kích cỡ đều nhau (giữ emoji ở list, không thay icon)
+export function Emo({ children, size = 18, box }) {
+  const b = box ?? size + 4;
+  return (
+    <span style={{
+      fontSize: size, lineHeight: 1, display: "inline-flex",
+      alignItems: "center", justifyContent: "center",
+      width: b, height: b, flexShrink: 0,
+    }}>{children}</span>
+  );
+}
+
 export function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 export function Badge({ s }) { return <span style={{ background: s.bg, color: s.c, fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap" }}>{s.t}</span>; }
 
