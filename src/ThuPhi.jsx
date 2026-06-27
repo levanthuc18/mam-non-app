@@ -479,23 +479,23 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             {fastMode ? (
               paidFull ? (
                 <button disabled style={{ ...colBtn(C.greenSoft, C.green, false, false), cursor: "default" }}>
-                  <span style={{ fontSize: 13, lineHeight: 1 }}>✓</span>
+                  <Icon name="check" size={15} color={C.green} />
                   <span style={{ fontSize: 8.5, fontWeight: 700 }}>Đủ</span>
                 </button>
               ) : (
                 <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={colBtn(C.green, "#fff", false, locked)}>
-                  <span style={{ fontSize: 13, lineHeight: 1 }}>⚡</span>
+                  <Icon name="cash" size={15} color="#fff" />
                   <span style={{ fontSize: 8.5, fontWeight: 700 }}>Thu đủ</span>
                 </button>
               )
             ) : (
               <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
-                <span style={{ fontSize: 13, lineHeight: 1 }}>💰</span>
+                <Icon name="cash" size={15} color={paidFull ? C.amber : "#fff"} />
                 <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
               </button>
             )}
             <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn("#FFF9EE", C.amber, true, locked)}>
-              <span style={{ fontSize: 13, lineHeight: 1 }}>✏️</span>
+              <Icon name="edit" size={15} color={C.amber} />
               <span style={{ fontSize: 8.5, fontWeight: 700 }}>Sửa</span>
             </button>
             <button onClick={() => setExpandId(isExpanded ? null : r.hs.id)} style={colBtn(C.card, C.sub, true)}>
@@ -861,7 +861,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
 
       {fastMode && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FEF9E7", border: "1px solid #FDE68A", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: "#92702A", fontWeight: 600 }}>
-          <span style={{ fontSize: 15 }}>⚡</span>
+          <Icon name="zap" size={16} color="#92702A" />
           <span>Quét thu nhanh — bấm <b>Thu đủ</b> là thu ngay, có thể Hoàn tác.{fastCount > 0 ? ` Đã thu ${fastCount} cháu phiên này.` : ""}</span>
         </div>
       )}
@@ -969,7 +969,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
           <div style={{ height: 90 }} />
           <div style={{ position: "fixed", bottom: 76, left: 0, right: 0, maxWidth: 640, margin: "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
             <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.ink, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
-              ⚡ Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+              <Icon name="zap" size={17} color="#fff" /> Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
             </div>
             {batchOpen && (
               <div style={{ background: C.card, borderRadius: C.r, marginTop: C.xs, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden" }}>
@@ -977,10 +977,10 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
                   <Emo size={16}>🍽️</Emo> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
                 </button>
                 <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Emo size={16}>⚡</Emo> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
+                  <Icon name="zap" size={16} color={C.ink} /> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
                 </button>
                 <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.green : C.gray, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Emo size={16}>💵</Emo> Thu đủ {soNo} HS còn nợ đang hiển thị
+                  <Icon name="cash" size={16} color={soNo > 0 ? C.green : C.gray} /> Thu đủ {soNo} HS còn nợ đang hiển thị
                 </button>
               </div>
             )}
