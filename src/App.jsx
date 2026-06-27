@@ -162,7 +162,7 @@ export default function App() {
             <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: C.pine, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
               {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} học sinh · ${meta.classes.length} lớp`}
-              {store.locked && <span>· 🔒</span>}
+              {store.locked && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>· <Icon name="lock" size={12} color={C.sub} /></span>}
             </div>
             </div>
           </div>
@@ -276,7 +276,7 @@ export default function App() {
 
         {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
           <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
-            <div style={{ fontSize: 32 }}>📅</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}><Icon name="calendarCheck" size={36} color={C.gray} strokeWidth={1.6} /></div>
             <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
             {isAdmin ? (
               <>
