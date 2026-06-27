@@ -4,8 +4,9 @@ import {
   KHOAN
 } from "./lib.js";
 import {
-  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote
+  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, Emo
 } from "./ui.jsx";
+import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
 
 /* ============================================================
@@ -24,7 +25,7 @@ const fmtK = (n) => {
 function EmptyState({ search, onClear }) {
   return (
     <div style={{ textAlign: "center", padding: "36px 20px", color: C.sub }}>
-      <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Icon name="search" size={40} color={C.gray} strokeWidth={1.6} /></div>
       <div style={{ fontSize: 14, marginBottom: 12 }}>{search ? "Không tìm thấy học sinh phù hợp" : "Không có học sinh trong bộ lọc này"}</div>
       <button onClick={onClear} style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Xóa bộ lọc</button>
     </div>
@@ -525,7 +526,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <span>{fmt(tongPhaiThu)}đ</span>
           </div>
           <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: "1px solid #BFDBFE", background: "#DBEAFE", color: "#2563EB", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <span style={{ fontSize: 15 }}>📄</span> Xem phiếu thu
+            <Icon name="receipt" size={15} color="#2563EB" /> Xem phiếu thu
           </button>
         </div>
       )}
@@ -842,8 +843,8 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>
-          <span style={{ color: C.green }}>🟢 Đã thu: {fmtK(tk.thu)}</span>
-          <span style={{ color: C.coral }}>🔴 Còn nợ: {fmtK(tk.no)}</span>
+          <span style={{ color: C.green, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.green, flexShrink: 0 }} /> Đã thu: {fmtK(tk.thu)}</span>
+          <span style={{ color: C.coral, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.coral, flexShrink: 0 }} /> Còn nợ: {fmtK(tk.no)}</span>
         </div>
         <div style={{ height: 6, borderRadius: 99, background: C.line, overflow: "hidden", marginBottom: 4 }}>
           <div style={{ width: `${pct}%`, height: "100%", background: C.green, borderRadius: 99, transition: "width .3s" }} />
@@ -973,13 +974,13 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
             {batchOpen && (
               <div style={{ background: C.card, borderRadius: C.r, marginTop: C.xs, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden" }}>
                 <button onClick={() => { setShowNgayAn(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>🍽️</span> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
+                  <Emo size={16}>🍽️</Emo> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
                 </button>
                 <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>⚡</span> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
+                  <Emo size={16}>⚡</Emo> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
                 </button>
                 <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.green : C.gray, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>💵</span> Thu đủ {soNo} HS còn nợ đang hiển thị
+                  <Emo size={16}>💵</Emo> Thu đủ {soNo} HS còn nợ đang hiển thị
                 </button>
               </div>
             )}
