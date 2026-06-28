@@ -86,7 +86,15 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
   const [viewStudentId, setViewStudentId] = useState(null); 
-  const [notifOpen, setNotifOpen] = useState(false); 
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [baoPendingCount, setBaoPendingCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => { try { const l = (await sGet("mn5:bao")) || []; if (alive) setBaoPendingCount(l.filter((b) => !b.done).length); } catch {} };
+    load();
+    const iv = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [tab]); 
   
   const store = useStore();
   const { meta, students, loading } = store;
@@ -125,6 +133,7 @@ export default function App() {
   const noRows = recRows0.filter((r) => r.conNo > 0);
   
   const sysAlerts = [];
+  if (baoPendingCount > 0) sysAlerts.push({ type: 'warning', msg: `${baoPendingCount} báo từ Giáo viên chờ duyệt`, actionLabel: 'Duyệt', tab: 'caidat' });
   if (chuaThu > 0) sysAlerts.push({ type: 'danger', msg: `${chuaThu} HS chưa thu đủ tháng ${store.month}`, actionLabel: 'Thu ngay', tab: 'thu', filter: 'chuaThu' });
   if (ngayAn0 > 0) sysAlerts.push({ type: 'warning', msg: `${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền)`, actionLabel: 'Sửa', tab: 'thu', filter: 'all' });
   if (noRows.length > 0) sysAlerts.push({ type: 'danger', msg: `${noRows.length} HS đang nợ tiền`, actionLabel: 'Xem', tab: 'thu', filter: 'thieu' });
@@ -140,7 +149,10 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
         input[type=number]::-webkit-inner-spin-button{display:none}
         *{box-sizing:border-box}
-        button:active{transform:scale(0.97)}
+        button{transition:filter .15s ease, transform .1s ease}
+        button:not(:disabled){cursor:pointer}
+        button:not(:disabled):hover{filter:brightness(0.95)}
+        button:not(:disabled):active{transform:scale(0.97)}
         .active-press-shadow {
           will-change: transform;
         }
