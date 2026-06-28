@@ -390,10 +390,82 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const xoaGV = async (id) => { const gv = (meta.giaoVien || []).find((g) => g.id === id); if (await ask("Xóa giáo viên này?", { danger: true, okText: "Xóa" })) { const newGV = (meta.giaoVien || []).filter((g) => g.id !== id); upMeta({ ...meta, giaoVien: newGV }); logAction(`Xóa giáo viên "${gv?.ten || id}"`); toast("Đã xóa giáo viên", gv ? () => upMeta({ ...meta, giaoVien: [...newGV, gv] }) : undefined); } };
   const setDK = (k, v) => upMeta({ ...meta, soDuDauKy: { ...meta.soDuDauKy, [k]: v } });
 
+  // === Báo từ Giáo viên (Admin nhận + duyệt) ===
+  const [baoList, setBaoList] = useState([]);
+  const loadBao = async () => { try { setBaoList((await sGet("mn5:bao")) || []); } catch { setBaoList([]); } };
+  useEffect(() => { loadBao(); }, []);
+  const baoPending = baoList.filter((b) => !b.done);
+  const _today = () => new Date().toISOString().slice(0, 10);
+  const baoTypeLabel = (t) => t === "thoihoc" ? "Thôi học" : t === "chuyenlop" ? "Chuyển lớp" : t === "moi" ? "Cháu mới" : "Báo";
+  const markBaoDone = async (id) => {
+    const cur = (await sGet("mn5:bao")) || [];
+    const next = cur.map((b) => b.id === id ? { ...b, done: true, doneTs: Date.now() } : b);
+    await sSet("mn5:bao", next); setBaoList(next);
+  };
+  const duyetBao = async (b) => {
+    if (b.type === "thoihoc") {
+      if (!students.some((s) => s.id === b.hsId)) { toast("Không tìm thấy cháu này (có thể đã xử lý)."); await markBaoDone(b.id); return; }
+      upStudents(students.map((s) => s.id === b.hsId ? { ...s, trangThai: "Ra trường", ngayNghiHoc: _today() } : s), true);
+      logAction(`Duyệt báo GV (${b.gv || "GV"}): cho "${b.hsTen}" thôi học`);
+    } else if (b.type === "chuyenlop") {
+      const tenLop = meta.classes.find((c) => c.id === b.lop)?.ten || b.lopTen || "";
+      if (!students.some((s) => s.id === b.hsId)) { toast("Không tìm thấy cháu này."); await markBaoDone(b.id); return; }
+      upStudents(students.map((s) => {
+        if (s.id !== b.hsId) return s;
+        const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym);
+        hist.push({ tuThang: ym, lop: b.lop });
+        hist.sort((a, z) => a.tuThang.localeCompare(z.tuThang));
+        return { ...s, lopHistory: hist };
+      }), true);
+      logAction(`Duyệt báo GV (${b.gv || "GV"}): chuyển "${b.hsTen}" sang lớp ${tenLop}`);
+    } else if (b.type === "moi") {
+      const lop0 = meta.classes[0]?.id || "";
+      upStudents([...students, { id: "hs" + uid(), ten: b.hsTen, gt: "", ngaySinh: "", lopHistory: [{ tuThang: ym, lop: lop0 }], pl: "Bthg", nguoiThu: "A", trangThai: "Đang học", ngayNhapHoc: _today(), ngayNghiHoc: "", noDauKy: 0, phuHuynh: { ten: "", sdt: "" } }], true);
+      logAction(`Duyệt báo GV (${b.gv || "GV"}): thêm cháu mới "${b.hsTen}"${b.note ? " — " + b.note : ""}`);
+    }
+    await markBaoDone(b.id);
+    toast("Đã duyệt ✓");
+  };
+  const boQuaBao = async (b) => {
+    if (!(await ask(`Bỏ qua báo "${baoTypeLabel(b.type)}: ${b.hsTen || ""}"?`, { okText: "Bỏ qua" }))) return;
+    await markBaoDone(b.id);
+    logAction(`Bỏ qua báo GV (${b.gv || "GV"}): ${b.hsTen || ""} — ${baoTypeLabel(b.type)}`);
+    toast("Đã bỏ qua.");
+  };
+
   const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none" };
 
   return (
     <>
+      {baoPending.length > 0 && (
+        <Card style={{ marginBottom: 12, background: "#FFF7ED", borderColor: "#F2D9B8" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <Icon name="bell" size={17} color={C.coral} />
+            <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: C.ink }}>Báo từ Giáo viên</span>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", background: C.coral, borderRadius: 99, padding: "1px 8px" }}>{baoPending.length}</span>
+          </div>
+          {baoPending.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).map((b) => {
+            const col = b.type === "thoihoc" ? C.coral : b.type === "chuyenlop" ? C.blueA : C.green;
+            const tg = b.ts ? new Date(b.ts) : null;
+            const tgStr = tg ? `${String(tg.getHours()).padStart(2, "0")}:${String(tg.getMinutes()).padStart(2, "0")} ${tg.getDate()}/${tg.getMonth() + 1}` : "";
+            return (
+              <div key={b.id} style={{ border: `1px solid ${C.line}`, borderRadius: 11, padding: "10px 12px", marginBottom: 9, background: C.card }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 800, color: "#fff", background: col, borderRadius: 6, padding: "1px 7px" }}>{baoTypeLabel(b.type)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{b.hsTen || "(chưa tên)"}</span>
+                  {b.type === "chuyenlop" && <span style={{ fontSize: 12.5, color: C.sub }}>→ {meta.classes.find((c) => c.id === b.lop)?.ten || b.lopTen || ""}</span>}
+                </div>
+                <div style={{ fontSize: 11.5, color: C.gray, marginBottom: b.note ? 4 : 8 }}>{b.gv || "Giáo viên"}{tgStr ? " · " + tgStr : ""}</div>
+                {b.note && <div style={{ fontSize: 12.5, color: C.sub, background: C.bg, borderRadius: 7, padding: "5px 9px", marginBottom: 8 }}>{b.note}</div>}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => duyetBao(b)} style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="check" size={14} color="#fff" /> Duyệt</button>
+                  <button onClick={() => boQuaBao(b)} style={{ flex: "0 0 auto", padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body }}>Bỏ qua</button>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
       <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
         {[
           ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
