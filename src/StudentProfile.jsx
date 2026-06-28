@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
 import { AvatarEditor } from "./Avatar.jsx";
 
@@ -213,7 +214,7 @@ function ThuPhiTab({ student, meta }) {
         <Card key={h.thang} style={{ marginBottom: 8, padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>Tháng {h.thang.slice(5)}/{h.thang.slice(0, 4)}</div>
-            {h.daChot && <span style={{ fontSize: 11, background: C.goldSoft, color: "#7A5E12", padding: "2px 8px", borderRadius: 99 }}>🔒 Đã chốt</span>}
+            {h.daChot && <span style={{ fontSize: 11, background: C.goldSoft, color: "#7A5E12", display:"inline-flex", alignItems:"center", gap:3, padding: "2px 8px", borderRadius: 99 }}><Icon name="lock" size={11} color="#7A5E12" /> Đã chốt</span>}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: C.sub, padding: "3px 0" }}>
             <span>Phải thu</span><b style={{ color: C.ink }}>{fmt(h.ps)}</b>
