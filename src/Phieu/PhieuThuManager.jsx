@@ -7,7 +7,7 @@ import { AnimatedCounter } from "./AnimatedCounter.jsx";
 import { PreflightCheck } from "./PreflightCheck.jsx";
 import { ClassList } from "./ClassList.jsx";
 import { PrintPreview } from "./PrintPreview.jsx";
-import { sharePhieuAnh } from "./shareImage.js";
+import { sharePhieuAnh, makePhieuImage, canShareImageFile, shareImageFile, downloadImageUrl } from "./shareImage.js";
 
 const FILTER_DEFS = [
   { key: "onlyConNo", label: "Chỉ in học sinh còn nợ" },
@@ -27,6 +27,8 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
   const [sharingSingle, setSharingSingle] = useState(false);
+  const [shareModal, setShareModal] = useState(null); // { url, file, title, text, filename }
+  const closeShareModal = () => { setShareModal((m) => { if (m && m.url) { try { URL.revokeObjectURL(m.url); } catch {} } return null; }); };
   
   useEffect(() => {
     if (phieuId) {
@@ -103,10 +105,10 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
               const ten = singleRow.hs.ten || "Học sinh";
               const lop = singleRow.lop?.ten || "";
               const fn = fileName(`${lop ? lop + " - " : ""}${ten} - T${month}.${year}`) + ".png";
-              const res = await sharePhieuAnh(node, { filename: fn, title: `Phiếu học phí — ${ten}`, text: `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}` });
+              const r = await makePhieuImage(node, fn);
               setSharingSingle(false);
-              if (!res.ok) alert("Không tạo được ảnh (" + (res.reason || "?") + (res.error && res.error.message ? ": " + res.error.message : "") + "). Thử lại nhé.");
-              else if (res.mode === "download") alert("Thiết bị không hỗ trợ chia sẻ trực tiếp — ảnh đã được tải về.");
+              if (!r.ok) { alert("Không tạo được ảnh (" + (r.reason || "?") + (r.error && r.error.message ? ": " + r.error.message : "") + "). Thử lại nhé."); return; }
+              setShareModal({ url: r.url, file: r.file, filename: fn, title: `Phiếu học phí — ${ten}`, text: `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}` });
             }}
             disabled={sharingSingle}
             style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: sharingSingle ? C.graySoft : C.pine, color: sharingSingle ? C.gray : "#fff", fontWeight: 700, fontSize: 13, cursor: sharingSingle ? "default" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
@@ -125,6 +127,31 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
           mData={mData}
           upMData={upMData}
         />
+        {shareModal && (
+          <div onClick={closeShareModal} className="no-print" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 2000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 16, maxWidth: 430, width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
+              <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.ink, marginBottom: 6 }}>Ảnh phiếu thu</div>
+              <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12, lineHeight: 1.5 }}>Nhấn giữ vào ảnh để <b>Lưu ảnh</b> hoặc <b>Chia sẻ</b> sang Zalo, Messenger... Hoặc dùng nút bên dưới.</div>
+              <img src={shareModal.url} alt="Phiếu thu" style={{ width: "100%", borderRadius: 10, border: `1px solid ${C.line}`, display: "block" }} />
+              <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                {canShareImageFile(shareModal.file) && (
+                  <button
+                    onClick={async () => { const r = await shareImageFile(shareModal.file, { title: shareModal.title, text: shareModal.text }); if (!r.ok) alert("Không mở được chia sẻ — bạn nhấn giữ vào ảnh để lưu/gửi nhé."); }}
+                    style={{ flex: 1, minWidth: 120, padding: "11px 0", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: font.body }}
+                  >Chia sẻ ngay</button>
+                )}
+                <button
+                  onClick={() => downloadImageUrl(shareModal.url, shareModal.filename)}
+                  style={{ flex: 1, minWidth: 120, padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: font.body }}
+                >Tải ảnh về</button>
+                <button
+                  onClick={closeShareModal}
+                  style={{ flex: "0 0 auto", padding: "11px 18px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: font.body }}
+                >Đóng</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
