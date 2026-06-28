@@ -161,7 +161,7 @@ export default function App() {
             <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: C.pine, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
-              {isGV ? `👩‍🏫 ${gvTen} - Lớp ${meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}` : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} học sinh · ${meta.classes.length} lớp`}
+              {isGV ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Icon name="graduationCap" size={13} color={C.sub} /> {gvTen} - Lớp {meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}</span> : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} học sinh · ${meta.classes.length} lớp`}
               {store.locked && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>· <Icon name="lock" size={12} color={C.sub} /></span>}
             </div>
             </div>
