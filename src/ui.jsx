@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, font, PL_COLOR } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 
 // Emo — bọc emoji cho căn giữa, kích cỡ đều nhau (giữ emoji ở list, không thay icon)
 export function Emo({ children, size = 18, box }) {
@@ -51,7 +52,7 @@ export function Chips({ items, val, set, compact }) {
 export function SearchBar({ value, onChange, placeholder }) {
   return (
     <div style={{ position: "relative", marginBottom: 10 }}>
-      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.gray, fontSize: 14 }}>🔍</span>
+      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.gray, display: "flex" }}><Icon name="search" size={16} color={C.gray} /></span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder || "Tìm tên học sinh…"}
         style={{ width: "100%", padding: "10px 12px 10px 34px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: C.card, outline: "none" }}
         onFocus={(e) => (e.target.style.borderColor = C.pine)} onBlur={(e) => (e.target.style.borderColor = C.line)} />
