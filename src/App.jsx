@@ -51,7 +51,7 @@ function ToastHost() {
 
 function NotificationSheet({ open, onClose, alerts, onAction }) {
   return (
-    <BottomSheet open={open} onClose={onClose} title="🔔 Trung tâm thông báo">
+    <BottomSheet open={open} onClose={onClose} title="Trung tâm thông báo">
       {alerts.length === 0 ? (
         <div style={{ textAlign: "center", padding: 30, color: C.green, fontWeight: 600 }}>✓ Tuyệt vời! Hệ thống không có cảnh báo nào.</div>
       ) : (
@@ -60,7 +60,7 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
             const c = a.type === 'danger' ? { bg: C.coralSoft, border: "#EFC9BF", fg: C.coral } : a.type === 'warning' ? { bg: C.amberSoft, border: "#EAD8A0", fg: "#7A5E12" } : { bg: C.greenSoft, border: "#BFE3CC", fg: C.green };
             return (
               <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ fontSize: 16 }}>{a.icon}</div>
+                <div style={{ width: 10, height: 10, borderRadius: 99, background: c.fg, flexShrink: 0, marginTop: 4 }} />
                 <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{a.msg}</div>
                 <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: c.fg, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", width: 100, textAlign: "center" }}>
                   {a.actionLabel}
@@ -125,9 +125,9 @@ export default function App() {
   const noRows = recRows0.filter((r) => r.conNo > 0);
   
   const sysAlerts = [];
-  if (chuaThu > 0) sysAlerts.push({ type: 'danger', icon: '🔴', msg: `${chuaThu} HS chưa thu đủ tháng ${store.month}`, actionLabel: 'Thu ngay', tab: 'thu', filter: 'chuaThu' });
-  if (ngayAn0 > 0) sysAlerts.push({ type: 'warning', icon: '🟠', msg: `${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền)`, actionLabel: 'Sửa', tab: 'thu', filter: 'all' });
-  if (noRows.length > 0) sysAlerts.push({ type: 'danger', icon: '🔴', msg: `${noRows.length} HS đang nợ tiền`, actionLabel: 'Xem', tab: 'thu', filter: 'thieu' });
+  if (chuaThu > 0) sysAlerts.push({ type: 'danger', msg: `${chuaThu} HS chưa thu đủ tháng ${store.month}`, actionLabel: 'Thu ngay', tab: 'thu', filter: 'chuaThu' });
+  if (ngayAn0 > 0) sysAlerts.push({ type: 'warning', msg: `${ngayAn0} HS có ngày ăn = 0 (chưa tính tiền)`, actionLabel: 'Sửa', tab: 'thu', filter: 'all' });
+  if (noRows.length > 0) sysAlerts.push({ type: 'danger', msg: `${noRows.length} HS đang nợ tiền`, actionLabel: 'Xem', tab: 'thu', filter: 'thieu' });
   
   const handleNotifAction = (targetTab, filter) => {
     setTab(targetTab);
@@ -185,7 +185,7 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
-        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào ⚙️ Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
+        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {tab === "home" && (
           <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} />
