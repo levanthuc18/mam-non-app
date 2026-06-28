@@ -200,7 +200,7 @@ export default function App() {
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {tab === "home" && (
-          <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} />
+          <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
         )}
 
         {tab === "thu" && store.mData && (
