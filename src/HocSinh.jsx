@@ -297,14 +297,14 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 8, lineHeight: 1.5 }}>Sẽ đặt ngày nghỉ + chuyển trạng thái sang <b>Ra trường</b> cho {selectedHS.length} HS.</div>
           <label style={{ fontSize: 12.5, color: C.sub, display: "block", marginBottom: 6 }}>Ngày ra trường:</label>
           <input type="date" value={bulkRaNgay} onChange={(e) => setBulkRaNgay(e.target.value)} style={{ ...inp, width: "100%", marginBottom: 12 }} />
-          <button onClick={bulkRaTruong} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>🎓 Cho {selectedHS.length} HS ra trường</button>
+          <button onClick={bulkRaTruong} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.amber, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="graduationCap" size={15} color="#fff" /> Cho {selectedHS.length} HS ra trường</span></button>
         </div>)}
         {ttView === "xoa" && (<div>
           <button onClick={() => setTtView("khac")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 10, padding: 0 }}>‹ Quay lại</button>
           <div style={{ fontSize: 13, color: C.coral, fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}><Icon name="alertTriangle" size={15} color={C.coral} /> Xóa vĩnh viễn {selectedHS.length} học sinh</div>
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mất hẳn dữ liệu, không xem lại được. Gõ <b>XOA</b> để xác nhận.</div>
           <input value={xoaText} onChange={(e) => setXoaText(e.target.value)} placeholder="Gõ XOA" style={{ ...inp, width: "100%", marginBottom: 12, textAlign: "center", fontWeight: 700, letterSpacing: 2 }} />
-          <button onClick={bulkDelete} disabled={xoaText.trim().toUpperCase() !== "XOA"} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: xoaText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: xoaText.trim().toUpperCase() === "XOA" ? "pointer" : "default", fontFamily: font.body }}>🗑 Xóa vĩnh viễn {selectedHS.length} HS</button>
+          <button onClick={bulkDelete} disabled={xoaText.trim().toUpperCase() !== "XOA"} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: xoaText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: xoaText.trim().toUpperCase() === "XOA" ? "pointer" : "default", fontFamily: font.body }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="trash" size={15} color="#fff" /> Xóa vĩnh viễn {selectedHS.length} HS</span></button>
         </div>)}
       </BottomSheet>
     </>
