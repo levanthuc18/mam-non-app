@@ -1,6 +1,7 @@
 // LoginScreen.jsx — màn chọn vai trò + nhập PIN (phong cách mầm non)
 import { useState } from "react";
 import { C, font } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 import { Logo } from "./Brand.jsx";
 import { Cloud, Sun, Grass, School } from "./Decor.jsx";
 
@@ -39,16 +40,16 @@ export function LoginScreen({ meta, onLogin }) {
           <>
             <button onClick={() => { setMode("admin"); setPin(""); setErr(""); }}
               style={{ width: "100%", padding: "15px 18px", borderRadius: 16, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15.5, cursor: "pointer", marginBottom: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 6px 16px rgba(23,107,91,.28)" }}>
-              <span style={{ fontSize: 19 }}>👩‍💼</span> Quản lý (Kế toán)
+              <Icon name="briefcase" size={18} color="currentColor" /> Quản lý (Kế toán)
             </button>
             <button onClick={() => { setMode("gv"); setPin(""); setErr(""); }}
               style={{ width: "100%", padding: "15px 18px", borderRadius: 16, border: `1.5px solid ${C.pine}`, background: "#fff", color: C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 15.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 4px 12px rgba(0,0,0,.06)" }}>
-              <span style={{ fontSize: 19 }}>👩‍🏫</span> Giáo viên điểm danh
+              <Icon name="graduationCap" size={18} color="currentColor" /> Giáo viên điểm danh
             </button>
           </>
         ) : (
           <div style={{ background: "#fff", borderRadius: 18, padding: "20px 18px", boxShadow: "0 8px 28px rgba(0,0,0,.12)", textAlign: "center" }}>
-            <div style={{ marginBottom: 10, fontSize: 14, fontWeight: 700, color: mode === "admin" ? C.pine : C.blueA }}>{mode === "admin" ? "🔐 Nhập mã quản lý" : "👩‍🏫 Nhập PIN giáo viên"}</div>
+            <div style={{ marginBottom: 10, fontSize: 14, fontWeight: 700, color: mode === "admin" ? C.pine : C.blueA }}>{mode === "admin" ? <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="lock" size={14} color="currentColor" /> Nhập mã quản lý</span> : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="graduationCap" size={14} color="currentColor" /> Nhập PIN giáo viên</span>}</div>
             <input type="password" inputMode="numeric" autoFocus value={pin} onChange={(e) => { setPin(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && (mode === "admin" ? tryAdmin() : tryGV())} placeholder={mode === "admin" ? "Mã quản lý" : "PIN của bạn"} style={{ width: "100%", padding: "12px", borderRadius: 12, border: `1.5px solid ${err ? C.coral : C.line}`, fontSize: 17, fontFamily: font.body, outline: "none", textAlign: "center", letterSpacing: 5 }} />
             {err && <div style={{ fontSize: 12.5, color: C.coral, marginTop: 6 }}>{err}</div>}
             <button onClick={mode === "admin" ? tryAdmin : tryGV} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: mode === "admin" ? C.pine : C.blueA, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: 14, fontFamily: font.display }}>Vào</button>
