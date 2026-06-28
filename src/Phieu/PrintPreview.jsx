@@ -188,7 +188,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 }
                 const res = await sharePhieuAnh(captureRef.current, { filename, title, text });
                 setSharing(false);
-                if (!res.ok) alert("Không tạo được ảnh, thử lại nhé.");
+                if (!res.ok) alert("Không tạo được ảnh (" + (res.reason || "?") + (res.error && res.error.message ? ": " + res.error.message : "") + "). Thử lại nhé.");
                 else if (res.mode === "download") alert("Thiết bị không hỗ trợ chia sẻ trực tiếp — ảnh đã được tải về.");
               }}
               disabled={sharing}
