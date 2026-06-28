@@ -1,17 +1,18 @@
 import { C, font } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 
 export function MoreMenu({ setTab, onLogout }) {
   const sections = [
     {
       title: "Quản lý & Cài đặt",
       items: [
-        { icon: "⚙️", label: "Cài đặt hệ thống (Lớp, HS, Đơn giá...)", action: () => setTab("caidat") },
+        { icon: "settings", label: "Cài đặt hệ thống (Lớp, HS, Đơn giá...)", action: () => setTab("caidat") },
       ]
     },
     {
-      title: "⚙️ Tài khoản",
+      title: "Tài khoản",
       items: [
-        { icon: "↩", label: "Đăng xuất", action: onLogout },
+        { icon: "logOut", label: "Đăng xuất", action: onLogout },
       ]
     }
   ];
@@ -32,7 +33,7 @@ export function MoreMenu({ setTab, onLogout }) {
                 fontFamily: font.body, fontSize: 14.5, color: C.ink, fontWeight: 600
               }}
             >
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
+              <Icon name={item.icon} size={19} color={C.pine} />
               <span style={{ flex: 1 }}>{item.label}</span>
               <span style={{ color: C.gray }}>›</span>
             </button>
