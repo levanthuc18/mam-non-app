@@ -3,15 +3,7 @@ import { C, font } from "./lib.js";
 export function MoreMenu({ setTab, onLogout }) {
   const sections = [
     {
-      title: "📈 Báo cáo & Tài chính",
-      items: [
-        { icon: "📊", label: "Tổng quan tháng", action: () => setTab("dash") },
-        { icon: "📕", label: "Công nợ toàn trường", action: () => setTab("no") },
-        { icon: "🧾", label: "In phiếu thu", action: () => setTab("phieu") },
-      ]
-    },
-    {
-      title: "🏫 Quản lý & Cài đặt",
+      title: "Quản lý & Cài đặt",
       items: [
         { icon: "⚙️", label: "Cài đặt hệ thống (Lớp, HS, Đơn giá...)", action: () => setTab("caidat") },
       ]
