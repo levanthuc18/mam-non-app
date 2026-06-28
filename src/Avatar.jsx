@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, font, sGet, sSet, sDel, toast } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
 const GT_AVA = {
@@ -132,7 +133,7 @@ function AvatarCropper({ src, onCancel, onSave }) {
           <div style={{ position: "absolute", left: 0, top: 0, width: VIEW, height: VIEW, borderRadius: "50%", boxShadow: "0 0 0 9999px rgba(0,0,0,.45)", border: "2px solid rgba(255,255,255,.9)", pointerEvents: "none" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 2px 4px" }}>
-          <span style={{ fontSize: 16 }}>🔍</span>
+          <Icon name="search" size={16} color={C.sub} />
           <input type="range" min={minScale} max={minScale * MAX_MULT} step={0.01} value={scale} onChange={(e) => zoomCenter(parseFloat(e.target.value))} style={{ flex: 1, accentColor: C.pine }} />
         </div>
         <div style={{ fontSize: 11.5, color: C.sub, textAlign: "center", marginBottom: 12 }}>Kéo để dịch ảnh · chụm 2 ngón hoặc thanh trượt để phóng to</div>
@@ -167,9 +168,9 @@ export function AvatarEditor({ hs, setHS }) {
         setHS({ avt: 1 });
         toast("Đã lưu ảnh ✓");
       } else {
-        toast("⚠️ Lưu ảnh thất bại, thử lại");
+        toast("Lưu ảnh thất bại, thử lại");
       }
-    } catch { toast("⚠️ Lưu ảnh lỗi"); }
+    } catch { toast("Lưu ảnh lỗi"); }
     setBusy(false);
   };
 
@@ -189,7 +190,7 @@ export function AvatarEditor({ hs, setHS }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: "none" }} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ ...btn, borderColor: C.pine }}>{busy ? "Đang lưu…" : (src ? "📷 Đổi ảnh" : "📷 Thêm ảnh")}</button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ ...btn, borderColor: C.pine }}>{busy ? "Đang lưu…" : (src ? <span style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center"}}><Icon name="camera" size={15} color={C.pine} /> Đổi ảnh</span> : <span style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center"}}><Icon name="camera" size={15} color={C.pine} /> Thêm ảnh</span>)}</button>
           {src && !busy && <button onClick={remove} style={{ ...btn, color: C.coral, borderColor: C.coral }}>Xóa ảnh</button>}
         </div>
         <div style={{ fontSize: 11.5, color: C.sub, marginTop: 6, lineHeight: 1.4 }}>Chưa có ảnh thì hiển thị icon theo giới tính.</div>
