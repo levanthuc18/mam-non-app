@@ -6,6 +6,7 @@ import {
 import {
   Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
 } from "./ui.jsx";
+import { Icon } from "./Icon.jsx";
 
 // Component Donut (tùy chỉnh kích thước)
 function Donut({ pct, color, size = 60 }) {
@@ -45,7 +46,7 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
     <Card style={{ marginBottom: 12, padding: collapsed ? "11px 14px" : 14 }}>
       {/* TIÊU ĐỀ KHỐI + CÔNG TẮC */}
       <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginBottom: collapsed ? 0 : 12 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.pine }}>📊 Tổng quan quản lý</div>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.pine, display:"inline-flex",alignItems:"center",gap:8 }}><Icon name="barChart" size={17} color={C.pine} /> Tổng quan quản lý</div>
         <span style={{ fontSize: 12.5, color: C.sub, fontWeight: 600 }}>{collapsed ? "Chi tiết ▼" : "Thu gọn ▲"}</span>
       </div>
 
@@ -84,7 +85,7 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
             >
               <div style={{ minWidth: 0 }}>
                 <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
-                <span style={{ fontSize: 11.5, color: lopTime(c.id) ? C.sub : C.amber, marginLeft: 8 }}>{lopTime(c.id) ? `🕒 ${lopTime(c.id)}` : "• chưa điểm danh"}</span>
+                <span style={{ fontSize: 11.5, color: lopTime(c.id) ? C.sub : C.amber, marginLeft: 8 }}>{lopTime(c.id) ? <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Icon name="clock" size={12} color={C.sub} /> {lopTime(c.id)}</span> : "• chưa điểm danh"}</span>
               </div>
               <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700, flexShrink: 0 }}>
                 {c.nghi > 0 ? `Nghỉ ${c.nghi}/${c.siSo}` : `Đủ ${c.siSo}`}
@@ -212,7 +213,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       {/* 2. KHỐI ĐIỂM DANH (thu gọn/mở) */}
       <div onClick={() => setOpenDD(v => !v)} style={{ position: "relative", textAlign: "center", cursor: "pointer", padding: "8px 4px", marginBottom: openDD ? 8 : 4 }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: C.pine }}>🎯 Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
+        <div style={{ fontWeight: 800, fontSize: 18, color: C.pine, display:"inline-flex", alignItems:"center", gap:8 }}><Icon name="checkSquare" size={20} color={C.pine} /> Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
         {!openDD && <div style={{ fontSize: 12, color: C.sub, marginTop: 2, fontWeight: 600 }}>{studentRows.length} cháu · {soNghiNgay} nghỉ · Mở rộng ▼</div>}
         {openDD && <span style={{ position: "absolute", right: 6, top: 12, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>Thu gọn ▲</span>}
       </div>
@@ -246,7 +247,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
               <label style={{ position: "relative", textAlign: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                  <span style={{ fontSize: 17 }}>📅</span>{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
+                  <Icon name="calendarCheck" size={16} color={C.pine} />{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
                 </div>
                 <input type="date" value={`${year}-${String(month).padStart(2, "0")}-${String(viewDay).padStart(2, "0")}`} onChange={(e) => { const v = e.target.value.split("-").map(Number); if (!v[0]) return; setYear(v[0]); setMonth(v[1]); setViewDay(v[2]); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", border: "none" }} />
               </label>
@@ -260,7 +261,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
               {isGV ? (
                 dow !== 0 && !isLeNgay ? (
-                  <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: "#fff", color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap" }}>➕ Báo cháu mới</button>
+                  <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: "#fff", color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="plus" size={13} color={C.pine} /> Báo cháu mới</button>
                 ) : (
                   <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "🎌 Ngày lễ — nghỉ cả trường"}</span>
                 )
@@ -308,13 +309,13 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         <div style={{ position: "sticky", bottom: 0, zIndex: 5, marginTop: 8, paddingTop: 8, paddingBottom: 8, background: "linear-gradient(to top, " + C.bg + " 72%, rgba(245,247,243,0))" }}>
           {saveState === "err" ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: C.coralSoft, border: `1.5px solid ${C.coral}`, color: C.coral, fontSize: 13.5, fontWeight: 600, fontFamily: font.body }}>
-              <span style={{ flex: 1 }}>⚠️ Chưa lưu được — kiểm tra mạng rồi thử lại</span>
+              <span style={{ flex: 1, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={15} color={C.coral} /> Chưa lưu được — kiểm tra mạng rồi thử lại</span>
               <button onClick={xacNhanDD} style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: C.coral, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, flexShrink: 0 }}>Thử lại</button>
             </div>
           ) : (lastSaved && !dirty) ? (
             <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>✓ Đã điểm danh{mode === "ngay" ? ` ${dowLabel}, ${viewDay}/${month}` : ` tháng ${month}`} · Lúc {String(lastSaved.getHours()).padStart(2,"0")}:{String(lastSaved.getMinutes()).padStart(2,"0")}</div>
           ) : (
-            <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>{saveState === "saving" ? "💾 Đang lưu…" : "✓ Xác nhận đã điểm danh"}</button>
+            <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>{saveState === "saving" ? <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="save" size={16} color="#fff" /> Đang lưu…</span> : <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="check" size={16} color="#fff" /> Xác nhận đã điểm danh</span>}</button>
           )}
         </div>
       )}
@@ -322,8 +323,8 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       <BottomSheet open={baoOpen} onClose={() => { setBaoOpen(false); setBaoView("menu"); }} title={baoView === "moi" ? "Báo cháu mới" : baoView === "chuyenlop" ? `Báo chuyển lớp: ${baoHs?.ten || ""}` : `Báo về: ${baoHs?.ten || ""}`}>
         {baoView === "menu" && (<div>
-          <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><span style={{ fontSize: 18 }}>🏫</span><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.gray }}>›</span></button>
-          <button onClick={async () => { if (await ask(`Báo cho quản lý: cháu "${baoHs.ten}" thôi học (nghỉ hẳn)?`, { okText: "Gửi báo" })) guiBao({ type: "thoihoc", hsId: baoHs.id, hsTen: baoHs.ten }); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, textAlign: "left" }}><span style={{ fontSize: 18 }}>🚪</span><span style={{ flex: 1 }}>Báo thôi học (nghỉ hẳn)</span></button>
+          <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><Icon name="school" size={19} color={C.pine} /><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.gray }}>›</span></button>
+          <button onClick={async () => { if (await ask(`Báo cho quản lý: cháu "${baoHs.ten}" thôi học (nghỉ hẳn)?`, { okText: "Gửi báo" })) guiBao({ type: "thoihoc", hsId: baoHs.id, hsTen: baoHs.ten }); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, textAlign: "left" }}><Icon name="logOut" size={19} color={C.coral} /><span style={{ flex: 1 }}>Báo thôi học (nghỉ hẳn)</span></button>
         </div>)}
         {baoView === "chuyenlop" && (<div>
           <button onClick={() => setBaoView("menu")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8, padding: 0 }}>‹ Quay lại</button>
