@@ -298,7 +298,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
         today={{
           pct: pctToday, di: diHocHomNay, nghi: nghiHomNay,
           ghost: N === 0 ? (isGV ? "Lớp chưa điểm danh hôm nay." : "Chưa lớp nào điểm danh hôm nay.") : null,
-          note: isGV ? (N >= 1 ? "Đã điểm danh hôm nay" : "Chưa điểm danh") : `📊 ${N}/${M} lớp đã điểm danh`,
+          note: isGV ? (N >= 1 ? "Đã điểm danh hôm nay" : "Chưa điểm danh") : `${N}/${M} lớp đã điểm danh`,
           noteColor: (isGV ? N >= 1 : allConfirmed) ? C.green : C.amber,
           noteIcon: (isGV ? N >= 1 : allConfirmed) ? "check" : null,
         }}
@@ -309,7 +309,7 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
       {/* UI Khu vực "Việc cần xử lý hôm nay" */}
       {isAdmin && todayTasks.length > 0 && (
         <Card style={{ padding: 16, borderRadius: 20, marginBottom: C.md, border: `1px solid ${C.line}` }}>
-            <div style={{ fontWeight: 700, fontSize: 12, color: C.sub, marginBottom: 8, letterSpacing: "0.5px" }}>📋 VIỆC CẦN XỬ LÝ</div>
+            <div style={{ fontWeight: 700, fontSize: 12, color: C.sub, marginBottom: 8, letterSpacing: "0.5px", display:"flex", alignItems:"center", gap:6 }}><Icon name="clipboard" size={14} color={C.sub} /> VIỆC CẦN XỬ LÝ</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {todayTasks.map((t) => (
                 <div key={t.id} onClick={t.action} className="active-press-shadow" style={{ 
