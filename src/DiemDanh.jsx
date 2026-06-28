@@ -121,11 +121,17 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const [baoLop, setBaoLop] = useState("");
   const [baoNote, setBaoNote] = useState("");
   const [baoMoiTen, setBaoMoiTen] = useState("");
+  const [baoSentIds, setBaoSentIds] = useState(() => new Set());
+  const loadBaoSent = async () => {
+    try { const l = (await sGet("mn5:bao")) || []; setBaoSentIds(new Set(l.filter((b) => !b.done && b.hsId).map((b) => b.hsId))); } catch {}
+  };
+  useEffect(() => { loadBaoSent(); }, []);
 
   const guiBao = async (bao) => {
     const cur = (await sGet("mn5:bao")) || [];
     await sSet("mn5:bao", [...cur, { id: "b" + uid(), ts: Date.now(), gv: gvTen || "Giáo viên", done: false, ...bao }]);
     setBaoOpen(false); setBaoView("menu"); setBaoNote(""); setBaoMoiTen("");
+    loadBaoSent();
     toast("Đã gửi báo cho quản lý.");
   };
   const openBao = (hs) => { setBaoHs({ id: hs.id, ten: hs.ten }); setBaoLop(baoLops[0]?.[0] || ""); setBaoNote(""); setBaoView("menu"); setBaoOpen(true); };
@@ -295,7 +301,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
                     <div style={{ fontSize: 12, color: C.sub }}>{r.lop?.ten}{chuaNhap && <span style={{ color: C.amber, marginLeft: 4 }}>· nhập {nhap}</span>}{chuaNhapThang && <span style={{ color: C.amber, marginLeft: 4 }}>· chưa nhập</span>}</div>
                   </div>
                   <Badge s={disabled ? { t: "—", c: C.gray, bg: C.graySoft } : nghi ? { t: "Nghỉ", c: C.coral, bg: C.coralSoft } : { t: "Đi học", c: C.green, bg: C.greenSoft }} />
-                  {isGV && <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 9, fontFamily: font.body }}>Khác</button>}
+                  {isGV && (() => { const daBao = baoSentIds.has(r.hs.id); return <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: `1.5px solid ${daBao ? C.amber : C.line}`, background: daBao ? C.amberSoft : C.card, color: daBao ? "#7A5E12" : C.sub, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 9, fontFamily: font.body, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>{daBao ? <><Icon name="clock" size={12} color="#7A5E12" /> Đã báo</> : "Khác"}</button>; })()}
                 </div>
               );
             })
