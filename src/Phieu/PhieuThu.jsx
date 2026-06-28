@@ -1,4 +1,4 @@
-import { C, font, fmt, printWithName, fileName } from "../lib.js";
+import { C, font, fmt, printWithName, fileName, LIGHT_VARS } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { QRBox } from "./QRBox.jsx";
 
@@ -50,7 +50,7 @@ export function PhieuThu({
         </select>
       )}
 
-      <div id="phieu-in" style={{ background: "#FFFEF9", padding: "0 0 10px", minHeight: "135mm", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div id="phieu-in" style={{ ...LIGHT_VARS, background: "#FFFEF9", color: "#1C3530", padding: "0 0 10px", minHeight: "135mm", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
           {!isBatch && <div className="no-print" style={{ height: 6, background: `linear-gradient(45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%), linear-gradient(-45deg, transparent 33.33%, #FFFEF9 33.33%, #FFFEF9 66.66%, transparent 66.66%)`, backgroundColor: C.bg, backgroundSize: "14px 20px" }} />}
           
