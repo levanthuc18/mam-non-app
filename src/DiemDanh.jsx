@@ -221,7 +221,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       {openDD && (<>
       {/* THANH TÌM KIẾM & LỚP */}
       {isGV && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
-            <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>👩‍🏫 {gvTen}</div>
+            <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display:"flex", alignItems:"center", gap:6 }}><Icon name="graduationCap" size={16} color={C.pine} /> {gvTen}</div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: soNghiNgay > 0 ? C.coral : C.green }}>{soNghiNgay > 0 ? `Nghỉ ${soNghiNgay}/${studentRows.length}` : `Đủ ${studentRows.length}`}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: (lastSaved && !dirty) ? C.green : C.amber, marginTop: 1 }}>{(lastSaved && !dirty) ? `✓ Đã điểm danh · ${String(lastSaved.getHours()).padStart(2,"0")}:${String(lastSaved.getMinutes()).padStart(2,"0")}` : "⏳ Chưa điểm danh"}</div>
@@ -236,7 +236,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         </div>
       </StickyBar>
       {locked && (ddLockReason
-        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</div>
+        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12", display: "flex", alignItems: "flex-start", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /><span>Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</span></div>
         : <LockNote />)}
 
       {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
@@ -253,7 +253,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               </label>
               {/* Icon ngày lễ (chỉ admin) */}
               {dow !== 0 && !locked && !isGV && (
-                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>🎌</button>
+                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? "#fff" : C.coral} /></button>
               )}
               <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
@@ -263,15 +263,15 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
                 dow !== 0 && !isLeNgay ? (
                   <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: "#fff", color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="plus" size={13} color={C.pine} /> Báo cháu mới</button>
                 ) : (
-                  <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "🎌 Ngày lễ — nghỉ cả trường"}</span>
+                  <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "Ngày lễ — nghỉ cả trường"}</span>
                 )
               ) : (
                 <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amber : C.sub, fontWeight: 600 }}>
-                  {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "🎌 Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
+                  {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
                 </span>
               )}
               {dow !== 0 && !isLeNgay && soNghiNgay > 0 && (
-                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : "#fff", color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : `👀 Cháu nghỉ (${soNghiNgay})`}</button>
+                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : "#fff", color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="eye" size={13} color="currentColor" /> Cháu nghỉ ({soNghiNgay})</span>}</button>
               )}
             </div>
           </Card>
