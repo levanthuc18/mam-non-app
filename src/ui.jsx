@@ -88,7 +88,7 @@ export function StickyBar({ shrunk, children }) {
 
 export function Card({ children, style }) { return <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.line}`, padding: 14, ...style }}>{children}</div>; }
 
-export function LockNote() { return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12" }}>🔒 Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>; }
+export function LockNote() { return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12", display: "flex", alignItems: "center", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /> Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>; }
 
 export function BottomSheet({ open, onClose, title, children }) {
   const sheetRef = useRef(null);
