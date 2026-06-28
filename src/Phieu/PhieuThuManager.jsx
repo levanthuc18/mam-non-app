@@ -105,7 +105,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
               const fn = fileName(`${lop ? lop + " - " : ""}${ten} - T${month}.${year}`) + ".png";
               const res = await sharePhieuAnh(node, { filename: fn, title: `Phiếu học phí — ${ten}`, text: `Phiếu thông báo học phí tháng ${month}/${year} — ${ten}` });
               setSharingSingle(false);
-              if (!res.ok) alert("Không tạo được ảnh, thử lại nhé.");
+              if (!res.ok) alert("Không tạo được ảnh (" + (res.reason || "?") + (res.error && res.error.message ? ": " + res.error.message : "") + "). Thử lại nhé.");
               else if (res.mode === "download") alert("Thiết bị không hỗ trợ chia sẻ trực tiếp — ảnh đã được tải về.");
             }}
             disabled={sharingSingle}
