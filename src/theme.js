@@ -5,24 +5,93 @@
 //        Component Emo (có JSX) nằm trong ui.jsx.
 // ============================================================================
 
-// 1) BẢNG MÀU — giữ đúng giá trị đang chạy, chỉ gom lại 1 chỗ.
-export const C = {
-  bg: "#F5F7F3",            // nền app (xanh kem nhạt, dịu mắt)
-  card: "#FFFFFF",          // nền thẻ / vùng nhập liệu
-  ink: "#1C3530",           // chữ chính
-  sub: "#5C7068",           // chữ phụ
-  pine: "#176B5B", pineSoft: "#E2F0EB",      // xanh thông chủ đạo
-  coral: "#D14B32", coralSoft: "#FBEAE5",    // đỏ (chưa thu / cảnh báo)
-  green: "#2E8F63", greenSoft: "#E4F3EA",    // xanh lá (đủ / ok)
-  amber: "#A8731B", amberSoft: "#FBF1DC",    // hổ phách (thu thừa / chú ý)
-  gray: "#8A938E", graySoft: "#EEF1EE", line: "#E3E8E2",
-  blueA: "#2F6FBF", blueASoft: "#E7F0FB",    // AE / học thử
-  violetB: "#8A56B8", violetBSoft: "#F2EAFA",// GV / ra trường
+// 1) BẢNG MÀU theo CHỦ ĐỀ (theme). Đổi theme = đổi CSS var = cả app đổi.
+//    Các khoá màu dưới đây sẽ thành biến CSS (--c-...). Số đo (xs..r_kpi) giữ nguyên.
+const COLOR_KEYS = [
+  "bg", "card", "ink", "sub", "pine", "pineSoft", "coral", "coralSoft",
+  "green", "greenSoft", "amber", "amberSoft", "gray", "graySoft", "line",
+  "blueA", "blueASoft", "violetB", "violetBSoft", "gold", "goldSoft",
+  "orange", "orangeSoft",
+];
+
+// Bộ màu nhấn dùng chung cho các theme SÁNG (giữ đúng giá trị đang chạy)
+const ACCENTS = {
+  ink: "#1C3530", sub: "#5C7068",
+  pine: "#176B5B", pineSoft: "#E2F0EB",
+  coral: "#D14B32", coralSoft: "#FBEAE5",
+  green: "#2E8F63", greenSoft: "#E4F3EA",
+  amber: "#A8731B", amberSoft: "#FBF1DC",
+  gray: "#8A938E",
+  blueA: "#2F6FBF", blueASoft: "#E7F0FB",
+  violetB: "#8A56B8", violetBSoft: "#F2EAFA",
   gold: "#C99A2E", goldSoft: "#FBF1D8",
-  orange: "#FF5722", orangeSoft: "#FFEDE6",  // cam nhấn (số tiền, tổng thu)
-  // Hệ thống Grid 8px + bo góc
+  orange: "#FF5722", orangeSoft: "#FFEDE6",
+};
+
+export const PALETTES = {
+  // Xanh khói = giao diện đang chạy (mặc định)
+  xanhkhoi: { ...ACCENTS, bg: "#F5F7F3", card: "#FFFFFF", graySoft: "#EEF1EE", line: "#E3E8E2" },
+  // Trắng sữa = trắng sạch
+  trangsua: { ...ACCENTS, bg: "#FAFAF8", card: "#FFFFFF", graySoft: "#F1F2F0", line: "#EBECEA" },
+  // Kem ấm = be ấm
+  kemam:    { ...ACCENTS, bg: "#F7F2E9", card: "#FFFDF8", graySoft: "#F0EADC", line: "#E9E1D0", pineSoft: "#E8F0E6" },
+  // Xám nhẹ = trung tính
+  xamnhe:   { ...ACCENTS, bg: "#F1F2F4", card: "#FFFFFF", graySoft: "#E9EBEE", line: "#E1E4E8" },
+  // Đêm = tối (nền đậm, chữ sáng, màu nhấn sáng hơn cho dễ đọc)
+  dem: {
+    bg: "#0F1A17", card: "#18261F", ink: "#E8F0ED", sub: "#9DB2AA",
+    pine: "#5FC4AC", pineSoft: "#1E3A33",
+    coral: "#F2795E", coralSoft: "#3A2420",
+    green: "#54B985", greenSoft: "#1C3328",
+    amber: "#D9A94A", amberSoft: "#332914",
+    gray: "#8A938E", graySoft: "#222E28", line: "#2B3B34",
+    blueA: "#5B9BE0", blueASoft: "#1A2A3D",
+    violetB: "#B584DC", violetBSoft: "#2A1F38",
+    gold: "#D9B45E", goldSoft: "#332B14",
+    orange: "#FF7A4D", orangeSoft: "#3A2218",
+  },
+};
+
+export const THEMES = [
+  { id: "trangsua", label: "Trắng sữa" },
+  { id: "xanhkhoi", label: "Xanh khói" },
+  { id: "kemam", label: "Kem ấm" },
+  { id: "xamnhe", label: "Xám nhẹ" },
+  { id: "dem", label: "Đêm" },
+];
+export const DEFAULT_THEME = "xanhkhoi";
+
+// C: khoá màu trỏ tới biến CSS; số đo giữ nguyên giá trị.
+export const C = {
+  ...Object.fromEntries(COLOR_KEYS.map((k) => [k, `var(--c-${k})`])),
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, r: 16, r_kpi: 20,
 };
+
+// Ghi 1 bộ màu lên :root (đổi cả app, không cần render lại React).
+export function applyTheme(id) {
+  const p = PALETTES[id] || PALETTES[DEFAULT_THEME];
+  const def = PALETTES[DEFAULT_THEME];
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  COLOR_KEYS.forEach((k) => root.style.setProperty(`--c-${k}`, p[k] || def[k]));
+  root.style.setProperty("color-scheme", id === "dem" ? "dark" : "light");
+  try { root.style.background = (p.bg || def.bg); } catch {}
+}
+export function setTheme(id) {
+  applyTheme(id);
+  try { localStorage.setItem("mn5:theme", id); } catch {}
+}
+export function getTheme() {
+  try { return localStorage.getItem("mn5:theme") || DEFAULT_THEME; } catch { return DEFAULT_THEME; }
+}
+
+// Áp ngay khi nạp (đọc nhanh từ localStorage để tránh nháy màu lúc mở app).
+applyTheme(getTheme());
+
+// Bộ biến CSS ép nền SÁNG — dùng cho phiếu in/chia sẻ (luôn sáng dù app đang ở Đêm).
+export const LIGHT_VARS = Object.fromEntries(
+  COLOR_KEYS.map((k) => [`--c-${k}`, PALETTES[DEFAULT_THEME][k]])
+);
 
 // 2) FONT
 export const font = {
