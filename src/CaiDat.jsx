@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { Icon } from "./Icon.jsx";
 import {
   C, font, fmt, ymKey, noDau, sGet, sSet, sList, sDel,
   ask, toast, logAction, uid,
@@ -73,28 +74,28 @@ export function BackupExport({ meta, students }) {
   return (
     <>
       <Card style={{ marginBottom: 12 }}>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4 }}>💾 Sao lưu dữ liệu</div>
+        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="save" size={16} color={C.ink} /> Sao lưu dữ liệu</div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12 }}>Bấm để xuất. Nếu máy không tự tải file (do trình duyệt/khung xem trước chặn), nội dung sẽ hiện ra ô bên dưới để bạn <b>copy</b> và dán vào ghi chú/Zalo lưu lại.</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={() => doExport("json")} disabled={busy} style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Đang xử lý…" : "📥 Sao lưu toàn bộ (JSON)"}</button>
-          <button onClick={() => doExport("csv")} disabled={busy} style={{ padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>📊 Xuất Excel thu phí (CSV)</button>
+          <button onClick={() => doExport("json")} disabled={busy} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "10px 16px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Đang xử lý…" : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="download" size={15} color="#fff" /> Sao lưu toàn bộ (JSON)</span>}</button>
+          <button onClick={() => doExport("csv")} disabled={busy} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}><Icon name="fileText" size={15} color={C.pine} /> Xuất Excel thu phí (CSV)</button>
         </div>
         {outText && (
           <div style={{ marginTop: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <span style={{ fontSize: 12, color: C.sub }}>{outName}</span>
-              <button onClick={copyOut} style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>📋 Copy</button>
+              <button onClick={copyOut} style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: C.blueA, display:"inline-flex", alignItems:"center", gap:5, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}><Icon name="clipboard" size={13} color="#fff" /> Copy</button>
             </div>
             <textarea readOnly value={outText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 110, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 8, resize: "vertical", color: C.ink, background: "#FAFCFA" }} />
           </div>
         )}
       </Card>
       <Card>
-        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4 }}>♻️ Phục hồi</div>
-        <div style={{ fontSize: 12, color: C.coral, fontWeight: 600, marginBottom: 10 }}>⚠️ Ghi đè toàn bộ dữ liệu hiện tại.</div>
+        <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"flex", alignItems:"center", gap:6 }}><Icon name="refresh" size={16} color={C.ink} /> Phục hồi</div>
+        <div style={{ fontSize: 12, color: C.coral, fontWeight: 600, marginBottom: 10, display:"flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={13} color={C.coral} /> Ghi đè toàn bộ dữ liệu hiện tại.</div>
         <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>Cách 1 — dán nội dung bản sao lưu JSON vào đây:</div>
         <textarea value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder='Dán nội dung JSON đã sao lưu...' style={{ width: "100%", height: 90, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 8, resize: "vertical", marginBottom: 8 }} />
-        <button onClick={() => restore(pasteText)} disabled={busy || !pasteText.trim()} style={{ padding: "10px 16px", borderRadius: 10, border: "none", background: pasteText.trim() ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: pasteText.trim() ? "pointer" : "default" }}>♻️ Phục hồi từ nội dung dán</button>
+        <button onClick={() => restore(pasteText)} disabled={busy || !pasteText.trim()} style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6, padding: "10px 16px", borderRadius: 10, border: "none", background: pasteText.trim() ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: pasteText.trim() ? "pointer" : "default" }}><Icon name="refresh" size={15} color="#fff" /> Phục hồi từ nội dung dán</button>
         <div style={{ fontSize: 12, color: C.sub, margin: "12px 0 6px" }}>Cách 2 — chọn file .json (chỉ chạy khi mở app thật):</div>
         <label style={{ display: "inline-block", padding: "10px 16px", borderRadius: 10, border: `1.5px dashed ${C.line}`, fontSize: 13.5, color: C.sub, cursor: "pointer" }}>Chọn file .json<input type="file" accept=".json,application/json" onChange={importFile} disabled={busy} style={{ display: "none" }} /></label>
       </Card>
@@ -154,11 +155,11 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
 
   return (
     <Card style={{ marginBottom: 12, background: C.blueASoft, borderColor: "#C7DCF3" }}>
-      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.blueA, marginBottom: 6 }}>📥 Nhập hàng loạt từ Excel/CSV</div>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.blueA, marginBottom: 6, display:"flex", alignItems:"center", gap:6 }}><Icon name="download" size={16} color={C.blueA} /> Nhập hàng loạt từ Excel/CSV</div>
       <div style={{ fontSize: 12, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mỗi dòng = 1 học sinh, cách nhau bằng dấu phẩy, theo thứ tự: <b>Họ tên, Lớp, Phân loại, Người thu, SĐT, Nợ</b>. Chỉ <b>Họ tên</b> + <b>Lớp</b> bắt buộc; ô trống cứ để 2 dấu phẩy liền. Giữ nguyên dòng tiêu đề đầu tiên. Có thể thêm cột <b>Giới tính</b> (Nam/Nữ) — tùy chọn.</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-        <button onClick={downloadTpl} style={{ padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.blueA}`, background: C.card, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>📄 File mẫu CSV</button>
-        <label style={{ display: "inline-block", padding: "9px 14px", borderRadius: 9, border: `1.5px dashed ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{busy ? "Đang xử lý…" : "📂 Chọn file CSV"}<input type="file" accept=".csv,text/csv" onChange={importFile} disabled={busy} style={{ display: "none" }} /></label>
+        <button onClick={downloadTpl} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "9px 14px", borderRadius: 9, border: `1.5px solid ${C.blueA}`, background: C.card, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer" }}><Icon name="fileText" size={14} color={C.blueA} /> File mẫu CSV</button>
+        <label style={{ display: "inline-flex", alignItems:"center", gap:6, padding: "9px 14px", borderRadius: 9, border: `1.5px dashed ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{busy ? "Đang xử lý…" : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="upload" size={14} color={C.sub} /> Chọn file CSV</span>}<input type="file" accept=".csv,text/csv" onChange={importFile} disabled={busy} style={{ display: "none" }} /></label>
       </div>
       {tplText && (
         <div style={{ marginBottom: 8 }}>
@@ -252,7 +253,7 @@ export function AuditLog() {
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <button onClick={load} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>↻ Tải lại</button>
-        {log.length > 0 && <button onClick={clear} style={{ padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>🗑 Xóa nhật ký</button>}
+        {log.length > 0 && <button onClick={clear} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "8px 14px", borderRadius: 9, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><Icon name="trash" size={14} color={C.coral} /> Xóa nhật ký</button>}
       </div>
       {log.length === 0 ? (
         <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 24 }}>Chưa có thao tác nào được ghi.</div>
@@ -408,14 +409,14 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
             <Card key={l.id} style={{ padding: "12px 14px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <input value={l.ten} onChange={(e) => setLopGia(l.id, "ten", e.target.value)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, border: "none", background: "none", color: C.ink, outline: "none", width: "70%" }} />
-                <button onClick={() => xoaLop(l.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", fontSize: 14 }}>🗑</button>
+                <button onClick={() => xoaLop(l.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={16} color={C.coral} /></button>
               </div>
               <label style={{ fontSize: 11, color: C.sub, display: "block", marginBottom: 10 }}>Buổi T7 (giá/buổi)
                 <input type="number" value={l.t7 || 0} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, "t7", Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: "#FAFCFA", outline: "none" }} /></label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {KHOAN.map((k) => {
                   const mode = khoanMode(l, k.key);
-                  const badge = mode === "thu" ? { t: "✓ Thu", bg: C.greenSoft, fg: C.green } : { t: "🚫 Không thu", bg: C.coralSoft, fg: C.coral };
+                  const badge = mode === "thu" ? { t: "✓ Thu", bg: C.greenSoft, fg: C.green } : { t: "Không thu", bg: C.coralSoft, fg: C.coral };
                   return (
                     <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <label style={{ flex: 1, fontSize: 11, color: C.sub }}>{k.label}
@@ -444,7 +445,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{gv.ten}</div>
                 <div style={{ fontSize: 12, color: C.sub }}>PIN: <b style={{ color: C.ink }}>{gv.pin}</b> · Lớp: {meta.classes.find((c) => c.id === gv.lopId)?.ten || "?"}</div>
               </div>
-              <button onClick={() => xoaGV(gv.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", fontSize: 16 }}>🗑</button>
+              <button onClick={() => xoaGV(gv.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", display:"inline-flex", alignItems:"center" }}><Icon name="trash" size={16} color={C.coral} /></button>
             </Card>
           ))}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
