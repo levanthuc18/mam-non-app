@@ -5,7 +5,8 @@ import {
   ask, toast, logAction, uid,
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
-  KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META
+  KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META,
+  THEMES, setTheme, getTheme
 } from "./lib.js";
 import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
@@ -279,6 +280,7 @@ export function AuditLog() {
 
 export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWide }) {
   const [sec, setSec] = useState("lop");
+  const [theme, setThemeState] = useState(getTheme());
   const [ten, setTen] = useState("");
   const [lop, setLop] = useState(meta.classes[0]?.id || "");
   const [pl, setPl] = useState("Bthg");
@@ -468,7 +470,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       )}
       <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
         {[
-          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
+          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setSec(k)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 10, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>
         ))}
@@ -551,6 +553,40 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
         </Card>
       )}
 
+      {sec === "giaodien" && (
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <Icon name="settings" size={16} color={C.ink} />
+            <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: C.ink }}>Giao diện màu nền</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 14 }}>Chọn 1 nền → cả app đổi theo (gồm chữ &amp; nền). Áp dụng ngay cho mọi máy đang đăng nhập trên thiết bị này.</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {THEMES.map((t) => {
+              const active = theme === t.id;
+              const dark = t.id === "dem";
+              const swatch = { trangsua: "#FAFAF8", xanhkhoi: "#E2F0EB", kemam: "#F0EADC", xamnhe: "#E9EBEE", dem: "#16241E" }[t.id];
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => { setTheme(t.id); setThemeState(t.id); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 9, padding: "9px 14px 9px 10px",
+                    borderRadius: 999, cursor: "pointer", fontFamily: font.body, fontWeight: 700, fontSize: 13.5,
+                    border: `2px solid ${active ? C.pine : C.line}`,
+                    background: active ? C.pineSoft : C.card,
+                    color: C.ink,
+                  }}
+                >
+                  <span style={{ width: 22, height: 22, borderRadius: 999, background: swatch, border: `1.5px solid ${dark ? "#000" : C.line}`, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    {active && <Icon name="check" size={13} color={dark ? "#fff" : C.pine} />}
+                  </span>
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
       {sec === "backup" && <BackupExport meta={meta} students={students} />}
       {sec === "log" && <AuditLog />}
 
