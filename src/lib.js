@@ -1,6 +1,7 @@
 // Màu / font / radius / style chung gom ở theme.js (1 file để chỉnh sửa).
 import { C, font, R, SH, S } from "./theme.js";
 export { C, font, R, SH, S };
+export { THEMES, PALETTES, applyTheme, setTheme, getTheme, LIGHT_VARS, DEFAULT_THEME } from "./theme.js";
 export const fmt = (n) => (n < 0 ? "-" : "") + Math.abs(Math.round(n || 0)).toLocaleString("vi-VN");
 export const ymKey = (y, m) => `${y}-${String(m).padStart(2, "0")}`;
 export const stripYm = (d) => { if (!d) return d; const { __ym, ...rest } = d; return rest; };
