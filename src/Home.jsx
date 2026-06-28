@@ -166,7 +166,7 @@ function RecentActivity({ onSeeAll }) {
 }
 
 // ===== Component chính =====
-export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile }) {
+export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile, baoPendingCount = 0 }) {
   const { allRows, students, meta, month, year, ddData, leData } = store;
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
@@ -289,8 +289,17 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile 
       });
     }
 
+    if (baoPendingCount > 0) {
+      tasks.push({
+        id: "task_bao",
+        type: "warning",
+        text: `${baoPendingCount} báo từ Giáo viên chờ duyệt`,
+        action: () => setTab("caidat")
+      });
+    }
+
     return tasks;
-  }, [isAdmin, N, M, chuaThu, ngayAn0, meta, today, month, setTab, setThuFilter]);
+  }, [isAdmin, N, M, chuaThu, ngayAn0, baoPendingCount, meta, today, month, setTab, setThuFilter]);
 
   return (
     <div style={{ paddingBottom: C.lg, marginTop: C.md }}>
