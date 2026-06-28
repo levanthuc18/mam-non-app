@@ -1,10 +1,10 @@
-import { C, font, fmt } from "../lib.js";
+import { C, font, fmt, LIGHT_VARS } from "../lib.js";
 
 export function PhieuTongHop({ rows, lopTen, month, year }) {
   const tongTien = rows.reduce((a, r) => a + r.tongPhaiThu, 0);
   
   return (
-    <div style={{ background: "#FFFEF9", padding: "20px", minHeight: "135mm", fontFamily: font.body, color: C.ink }}>
+    <div style={{ ...LIGHT_VARS, background: "#FFFEF9", padding: "20px", minHeight: "135mm", fontFamily: font.body, color: "#1C3530" }}>
       <div style={{ textAlign: "center", marginBottom: "20px" }}>
         <h2 style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, textTransform: "uppercase" }}>
           Bảng tổng hợp thu tiền
