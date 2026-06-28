@@ -3,6 +3,7 @@ import {
   sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR
 } from "./lib.js";
+import { Icon } from "./Icon.jsx";
 import { Card, Chips, useStickyShrink, StickyBar } from "./ui.jsx";
 
 export function CongNoTab({ students, meta, ym, mData }) {
@@ -139,7 +140,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
         <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginTop: 14, overflow: "hidden" }}>
           <div onClick={() => setOpenTn(!openTn)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5 }}>💧 Thu ngoài (KV4)</div>
+              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="droplet" size={16} color={C.blueA} /> Thu ngoài (KV4)</div>
               <div style={{ fontSize: 11.5, color: C.sub }}>Khoản khác, cùng chiều thu · phải {fmt(tnData.phai)} · thu {fmt(tnData.thu)}</div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -164,7 +165,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
         <div style={{ background: C.card, borderRadius: 14, border: "1px solid #EAD8A0", marginTop: 10, overflow: "hidden" }}>
           <div onClick={() => setOpenNcc(!openNcc)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5 }}>🏭 Nợ nhà cung cấp (NCC)</div>
+              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color="#9A6B00" /> Nợ nhà cung cấp (NCC)</div>
               <div style={{ fontSize: 11.5, color: C.sub }}>Trường nợ ra — KHÔNG tính vào Tổng nợ HS</div>
             </div>
             <div style={{ textAlign: "right" }}>
