@@ -36,6 +36,43 @@ function ConfirmHost() {
     </div>
   );
 }
+function ToastHost() {
+  const [state, setState] = useState(null);
+  const tRef = useState({})[0]; 
+  useEffect(() => { setToastRef((s) => { setState(s); clearTimeout(tRef.current); tRef.current = setTimeout(() => setState(null), s && s.undo ? 6000 : 2600); }); return () => setToastRef(null); }, []);
+  if (!state) return null;
+  return (
+    <div style={{ position: "fixed", bottom: 78, left: "50%", transform: "translateX(-50%)", zIndex: 100, background: C.ink, color: "#fff", padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 10 }}>
+      <span>{state.msg}</span>
+      {state.undo && <button onClick={() => { state.undo(); clearTimeout(tRef.current); setState(null); }} style={{ background: "#fff", color: C.ink, border: "none", borderRadius: 99, padding: "4px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>↩ Hoàn tác</button>}
+    </div>
+  );
+}
+
+function NotificationSheet({ open, onClose, alerts, onAction }) {
+  return (
+    <BottomSheet open={open} onClose={onClose} title="🔔 Trung tâm thông báo">
+      {alerts.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 30, color: C.green, fontWeight: 600 }}>✓ Tuyệt vời! Hệ thống không có cảnh báo nào.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {alerts.map((a, i) => {
+            const c = a.type === 'danger' ? { bg: C.coralSoft, border: "#EFC9BF", fg: C.coral } : a.type === 'warning' ? { bg: C.amberSoft, border: "#EAD8A0", fg: "#7A5E12" } : { bg: C.greenSoft, border: "#BFE3CC", fg: C.green };
+            return (
+              <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 16 }}>{a.icon}</div>
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{a.msg}</div>
+                <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: c.fg, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", width: 100, textAlign: "center" }}>
+                  {a.actionLabel}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </BottomSheet>
+  );
+}
 
 export default function App() {
   const [tab, setTab] = useState("home"); 
