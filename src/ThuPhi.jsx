@@ -37,7 +37,7 @@ export function NgayAnBar({ onApply, rows }) {
   return (
     <Card style={{ marginBottom: 10, background: C.pineSoft, borderColor: "#BFE0D4", padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine }}>🍽️ Số ngày ăn trong tháng:</span>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="utensils" size={14} color={C.pine} /> Số ngày ăn trong tháng:</span>
         <NumInput value={v} onChange={setV} w={62} />
         <span style={{ fontSize: 12.5, color: C.pine }}>ngày</span>
         <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp dụng cho {rows.length} HS đang hiển thị</button>
@@ -202,7 +202,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
   const delPT = (id) => { setLocalPhuThu(prev => prev.filter(p => p.id !== id)); delPhuThuHS(sid, id); };
 
   return (
-    <BottomSheet open={true} onClose={onClose} title={`⚙️ SỬA KHOẢN THU — ${r.hs.ten.toUpperCase()}`}>
+    <BottomSheet open={true} onClose={onClose} title={`SỬA KHOẢN THU — ${r.hs.ten.toUpperCase()}`}>
       <div style={{ display: "flex", flexDirection: "column", gap: C.md }}>
         {KHOAN.map(k => {
           const isNgayAn = k.key === "tienAn";
@@ -282,7 +282,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13 }}>
               <span style={{ flex: 1, color: C.ink }}>{p.ten}</span>
               <span style={{ fontWeight: 600 }}>{fmt(p.soTien)}</span>
-              <button onClick={() => delPT(p.id)} style={{ border: "none", background: "none", color: C.coral, cursor: "pointer", fontSize: 14 }}>🗑</button>
+              <button onClick={() => delPT(p.id)} style={{ border: "none", background: "none", display:"inline-flex", alignItems:"center", color: C.coral, cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={15} color={C.coral} /></button>
             </div>
           ))}
           <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
@@ -317,10 +317,10 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
   const isDu = r.conNo === 0 && tongPhaiThu > 0 && thucThu >= tongPhaiThu;
   const isThua = r.conNo < 0;
 
-  let statusColor = C.coral, statusText = "CHƯA THU", statusIcon = "🔴";
-  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
-  else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; statusIcon = "🟢"; }
-  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; statusIcon = "🔵"; }
+  let statusColor = C.coral, statusText = "CHƯA THU";
+  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; }
+  else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; }
+  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; }
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
 
@@ -437,7 +437,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
                 {hasDiscount && (
-                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}>🎁</span>
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", display:"inline-flex", alignItems:"center", gap:3, border: "1px solid #FDE68A", padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color="#D97706" /></span>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: "#6B7280", minWidth: 0 }}>
@@ -511,7 +511,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {displayDong.map(([label, val, sua], i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
-              <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber }}> ⚠</span>}</span>
+              <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber, display:"inline-flex", verticalAlign:"middle", marginLeft:3 }}><Icon name="alertTriangle" size={10} color={C.amber} /></span>}</span>
               <span>{fmt(val)}</span>
             </div>
           ))}
@@ -542,9 +542,9 @@ function ThuNgoaiItem({ k, locked, set, del }) {
   const isThieu = k.thucThu > 0 && conNo > 0;
   const isDu = conNo <= 0 && k.soTien > 0;
 
-  let statusColor = C.coral, statusText = "CHƯA THU", statusIcon = "🔴";
-  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; statusIcon = "🟡"; }
-  else if (isDu) { statusColor = C.green; statusText = "ĐÃ THU ĐỦ"; statusIcon = "🟢"; }
+  let statusColor = C.coral, statusText = "CHƯA THU";
+  if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; }
+  else if (isDu) { statusColor = C.green; statusText = "ĐÃ THU ĐỦ"; }
 
   const borderLeftColor = isChuaThu || isThieu ? C.coral : C.green;
 
@@ -564,18 +564,18 @@ function ThuNgoaiItem({ k, locked, set, del }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</span>
-            {k.coDinh && <span style={{ fontSize: 10, fontWeight: 700, color: C.blueA, background: C.blueASoft, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}>🔁 Cố định</span>}
+            {k.coDinh && <span style={{ fontSize: 10, fontWeight: 700, color: C.blueA, background: C.blueASoft, display:"inline-flex", alignItems:"center", gap:3, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}><Icon name="refresh" size={10} color={C.blueA} /> Cố định</span>}
           </div>
           <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>Phải thu: {fmt(k.soTien)}đ</div>
         </div>
         {!locked && (
-          <button onClick={() => del(k.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4, fontSize: 16, flexShrink: 0 }}>🗑</button>
+          <button onClick={() => del(k.id)} style={{ color: C.coral, border: "none", background: "none", display:"inline-flex", alignItems:"center", cursor: "pointer", padding: 4, fontSize: 16, flexShrink: 0 }}><Icon name="trash" size={15} color={C.coral} /></button>
         )}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: `1px dashed ${C.line}` }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: statusColor }}>{statusIcon} {statusText}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: statusColor, display:"flex", alignItems:"center", gap:6 }}><span style={{width:8,height:8,borderRadius:99,background:statusColor,flexShrink:0}} />{statusText}</div>
           {isThieu && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Còn thiếu: {fmt(conNo)}đ</div>}
         </div>
         
@@ -620,7 +620,7 @@ function ThuNgoai({ mData, upMData, locked }) {
   return (
     <div style={{ marginTop: 16 }}>
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-        <span>💧 Thu ngoài (KV4)</span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="droplet" size={14} color={C.blueA} /> Thu ngoài (KV4)</span>
       </div>
       
       {tn.length === 0 && (
@@ -662,7 +662,7 @@ function ThuNgoai({ mData, upMData, locked }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid ${C.line}` }}>
               <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.pine : "#fff", color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
-              <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.pine : "#fff", color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}>🔁 Cố định</button>
+              <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.pine : "#fff", color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="refresh" size={13} color="currentColor" /> Cố định</span></button>
             </div>
             
             <button 
@@ -697,7 +697,7 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
   };
   return (
     <Card style={{ marginTop: 10, background: C.blueASoft, borderColor: "#C7DCF3" }}>
-      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, color: C.blueA }}>➕ Khoản thu áp cho cả lớp</div>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"inline-flex", alignItems:"center", gap:6, color: C.blueA }}><Icon name="plus" size={15} color={C.pine} /> Khoản thu áp cho cả lớp</div>
       <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Chọn lớp + nhập khoản → cộng vào mọi HS lớp đó tháng này. <b>Cố định</b> = khoản lặp hàng tháng; <b>không cố định</b> = chỉ tháng này. Sửa/xóa lẻ ở thẻ HS.</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
         <select value={lopAp} onChange={(e) => setLopAp(e.target.value)} style={{ flex: "1 1 120px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body, background: "#fff" }}>
@@ -913,7 +913,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
               </div>
             ) : (
               <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={{ flexShrink: 0, width: 72, height: 46, borderRadius: 10, border: "none", background: C.green, color: "#fff", cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1, boxShadow: "0 2px 6px rgba(16,185,129,.25)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                <span style={{ fontSize: 15, lineHeight: 1 }}>⚡</span>
+                <Icon name="zap" size={15} color={C.amber} />
                 <span style={{ fontSize: 9.5, fontWeight: 700 }}>Thu đủ</span>
               </button>
             )}
@@ -974,7 +974,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
             {batchOpen && (
               <div style={{ background: C.card, borderRadius: C.r, marginTop: C.xs, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden" }}>
                 <button onClick={() => { setShowNgayAn(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Emo size={16}>🍽️</Emo> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
+                  <Icon name="utensils" size={16} color={C.ink} /> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
                 </button>
                 <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
                   <Icon name="zap" size={16} color={C.ink} /> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
