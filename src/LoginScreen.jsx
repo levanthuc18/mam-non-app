@@ -16,7 +16,7 @@ export function LoginScreen({ meta, onLogin }) {
   return (
     <div style={{
       position: "relative", overflow: "hidden", height: "100dvh", minHeight: "100dvh",
-      background: "linear-gradient(165deg,#EAF3EE 0%,#E4EEF3 55%,#EAF0F3 100%)",
+      background: `linear-gradient(165deg, ${C.bg} 0%, ${C.pineSoft} 100%)`,
       fontFamily: font.body, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", padding: "20px 22px 132px",
     }}>
@@ -43,12 +43,12 @@ export function LoginScreen({ meta, onLogin }) {
               <Icon name="briefcase" size={18} color="currentColor" /> Quản lý (Kế toán)
             </button>
             <button onClick={() => { setMode("gv"); setPin(""); setErr(""); }}
-              style={{ width: "100%", padding: "15px 18px", borderRadius: 16, border: `1.5px solid ${C.pine}`, background: "#fff", color: C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 15.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 4px 12px rgba(0,0,0,.06)" }}>
+              style={{ width: "100%", padding: "15px 18px", borderRadius: 16, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 15.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: "0 4px 12px rgba(0,0,0,.06)" }}>
               <Icon name="graduationCap" size={18} color="currentColor" /> Giáo viên điểm danh
             </button>
           </>
         ) : (
-          <div style={{ background: "#fff", borderRadius: 18, padding: "20px 18px", boxShadow: "0 8px 28px rgba(0,0,0,.12)", textAlign: "center" }}>
+          <div style={{ background: C.card, borderRadius: 18, padding: "20px 18px", boxShadow: "0 8px 28px rgba(0,0,0,.12)", textAlign: "center" }}>
             <div style={{ marginBottom: 10, fontSize: 14, fontWeight: 700, color: mode === "admin" ? C.pine : C.blueA }}>{mode === "admin" ? <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="lock" size={14} color="currentColor" /> Nhập mã quản lý</span> : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="graduationCap" size={14} color="currentColor" /> Nhập PIN giáo viên</span>}</div>
             <input type="password" inputMode="numeric" autoFocus value={pin} onChange={(e) => { setPin(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && (mode === "admin" ? tryAdmin() : tryGV())} placeholder={mode === "admin" ? "Mã quản lý" : "PIN của bạn"} style={{ width: "100%", padding: "12px", borderRadius: 12, border: `1.5px solid ${err ? C.coral : C.line}`, fontSize: 17, fontFamily: font.body, outline: "none", textAlign: "center", letterSpacing: 5 }} />
             {err && <div style={{ fontSize: 12.5, color: C.coral, marginTop: 6 }}>{err}</div>}
