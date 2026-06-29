@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { C, binOf, buildVietQR } from "../lib.js";
 import QRCode from "qrcode/lib/browser.js";
 
-export function QRBox({ bank, amount, noiDung }) {
+export function QRBox({ bank, amount, noiDung, size = 88 }) {
   const bin = binOf(bank?.nh);
   const [dataUrl, setDataUrl] = useState("");
   const [err, setErr] = useState(false);
@@ -13,7 +13,7 @@ export function QRBox({ bank, amount, noiDung }) {
     setErr(false);
     try {
       const payload = buildVietQR({ bin, accountNo: bank.stk, amount, addInfo: noiDung });
-      QRCode.toDataURL(payload, { margin: 2, width: 240, errorCorrectionLevel: "M" })
+      QRCode.toDataURL(payload, { margin: 2, width: Math.max(240, Math.round(size * 2.6)), errorCorrectionLevel: "M" })
         .then((u) => { if (alive) setDataUrl(u); })
         .catch(() => { if (alive) setErr(true); });
     } catch { setErr(true); }
@@ -21,7 +21,7 @@ export function QRBox({ bank, amount, noiDung }) {
   }, [bin, bank?.stk, amount, noiDung]);
 
   const box = {
-    width: 88, height: 88, borderRadius: 8, background: "#fff",
+    width: size, height: size, borderRadius: 10, background: "#fff",
     border: `1.5px solid ${C.pine}`, flexShrink: 0,
   };
 
