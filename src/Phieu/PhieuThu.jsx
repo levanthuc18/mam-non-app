@@ -1,3 +1,4 @@
+import { useState, useRef, useLayoutEffect } from "react";
 import { C, font, fmt, printWithName, fileName, LIGHT_VARS } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { Icon } from "../Icon.jsx";
@@ -22,6 +23,25 @@ export function PhieuThu({
   const bank = meta.bank[nguoiThu] || {};
   const now = new Date();
 
+  // Khối giữa tự co (scale) cho vừa khoảng trống giữa đầu (đỏ) và chân (xanh) -> luôn 1 trang A5
+  const midRef = useRef(null);
+  const innerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  useLayoutEffect(() => {
+    const mid = midRef.current, inner = innerRef.current;
+    if (!mid || !inner) return;
+    const fit = () => {
+      const avail = mid.clientHeight;
+      const need = inner.scrollHeight;
+      setScale(avail > 0 && need > avail + 0.5 ? Math.max(0.5, (avail / need) * 0.99) : 1);
+    };
+    fit();
+    let ro;
+    try { ro = new ResizeObserver(fit); ro.observe(mid); } catch {}
+    try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit).catch(() => {}); } catch {}
+    return () => { try { ro && ro.disconnect(); } catch {} };
+  }, [phieuRow, month, year]);
+
   const inPhieu = () => {
     const printTitle = fileName(`${phieuRow.lop?.ten ? phieuRow.lop.ten + " - " : ""}${phieuRow.hs.ten} - T${month}.${year}`);
     if (!bienLai && upMeta && upMData) {
@@ -43,7 +63,8 @@ export function PhieuThu({
         <style>{`
           @media print {
             @page { size: A5 portrait; margin: 0; }
-            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; padding: 0.6cm 0.6cm 0.5cm !important; }
+            html, body { height: 100%; }
+            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; height: 20.2cm !important; }
             .no-print { display: none !important; }
           }
         `}</style>
@@ -55,95 +76,95 @@ export function PhieuThu({
         </select>
       )}
 
-      <div id="phieu-in" style={{ ...LIGHT_VARS, background: "#fff", color: C.ink, fontFamily: font.body, width: "100%", maxWidth: 540, margin: "0 auto", padding: "20px 22px 16px", boxSizing: "border-box" }}>
+      <div id="phieu-in" style={{ ...LIGHT_VARS, background: "#fff", color: C.ink, fontFamily: font.body, width: "100%", maxWidth: 520, margin: "0 auto", aspectRatio: "148 / 210", display: "flex", flexDirection: "column", boxSizing: "border-box", overflow: "hidden" }}>
 
-        {/* Header: logo + thông tin trường */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 16 }}>
-          <div style={{ flexShrink: 0 }}><Logo mark={false} w={118} /></div>
-          <div style={{ fontFamily: '"Times New Roman", Times, Georgia, serif', fontSize: 12.5, color: C.ink, lineHeight: 1.45, textAlign: "right" }}>
-            <div style={{ fontSize: 15.5, textTransform: "uppercase", fontWeight: "bold", letterSpacing: 0.2 }}>{meta.tenTruong || "Mầm Non Tuổi Thần Tiên"}</div>
-            <div>Địa chỉ: {meta.diaChi || "Lạc Nông - Mai Đình - Sóc Sơn - Hà Nội"}</div>
-            <div>Điện thoại: <b>{meta.dienThoai || "0945.958.222"}</b></div>
-          </div>
-        </div>
-
-        {/* Tiêu đề */}
-        <div style={{ textAlign: "center", marginBottom: 14 }}>
-          <div style={{ fontFamily: font.display, fontWeight: 900, fontSize: 23, color: C.ink, letterSpacing: 0.4 }}>PHIẾU THÔNG BÁO HỌC PHÍ</div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginTop: 5 }}>Tháng {mm} năm {year}</div>
-          <div style={{ fontSize: 12, color: C.sub, fontStyle: "italic", marginTop: 1 }}>Năm học {namHoc}</div>
-        </div>
-
-        <div style={{ borderTop: `1px dashed ${C.line}`, marginBottom: 14 }} />
-
-        {/* Học sinh */}
-        <div style={{ fontSize: 14, marginBottom: 16, lineHeight: 1.7 }}>
-          <div>Họ và tên trẻ: <b style={{ fontSize: 18 }}>{phieuRow.hs.ten}</b></div>
-          <div>Lớp: <b style={{ fontSize: 15 }}>{phieuRow.lop?.ten || ""}</b></div>
-        </div>
-
-        {/* Bảng khoản thu */}
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 8, borderBottom: `2px solid ${C.line}`, fontWeight: 800, fontSize: 13.5 }}>
-            <span>Khoản thu</span><span>Thành tiền</span>
-          </div>
-          {phieuRow.ps.dong.map(([l, v], i) => (
-            <div key={i} style={{ ...amtRow, padding: "9px 0", borderBottom: `1px dotted ${C.line}`, fontSize: 14 }}>
-              <span>{l}</span>
-              <span style={{ color: v < 0 ? C.coral : C.ink }}>{v < 0 ? "−" + fmt(-v) : fmt(v)} đ</span>
+        {/* ===== ĐỎ: đầu phiếu (bám lề trên, cố định) ===== */}
+        <div style={{ flexShrink: 0, padding: "14px 16px 8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 9 }}>
+            <div style={{ flexShrink: 0 }}><Logo mark={false} w={92} /></div>
+            <div style={{ fontFamily: '"Times New Roman", Times, Georgia, serif', fontSize: 11.5, color: C.ink, lineHeight: 1.4, textAlign: "right" }}>
+              <div style={{ fontSize: 14, textTransform: "uppercase", fontWeight: "bold", letterSpacing: 0.2 }}>{meta.tenTruong || "Mầm Non Tuổi Thần Tiên"}</div>
+              <div>Địa chỉ: {meta.diaChi || "Lạc Nông - Mai Đình - Sóc Sơn - Hà Nội"}</div>
+              <div>Điện thoại: <b>{meta.dienThoai || "0945.958.222"}</b></div>
             </div>
-          ))}
-          {phieuRow.noTruoc !== 0 && (
-            <div style={{ ...amtRow, padding: "9px 0", borderBottom: `1px dotted ${C.line}`, fontSize: 14, color: phieuRow.noTruoc > 0 ? C.coral : C.green }}>
-              <span>{phieuRow.noTruoc > 0 ? "Nợ tháng trước" : "Dư tháng trước"}</span>
-              <span>{phieuRow.noTruoc > 0 ? fmt(phieuRow.noTruoc) : "−" + fmt(-phieuRow.noTruoc)} đ</span>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontFamily: font.display, fontWeight: 900, fontSize: 19.5, color: C.ink, letterSpacing: 0.4 }}>PHIẾU THÔNG BÁO HỌC PHÍ</div>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, marginTop: 3 }}>Tháng {mm} năm {year}</div>
+            <div style={{ fontSize: 11, color: C.sub, fontStyle: "italic", marginTop: 0.5 }}>Năm học {namHoc}</div>
+          </div>
+        </div>
+
+        {/* ===== GIỮA: học sinh + bảng + tổng (tự co cho vừa) ===== */}
+        <div ref={midRef} style={{ flex: "1 1 auto", minHeight: 0, overflow: "hidden", padding: "0 16px", borderTop: `1px dashed ${C.line}` }}>
+          <div ref={innerRef} style={{ transformOrigin: "top left", transform: scale < 1 ? `scale(${scale})` : "none", width: scale < 1 ? `${100 / scale}%` : "100%", paddingTop: 9 }}>
+            <div style={{ fontSize: 13.5, marginBottom: 9, lineHeight: 1.5 }}>
+              <div>Họ và tên trẻ: <b style={{ fontSize: 16 }}>{phieuRow.hs.ten}</b></div>
+              <div>Lớp: <b style={{ fontSize: 14 }}>{phieuRow.lop?.ten || ""}</b></div>
             </div>
-          )}
-        </div>
 
-        {/* Tổng */}
-        <div style={{ marginTop: 14 }}>
-          <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: 19 }}>
-            <span>TỔNG PHẢI THU</span><span>{fmt(phieuRow.tongPhaiThu)} đ</span>
-          </div>
-          <div style={{ ...amtRow, fontSize: 14, color: C.sub, marginTop: 7 }}>
-            <span>Đã thu</span><span>{fmt(phieuRow.rec.thucThu)} đ</span>
-          </div>
-          {phieuRow.conNo !== 0 && (
-            <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: 19, color: phieuRow.conNo > 0 ? C.coral : C.amber, marginTop: 5 }}>
-              <span>{phieuRow.conNo > 0 ? "Còn lại cần đóng" : "Thu thừa"}</span>
-              <span>{fmt(Math.abs(phieuRow.conNo))} đ</span>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: 5, borderBottom: `2px solid ${C.line}`, fontWeight: 800, fontSize: 12.5 }}>
+                <span>Khoản thu</span><span>Thành tiền</span>
+              </div>
+              {phieuRow.ps.dong.map(([l, v], i) => (
+                <div key={i} style={{ ...amtRow, padding: "5.5px 0", borderBottom: `1px dotted ${C.line}`, fontSize: 13 }}>
+                  <span>{l}</span>
+                  <span style={{ color: v < 0 ? C.coral : C.ink }}>{v < 0 ? "−" + fmt(-v) : fmt(v)} đ</span>
+                </div>
+              ))}
+              {phieuRow.noTruoc !== 0 && (
+                <div style={{ ...amtRow, padding: "5.5px 0", borderBottom: `1px dotted ${C.line}`, fontSize: 13, color: phieuRow.noTruoc > 0 ? C.coral : C.green }}>
+                  <span>{phieuRow.noTruoc > 0 ? "Nợ tháng trước" : "Dư tháng trước"}</span>
+                  <span>{phieuRow.noTruoc > 0 ? fmt(phieuRow.noTruoc) : "−" + fmt(-phieuRow.noTruoc)} đ</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Thẻ QR chuyển khoản */}
-        <div style={{ marginTop: 18, padding: "15px 17px", borderRadius: 14, background: C.pineSoft, border: `1.5px solid ${C.line}`, display: "flex", gap: 16, alignItems: "center" }}>
-          <QRBox bank={bank} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} size={108} />
-          <div style={{ fontSize: 13, lineHeight: 1.5, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, color: C.pine, fontSize: 13.5, letterSpacing: 0.3, marginBottom: 7 }}>THÔNG TIN CHUYỂN KHOẢN</div>
-            <div style={{ color: C.sub, fontSize: 11.5 }}>Chủ tài khoản</div>
-            <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 5 }}>{bank.chu}</div>
-            <div style={{ color: C.sub, fontSize: 11.5 }}>Số tài khoản</div>
-            <div style={{ fontWeight: 700 }}>{bank.stk} · {bank.nh}</div>
+            <div style={{ marginTop: 9, paddingBottom: 6 }}>
+              <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: 16 }}>
+                <span>TỔNG PHẢI THU</span><span>{fmt(phieuRow.tongPhaiThu)} đ</span>
+              </div>
+              <div style={{ ...amtRow, fontSize: 13, color: C.sub, marginTop: 4 }}>
+                <span>Đã thu</span><span>{fmt(phieuRow.rec.thucThu)} đ</span>
+              </div>
+              {phieuRow.conNo !== 0 && (
+                <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: 16, color: phieuRow.conNo > 0 ? C.coral : C.amber, marginTop: 3 }}>
+                  <span>{phieuRow.conNo > 0 ? "Còn lại cần đóng" : "Thu thừa"}</span>
+                  <span>{fmt(Math.abs(phieuRow.conNo))} đ</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Hộp thông báo */}
-        <div style={{ marginTop: 14, padding: "13px 15px", borderRadius: 12, background: C.blueASoft, display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ flexShrink: 0, width: 32, height: 32, borderRadius: "50%", background: C.blueA, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon name="bell" size={17} color="#fff" />
+        {/* ===== XANH: QR + thông báo + chân (bám lề dưới, cố định) ===== */}
+        <div style={{ flexShrink: 0, padding: "0 16px 12px" }}>
+          <div style={{ padding: "10px 12px", borderRadius: 12, background: C.pineSoft, border: `1.5px solid ${C.line}`, display: "flex", gap: 13, alignItems: "center" }}>
+            <QRBox bank={bank} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} size={92} />
+            <div style={{ fontSize: 12.5, lineHeight: 1.45, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, color: C.pine, fontSize: 12.5, letterSpacing: 0.3, marginBottom: 4 }}>THÔNG TIN CHUYỂN KHOẢN</div>
+              <div style={{ color: C.sub, fontSize: 11 }}>Chủ tài khoản</div>
+              <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 3 }}>{bank.chu}</div>
+              <div style={{ color: C.sub, fontSize: 11 }}>Số tài khoản</div>
+              <div style={{ fontWeight: 700 }}>{bank.stk} · {bank.nh}</div>
+            </div>
           </div>
-          <div style={{ fontSize: 12.5, lineHeight: 1.5, color: C.ink }}>
-            <div>Phụ huynh đóng tiền từ ngày <b>01/{mm}</b> đến <b>10/{mm}</b> tại văn phòng hoặc giáo viên tại lớp.</div>
-            <div style={{ fontStyle: "italic", color: C.blueA, marginTop: 4 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
-          </div>
-        </div>
 
-        {/* Chân phiếu */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 11.5, color: C.sub, paddingTop: 12, marginTop: 16, borderTop: `1px dashed ${C.line}` }}>
-          <div>Mã phiếu: <b style={{ color: C.ink }}>{bienLai || "(cấp khi in)"}</b></div>
-          <div>Ngày {now.getDate()} tháng {String(now.getMonth() + 1).padStart(2, "0")} năm {now.getFullYear()}</div>
+          <div style={{ marginTop: 9, padding: "9px 12px", borderRadius: 10, background: C.blueASoft, display: "flex", gap: 11, alignItems: "flex-start" }}>
+            <div style={{ flexShrink: 0, width: 28, height: 28, borderRadius: "50%", background: C.blueA, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon name="bell" size={15} color="#fff" />
+            </div>
+            <div style={{ fontSize: 11.5, lineHeight: 1.45, color: C.ink }}>
+              <div>Phụ huynh đóng tiền từ ngày <b>01/{mm}</b> đến <b>10/{mm}</b> tại văn phòng hoặc giáo viên tại lớp.</div>
+              <div style={{ fontStyle: "italic", color: C.blueA, marginTop: 3 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 10.5, color: C.sub, paddingTop: 8, marginTop: 10, borderTop: `1px dashed ${C.line}` }}>
+            <div>Mã phiếu: <b style={{ color: C.ink }}>{bienLai || "(cấp khi in)"}</b></div>
+            <div>Ngày {now.getDate()} tháng {String(now.getMonth() + 1).padStart(2, "0")} năm {now.getFullYear()}</div>
+          </div>
         </div>
       </div>
 
