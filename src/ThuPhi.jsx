@@ -661,8 +661,8 @@ function ThuNgoai({ mData, upMData, locked }) {
           
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid ${C.line}` }}>
-              <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.pine : "#fff", color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
-              <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.pine : "#fff", color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="refresh" size={13} color="currentColor" /> Cố định</span></button>
+              <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.pine : C.card, color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
+              <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.pine : C.card, color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="refresh" size={13} color="currentColor" /> Cố định</span></button>
             </div>
             
             <button 
@@ -704,8 +704,8 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
           {classes.map((c) => <option key={c.id} value={c.id}>{c.ten} ({rows.filter((r) => r.lopId === c.id).length} HS)</option>)}
         </select>
         <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid #C7DCF3` }}>
-          <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.blueA : "#fff", color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
-          <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.blueA : "#fff", color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Cố định</button>
+          <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.blueA : C.card, color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
+          <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.blueA : C.card, color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Cố định</button>
         </div>
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
