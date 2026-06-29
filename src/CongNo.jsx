@@ -80,11 +80,11 @@ export function CongNoTab({ students, meta, ym, mData }) {
   return (
     <>
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <Card style={{ flex: 1, background: C.coralSoft, borderColor: "#EFC9BF", padding: "12px 14px" }}>
+        <Card style={{ flex: 1, background: C.coralSoft, borderColor: C.line, padding: "12px 14px" }}>
           <div style={{ fontSize: 12, color: C.coral, fontWeight: 600 }}>Tổng nợ ({noList.length} HS)</div>
           <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.coral }}>{fmt(tongNo)} đ</div>
         </Card>
-        <Card style={{ flex: 1, background: C.greenSoft, borderColor: "#BFE3CC", padding: "12px 14px" }}>
+        <Card style={{ flex: 1, background: C.greenSoft, borderColor: C.line, padding: "12px 14px" }}>
           <div style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Đóng dư ({duList.length} HS)</div>
           <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.green }}>{fmt(tongDu)} đ</div>
         </Card>
@@ -120,7 +120,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
                 </div>
               </div>
               {open && (
-                <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: "#FBFDFB", fontSize: 12.5 }}>
+                <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.graySoft, fontSize: 12.5 }}>
                   {x.noDauKy > 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: C.sub }}><span>Nợ đầu kỳ</span><b>{fmt(x.noDauKy)}</b></div>}
                   {x.chiTiet.map((c) => (
                     <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.no > 0 ? C.coral : c.no < 0 ? C.green : C.sub }}>
@@ -149,7 +149,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
             </div>
           </div>
           {openTn && (
-            <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: "#FBFDFB", fontSize: 12.5 }}>
+            <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.graySoft, fontSize: 12.5 }}>
               {tnData.chiTiet.map((c) => (
                 <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.no > 0 ? C.coral : c.no < 0 ? C.green : C.sub }}>
                   <span>Th{c.thang.slice(5)}: phải {fmt(c.ps)} · thu {fmt(c.tt)}</span>
@@ -162,7 +162,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
       )}
 
       {nccData && nccData.chiTiet.length > 0 && (
-        <div style={{ background: C.card, borderRadius: 14, border: "1px solid #EAD8A0", marginTop: 10, overflow: "hidden" }}>
+        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginTop: 10, overflow: "hidden" }}>
           <div onClick={() => setOpenNcc(!openNcc)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color="#9A6B00" /> Nợ nhà cung cấp (NCC)</div>
@@ -174,7 +174,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
             </div>
           </div>
           {openNcc && (
-            <div style={{ borderTop: "1px dashed #EAD8A0", padding: "10px 14px", background: "#FFFDF5", fontSize: 12.5 }}>
+            <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.amberSoft, fontSize: 12.5 }}>
               {nccData.chiTiet.map((c) => (
                 <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? "#9A6B00" : C.green }}>
                   <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
