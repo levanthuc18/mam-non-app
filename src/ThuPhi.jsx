@@ -35,7 +35,7 @@ function EmptyState({ search, onClear }) {
 export function NgayAnBar({ onApply, rows }) {
   const [v, setV] = useState(24);
   return (
-    <Card style={{ marginBottom: 10, background: C.pineSoft, borderColor: "#BFE0D4", padding: "10px 12px" }}>
+    <Card style={{ marginBottom: 10, background: C.pineSoft, borderColor: C.line, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="utensils" size={14} color={C.pine} /> Số ngày ăn trong tháng:</span>
         <NumInput value={v} onChange={setV} w={62} />
@@ -112,7 +112,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "20px 16px 28px", boxShadow: "0 -4px 24px rgba(0,0,0,.18)" }}>
+      <div style={{ background: C.card, borderRadius: "20px 20px 0 0", padding: "20px 16px 28px", boxShadow: "0 -4px 24px rgba(0,0,0,.18)" }}>
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 2 }}>{r.hs.ten}</div>
         <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>{r.lop?.ten}</div>
 
@@ -246,7 +246,7 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
                       color: C.ink,
                       textAlign: "right",
                       outline: "none",
-                      background: "#fff"
+                      background: C.card
                     }}
                   />
                   <span style={{
@@ -368,7 +368,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
   const chipStyle = {
     fontSize: 9.5,
     fontWeight: 600,
-    background: "#F3F4F6",
+    background: C.graySoft,
     color: C.sub,
     padding: "3px 7px",
     borderRadius: 6,
@@ -416,7 +416,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
 
   return (
     <div style={{
-      backgroundColor: "#FFFFFF",
+      backgroundColor: C.card,
       borderRadius: 12,
       padding: 10,
       marginBottom: 10,
@@ -435,14 +435,14 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <Avatar hs={r.hs} size={44} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
                 {hasDiscount && (
-                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "#D97706", background: "#FEF3C7", display:"inline-flex", alignItems:"center", gap:3, border: "1px solid #FDE68A", padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color="#D97706" /></span>
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: C.orange, background: C.amberSoft, display:"inline-flex", alignItems:"center", gap:3, border: `1px solid ${C.line}`, padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color="#D97706" /></span>
                 )}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: "#6B7280", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: C.sub, minWidth: 0 }}>
                 <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
-                {r.hs.pl !== "Bthg" && (<><span style={{ color: "#D1D5DB" }}>•</span><PLBadge pl={r.hs.pl} /></>)}
+                {r.hs.pl !== "Bthg" && (<><span style={{ color: C.line }}>•</span><PLBadge pl={r.hs.pl} /></>)}
               </div>
             </div>
           </div>
@@ -470,7 +470,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <span style={{ width: 8, height: 8, borderRadius: 99, background: statusColor, flexShrink: 0 }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: statusColor, whiteSpace: "nowrap" }}>{statusText}</span>
           </div>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "#111827", whiteSpace: "nowrap" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink, whiteSpace: "nowrap" }}>
             {isChuaThu ? `Phải thu: ${fmt(tongPhaiThu)}` :
              isThieu ? `Còn thiếu: ${fmt(r.conNo)}` :
              isThua ? `Dư: ${fmt(-r.conNo)}` : `Đã thu: ${fmt(thucThu)}`}
@@ -525,7 +525,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <span>TỔNG CỘNG HÓA ĐƠN</span>
             <span>{fmt(tongPhaiThu)}đ</span>
           </div>
-          <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: "1px solid #BFDBFE", background: "#DBEAFE", color: "#2563EB", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: `1px solid ${C.line}`, background: C.blueASoft, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <Icon name="receipt" size={15} color="#2563EB" /> Xem phiếu thu
           </button>
         </div>
@@ -563,7 +563,7 @@ function ThuNgoaiItem({ k, locked, set, del }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{k.ten}</span>
             {k.coDinh && <span style={{ fontSize: 10, fontWeight: 700, color: C.blueA, background: C.blueASoft, display:"inline-flex", alignItems:"center", gap:3, padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}><Icon name="refresh" size={10} color={C.blueA} /> Cố định</span>}
           </div>
           <div style={{ fontSize: 12.5, color: C.sub, marginTop: 2 }}>Phải thu: {fmt(k.soTien)}đ</div>
@@ -696,11 +696,11 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
     toast(`Đã thêm "${ten.trim()}" cho ${ids.length} HS lớp ${classes.find((c) => c.id === lopAp)?.ten}.`);
   };
   return (
-    <Card style={{ marginTop: 10, background: C.blueASoft, borderColor: "#C7DCF3" }}>
+    <Card style={{ marginTop: 10, background: C.blueASoft, borderColor: C.line }}>
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"inline-flex", alignItems:"center", gap:6, color: C.blueA }}><Icon name="plus" size={15} color={C.pine} /> Khoản thu áp cho cả lớp</div>
       <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Chọn lớp + nhập khoản → cộng vào mọi HS lớp đó tháng này. <b>Cố định</b> = khoản lặp hàng tháng; <b>không cố định</b> = chỉ tháng này. Sửa/xóa lẻ ở thẻ HS.</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-        <select value={lopAp} onChange={(e) => setLopAp(e.target.value)} style={{ flex: "1 1 120px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body, background: "#fff" }}>
+        <select value={lopAp} onChange={(e) => setLopAp(e.target.value)} style={{ flex: "1 1 120px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body, background: C.card }}>
           {classes.map((c) => <option key={c.id} value={c.id}>{c.ten} ({rows.filter((r) => r.lopId === c.id).length} HS)</option>)}
         </select>
         <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid #C7DCF3` }}>
@@ -777,11 +777,11 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const selStyle = { padding: "9px 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
 
   const CHIP_CFG = [
-    { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: "#1C3530" },
+    { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: `${C.line}` },
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
     { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
-    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: "#2563EB", border: "#DBEAFE" },
+    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: C.blueA, border: `${C.line}` },
   ];
 
   return (
@@ -860,7 +860,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
       {fastMode && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FEF9E7", border: "1px solid #FDE68A", borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: "#92702A", fontWeight: 600 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.amberSoft, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, fontWeight: 600 }}>
           <Icon name="zap" size={16} color="#92702A" />
           <span>Quét thu nhanh — bấm <b>Thu đủ</b> là thu ngay, có thể Hoàn tác.{fastCount > 0 ? ` Đã thu ${fastCount} cháu phiên này.` : ""}</span>
         </div>
@@ -903,12 +903,12 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
             </div>
             {done ? (
               <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <button disabled style={{ width: justPaid ? 56 : 72, height: 46, borderRadius: 10, border: `1.5px solid ${khoiThu ? C.line : C.green}`, background: "#fff", color: khoiThu ? C.sub : C.green, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                <button disabled style={{ width: justPaid ? 56 : 72, height: 46, borderRadius: 10, border: `1.5px solid ${khoiThu ? C.line : C.green}`, background: C.card, color: khoiThu ? C.sub : C.green, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                   <span style={{ fontSize: 15, lineHeight: 1 }}>✓</span>
                   <span style={{ fontSize: 9.5, fontWeight: 700 }}>{khoiThu ? "Khỏi" : "Đủ"}</span>
                 </button>
                 {justPaid && (
-                  <button onClick={() => onFastUndo(r.hs.id)} title="Hoàn tác" style={{ width: 36, height: 46, borderRadius: 10, border: `1.5px solid ${C.line}`, background: "#fff", color: C.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>↩</button>
+                  <button onClick={() => onFastUndo(r.hs.id)} title="Hoàn tác" style={{ width: 36, height: 46, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>↩</button>
                 )}
               </div>
             ) : (
@@ -968,7 +968,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         <>
           <div style={{ height: 90 }} />
           <div style={{ position: "fixed", bottom: 76, left: 0, right: 0, maxWidth: 640, margin: "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
-            <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.ink, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
+            <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.inkBg, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
               <Icon name="zap" size={17} color="#fff" /> Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
             </div>
             {batchOpen && (
