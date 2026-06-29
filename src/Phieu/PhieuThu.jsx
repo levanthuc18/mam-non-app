@@ -17,7 +17,6 @@ export function PhieuThu({
 }) {
   const nguoiThu = phieuRow.hs.nguoiThu;
   const bienLai = phieuRow.rec.bienLai || null;
-  const namHoc = month >= 8 ? `${year} - ${year + 1}` : `${year - 1} - ${year}`;
   const mm = month < 10 ? `0${month}` : `${month}`;
   const bank = meta.bank[nguoiThu] || {};
   const now = new Date();
@@ -76,7 +75,6 @@ export function PhieuThu({
           <div style={{ textAlign: "center" }}>
             <div style={{ fontFamily: font.display, fontWeight: 900, fontSize: 19.5, color: C.ink, letterSpacing: 0.4 }}>PHIẾU THÔNG BÁO HỌC PHÍ</div>
             <div style={{ fontSize: 13.5, fontWeight: 800, color: C.ink, marginTop: 3 }}>Tháng {mm} năm {year}</div>
-            <div style={{ fontSize: 11, color: C.sub, fontStyle: "italic", marginTop: 0.5 }}>Năm học {namHoc}</div>
           </div>
         </div>
 
