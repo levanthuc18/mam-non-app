@@ -52,12 +52,15 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
     <>
       <style>{`
         @media print {
+          @page { size: A5 portrait; margin: 0; }
           body * { visibility: hidden; }
           .print-area, .print-area * { visibility: visible; }
           .print-area { position: absolute; left: 0; top: 0; width: 100%; }
           .phieu-page { 
             page-break-after: always; 
             break-after: page; 
+            padding: 0.5cm 0.6cm 0.6cm;
+            box-sizing: border-box;
           }
           .phieu-page:last-child { 
             page-break-after: auto; 
