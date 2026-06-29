@@ -67,7 +67,9 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
             max-width: none !important;
             width: 100% !important;
             margin: 0 !important;
-            padding: 0.6cm 0.6cm 0.5cm !important;
+            padding: 0 !important;
+            aspect-ratio: auto !important;
+            height: 20.2cm !important;
             box-shadow: none !important;
           }
           .phieu-page:last-child { 
