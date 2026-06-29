@@ -292,3 +292,25 @@ export function toast(msg, undo) { if (_toast) _toast({ msg, undo }); }
 
 export const BANK_BIN = { "vietcombank": "970436", "vcb": "970436", "techcombank": "970407", "tcb": "970407", "bidv": "970418", "vietinbank": "970415", "ctg": "970415", "agribank": "970405", "mbbank": "970422", "mb": "970422", "acb": "970416", "vpbank": "970432", "vpb": "970432", "tpbank": "970423", "tpb": "970423", "sacombank": "970403", "stb": "970403", "hdbank": "970437", "vib": "970441", "shb": "970443", "ocb": "970448", "msb": "970426", "scb": "970429", "eximbank": "970431", "lienvietpostbank": "970449", "lpbank": "970449", "seabank": "970440", "bacabank": "970409", "vietabank": "970427", "namabank": "970428", "pgbank": "970430", "vietbank": "970433", "baovietbank": "970438", "kienlongbank": "970452", "abbank": "970425", "dongabank": "970406", "gpbank": "970408", "ncb": "970419", "saigonbank": "970400", "pvcombank": "970412" };
 export function binOf(nh) { const k = noDau(nh || "").replace(/[^a-z]/g, ""); return BANK_BIN[k] || null; }
+
+// CRC16-CCITT (False) — chuẩn VietQR/EMVCo
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) { crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1); crc &= 0xFFFF; }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+// Dựng chuỗi QR chuyển khoản theo chuẩn VietQR/napas247 (QRIBFTTA) — tạo tại chỗ, không phụ thuộc mạng
+export function buildVietQR({ bin, accountNo, amount, addInfo }) {
+  const f = (t, v) => t + String(v.length).padStart(2, "0") + v;
+  const acq = f("00", String(bin)) + f("01", String(accountNo));
+  const mer = f("00", "A000000727") + f("01", acq) + f("02", "QRIBFTTA");
+  let s = f("00", "01") + f("01", amount > 0 ? "12" : "11") + f("38", mer)
+        + f("53", "704") + (amount > 0 ? f("54", String(Math.round(amount))) : "") + f("58", "VN");
+  const info = String(addInfo || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^\x20-\x7E]/g, "").trim().slice(0, 25);
+  if (info) s += f("62", f("08", info));
+  s += "6304";
+  return s + crc16ccitt(s);
+}
