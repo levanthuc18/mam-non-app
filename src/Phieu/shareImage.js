@@ -1,16 +1,29 @@
 import { toBlob } from "html-to-image";
 
+/** Chụp node DOM -> PNG blob: đợi font nạp xong + chốt đúng kích thước + render 2 lần (lần đầu làm nóng) để chữ không phình/xuống dòng. */
+async function renderBlob(node) {
+  try { if (typeof document !== "undefined" && document.fonts && document.fonts.ready) await document.fonts.ready; } catch {}
+  const w = node.offsetWidth || undefined;
+  const h = node.offsetHeight || undefined;
+  const opts = {
+    pixelRatio: 2,
+    backgroundColor: "#ffffff",
+    cacheBust: true,
+    width: w,
+    height: h,
+    style: w ? { width: w + "px", height: h + "px", margin: "0" } : undefined,
+    filter: (n) => !(n.classList && n.classList.contains("no-print")),
+  };
+  await toBlob(node, opts);          // làm nóng: nạp font/ảnh vào bản sao
+  return await toBlob(node, opts);   // bản chuẩn
+}
+
 /** Tạo ảnh PNG từ node DOM -> { ok, url, file } hoặc { ok:false, reason, error }. */
 export async function makePhieuImage(node, filename = "phieu.png") {
   if (!node) return { ok: false, reason: "no-node" };
   let blob;
   try {
-    blob = await toBlob(node, {
-      pixelRatio: 2,
-      backgroundColor: "#ffffff",
-      skipFonts: true,
-      filter: (n) => !(n.classList && n.classList.contains("no-print")),
-    });
+    blob = await renderBlob(node);
   } catch (e) {
     return { ok: false, reason: "render-fail", error: e };
   }
@@ -48,12 +61,7 @@ export async function sharePhieuAnh(node, { filename = "phieu.png", title = "Phi
 
   let blob;
   try {
-    blob = await toBlob(node, {
-      pixelRatio: 2,
-      backgroundColor: "#ffffff",
-      skipFonts: true,
-      filter: (n) => !(n.classList && n.classList.contains("no-print")),
-    });
+    blob = await renderBlob(node);
   } catch (e) {
     return { ok: false, reason: "render-fail", error: e };
   }
