@@ -242,7 +242,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         </div>
       </StickyBar>
       {locked && (ddLockReason
-        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12", display: "flex", alignItems: "flex-start", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /><span>Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</span></div>
+        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, display: "flex", alignItems: "flex-start", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /><span>Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</span></div>
         : <LockNote />)}
 
       {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
@@ -250,7 +250,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
         <>
           <Card style={{ marginBottom: 12, padding: "12px 12px", border: `1.5px solid ${C.pine}`, background: C.pineSoft }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
-              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
+              <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
               <label style={{ position: "relative", textAlign: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                   <Icon name="calendarCheck" size={16} color={C.pine} />{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
@@ -261,13 +261,13 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               {dow !== 0 && !locked && !isGV && (
                 <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? "#fff" : C.coral} /></button>
               )}
-              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
+              <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
             {/* Dòng dưới: GV = Báo cháu mới + chip nghỉ; Admin = sĩ số + chip nghỉ */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
               {isGV ? (
                 dow !== 0 && !isLeNgay ? (
-                  <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: "#fff", color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="plus" size={13} color={C.pine} /> Báo cháu mới</button>
+                  <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="plus" size={13} color={C.pine} /> Báo cháu mới</button>
                 ) : (
                   <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "Ngày lễ — nghỉ cả trường"}</span>
                 )
