@@ -24,7 +24,7 @@ export function PhieuThu({
 
   // Tự nén theo số khoản thu để gói gọn 1 trang (không cắt nội dung).
   const nKhoan = phieuRow.ps.dong.length + (phieuRow.noTruoc !== 0 ? 1 : 0);
-  const dense = nKhoan >= 11 ? 2 : nKhoan >= 8 ? 1 : 0;
+  const dense = nKhoan >= 10 ? 2 : nKhoan >= 7 ? 1 : 0;
   const rowPad = dense === 2 ? 2.5 : dense === 1 ? 4 : 5.5;
   const rowFont = dense === 2 ? 11.5 : dense === 1 ? 12 : 13;
 
@@ -49,7 +49,7 @@ export function PhieuThu({
         <style>{`
           @media print {
             @page { size: A5 portrait; margin: 0; }
-            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 20.4cm !important; }
+            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 18.6cm !important; }
             .no-print { display: none !important; }
           }
         `}</style>
@@ -64,7 +64,7 @@ export function PhieuThu({
       <div id="phieu-in" style={{ ...LIGHT_VARS, background: "#fff", color: C.ink, fontFamily: font.body, width: "100%", maxWidth: 520, margin: "0 auto", aspectRatio: "148 / 210", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
 
         {/* ===== ĐỎ: đầu phiếu (bám lề trên) ===== */}
-        <div style={{ flexShrink: 0, padding: "11px 16px 7px" }}>
+        <div style={{ flexShrink: 0, padding: "7px 16px 5px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
             <div style={{ flexShrink: 0 }}><Logo mark={false} w={92} /></div>
             <div style={{ fontFamily: '"Times New Roman", Times, Georgia, serif', fontSize: 11.5, color: C.ink, lineHeight: 1.4, textAlign: "right" }}>
@@ -122,15 +122,13 @@ export function PhieuThu({
         </div>
 
         {/* ===== XANH: QR + thông báo + chân (bám lề dưới) ===== */}
-        <div style={{ flexShrink: 0, padding: "8px 16px 9px" }}>
-          <div style={{ padding: "9px 12px", borderRadius: 12, background: C.pineSoft, border: `1.5px solid ${C.line}`, display: "flex", gap: 13, alignItems: "center" }}>
+        <div style={{ flexShrink: 0, padding: "5px 16px 5px" }}>
+          <div style={{ padding: "10px 13px", borderRadius: 12, background: C.pineSoft, border: `1.5px solid ${C.line}`, display: "flex", gap: 13, alignItems: "center" }}>
             <QRBox bank={bank} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} size={dense ? 80 : 90} />
-            <div style={{ fontSize: 12.5, lineHeight: 1.4, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, color: C.pine, fontSize: 12.5, letterSpacing: 0.3, marginBottom: 4 }}>THÔNG TIN CHUYỂN KHOẢN</div>
-              <div style={{ color: C.sub, fontSize: 11 }}>Chủ tài khoản</div>
-              <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 3 }}>{bank.chu}</div>
-              <div style={{ color: C.sub, fontSize: 11 }}>Số tài khoản</div>
-              <div style={{ fontWeight: 700 }}>{bank.stk} · {bank.nh}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.55, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, color: C.pine, fontSize: 13, letterSpacing: 0.3, marginBottom: 5 }}>THÔNG TIN CHUYỂN KHOẢN</div>
+              <div style={{ marginBottom: 2 }}><span style={{ color: C.sub }}>Chủ tài khoản: </span><b>{bank.chu}</b></div>
+              <div><span style={{ color: C.sub }}>Số tài khoản: </span><b>{bank.stk} · {bank.nh}</b></div>
             </div>
           </div>
 
