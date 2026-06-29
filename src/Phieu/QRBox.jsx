@@ -26,7 +26,8 @@ export function QRBox({ bank, amount, noiDung }) {
     <img 
       src={url} 
       alt="QR chuyển khoản" 
-      onError={() => setErr(true)} 
+      crossOrigin="anonymous"
+      onError={(e) => { if (e.currentTarget.crossOrigin) { e.currentTarget.crossOrigin = null; e.currentTarget.src = url; } else setErr(true); }} 
       style={{ 
         width: 88, height: 88, borderRadius: 8, background: "#fff", 
         border: `1.5px solid ${C.pine}`, flexShrink: 0, objectFit: "contain" 
