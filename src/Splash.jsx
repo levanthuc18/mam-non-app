@@ -15,7 +15,7 @@ export function Splash({ onDone, ms = 2000, tenTruong = "Mầm Non Tuổi Thần
       position: "relative", overflow: "hidden",
       height: "100dvh", minHeight: "100dvh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", gap: 14,
-      background: "linear-gradient(165deg,#EAF3EE 0%,#E4EEF3 55%,#EAF0F3 100%)",
+      background: `linear-gradient(165deg, ${C.bg} 0%, ${C.pineSoft} 100%)`,
       fontFamily: font.body, padding: 24,
     }}>
       <style>{`
