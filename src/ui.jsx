@@ -88,7 +88,7 @@ export function StickyBar({ shrunk, children }) {
 
 export function Card({ children, style }) { return <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.line}`, padding: 14, ...style }}>{children}</div>; }
 
-export function LockNote() { return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: "#7A5E12", display: "flex", alignItems: "center", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /> Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>; }
+export function LockNote() { return <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, display: "flex", alignItems: "center", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /> Tháng này đã chốt — chỉ xem. Mở khóa ở tab Tổng quan.</div>; }
 
 export function BottomSheet({ open, onClose, title, children }) {
   const sheetRef = useRef(null);
@@ -134,8 +134,8 @@ export function BottomSheet({ open, onClose, title, children }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div ref={sheetRef} style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "0 16px 24px", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", willChange: "transform" }}>
-        <div {...dragProps} style={{ touchAction: "none", cursor: "grab", margin: "0 -16px", padding: "10px 16px 2px", position: "sticky", top: 0, background: "#fff", zIndex: 2 }}>
+      <div ref={sheetRef} style={{ background: C.card, borderRadius: "20px 20px 0 0", padding: "0 16px 24px", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", willChange: "transform" }}>
+        <div {...dragProps} style={{ touchAction: "none", cursor: "grab", margin: "0 -16px", padding: "10px 16px 2px", position: "sticky", top: 0, background: C.card, zIndex: 2 }}>
           <div style={{ width: 44, height: 5, borderRadius: 99, background: C.line, margin: "0 auto 12px" }} />
           {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 8 }}>{title}</div>}
           <button onClick={onClose} aria-label="Đóng" style={{ position: "absolute", top: 8, right: 10, width: 32, height: 32, borderRadius: 99, border: "none", background: C.graySoft, color: C.sub, fontSize: 17, lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
