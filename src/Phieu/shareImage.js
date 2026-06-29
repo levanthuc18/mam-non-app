@@ -8,7 +8,7 @@ export async function makePhieuImage(node, filename = "phieu.png") {
     blob = await toBlob(node, {
       pixelRatio: 2,
       backgroundColor: "#ffffff",
-      cacheBust: true,
+      skipFonts: true,
       filter: (n) => !(n.classList && n.classList.contains("no-print")),
     });
   } catch (e) {
@@ -51,7 +51,7 @@ export async function sharePhieuAnh(node, { filename = "phieu.png", title = "Phi
     blob = await toBlob(node, {
       pixelRatio: 2,
       backgroundColor: "#ffffff",
-      cacheBust: true,
+      skipFonts: true,
       filter: (n) => !(n.classList && n.classList.contains("no-print")),
     });
   } catch (e) {
