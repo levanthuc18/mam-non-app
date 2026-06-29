@@ -59,8 +59,16 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
           .phieu-page { 
             page-break-after: always; 
             break-after: page; 
-            padding: 0.5cm 0.6cm 0.6cm;
+            padding: 0 !important;
+            margin: 0 !important;
             box-sizing: border-box;
+          }
+          .phieu-page #phieu-in {
+            max-width: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0.6cm 0.6cm 0.5cm !important;
+            box-shadow: none !important;
           }
           .phieu-page:last-child { 
             page-break-after: auto; 
