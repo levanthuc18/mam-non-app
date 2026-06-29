@@ -6,7 +6,7 @@ import {
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
   KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META,
-  THEMES, setTheme, getTheme
+  THEMES, setTheme, getTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom
 } from "./lib.js";
 import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
@@ -87,7 +87,7 @@ export function BackupExport({ meta, students }) {
               <span style={{ fontSize: 12, color: C.sub }}>{outName}</span>
               <button onClick={copyOut} style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: C.blueA, display:"inline-flex", alignItems:"center", gap:5, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}><Icon name="clipboard" size={13} color="#fff" /> Copy</button>
             </div>
-            <textarea readOnly value={outText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 110, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 8, resize: "vertical", color: C.ink, background: "#FAFCFA" }} />
+            <textarea readOnly value={outText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 110, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 8, resize: "vertical", color: C.ink, background: C.graySoft }} />
           </div>
         )}
       </Card>
@@ -155,7 +155,7 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
   const importFile = async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; doImport(await f.text()); };
 
   return (
-    <Card style={{ marginBottom: 12, background: C.blueASoft, borderColor: "#C7DCF3" }}>
+    <Card style={{ marginBottom: 12, background: C.blueASoft, borderColor: C.line }}>
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.blueA, marginBottom: 6, display:"flex", alignItems:"center", gap:6 }}><Icon name="download" size={16} color={C.blueA} /> Nhập hàng loạt từ Excel/CSV</div>
       <div style={{ fontSize: 12, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Mỗi dòng = 1 học sinh, cách nhau bằng dấu phẩy, theo thứ tự: <b>Họ tên, Lớp, Phân loại, Người thu, SĐT, Nợ</b>. Chỉ <b>Họ tên</b> + <b>Lớp</b> bắt buộc; ô trống cứ để 2 dấu phẩy liền. Giữ nguyên dòng tiêu đề đầu tiên. Có thể thêm cột <b>Giới tính</b> (Nam/Nữ) — tùy chọn.</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
@@ -165,7 +165,7 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
       {tplText && (
         <div style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 11, color: C.sub, marginBottom: 4 }}>Nếu máy không tải được, copy nội dung mẫu dưới đây dán vào Excel/Sheets:</div>
-          <textarea readOnly value={tplText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 70, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 8, padding: 6, background: "#FAFCFA" }} />
+          <textarea readOnly value={tplText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 70, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 8, padding: 6, background: C.graySoft }} />
         </div>
       )}
       <div style={{ fontSize: 12, color: C.sub, margin: "6px 0 4px" }}>Hoặc dán nội dung CSV đã điền vào đây rồi bấm Nhập:</div>
@@ -281,6 +281,16 @@ export function AuditLog() {
 export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWide }) {
   const [sec, setSec] = useState("lop");
   const [theme, setThemeState] = useState(getTheme());
+  const [custom, setCustomState] = useState(getCustom());
+  const [pending, setPending] = useState(null); // {kind:'preset'|'color', id?, key?, label?, val?}
+  const previewVar = (key, val) => { try { const r = document.documentElement; r.style.setProperty(`--c-${key}`, val); if (key === "bg") r.style.background = val; } catch {} };
+  const confirmChange = () => {
+    if (!pending) return;
+    if (pending.kind === "preset") { setTheme(pending.id); setThemeState(pending.id); setCustomState({}); }
+    else { setCustomColor(pending.key, pending.val); setCustomState(getCustom()); }
+    setPending(null); toast("Đã áp dụng màu mới");
+  };
+  const cancelChange = () => { applyTheme(getTheme()); setPending(null); };
   const [ten, setTen] = useState("");
   const [lop, setLop] = useState(meta.classes[0]?.id || "");
   const [pl, setPl] = useState("Bthg");
@@ -435,12 +445,12 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
     toast("Đã bỏ qua.");
   };
 
-  const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none" };
+  const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.graySoft, outline: "none" };
 
   return (
     <>
       {baoPending.length > 0 && (
-        <Card style={{ marginBottom: 12, background: "#FFF7ED", borderColor: "#F2D9B8" }}>
+        <Card style={{ marginBottom: 12, background: C.amberSoft, borderColor: C.line }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <Icon name="bell" size={17} color={C.coral} />
             <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: C.ink }}>Báo từ Giáo viên</span>
@@ -486,7 +496,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                 <button onClick={() => xoaLop(l.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={16} color={C.coral} /></button>
               </div>
               <label style={{ fontSize: 11, color: C.sub, display: "block", marginBottom: 10 }}>Buổi T7 (giá/buổi)
-                <input type="number" value={l.t7 || 0} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, "t7", Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: "#FAFCFA", outline: "none" }} /></label>
+                <input type="number" value={l.t7 || 0} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, "t7", Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: C.graySoft, outline: "none" }} /></label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {KHOAN.map((k) => {
                   const mode = khoanMode(l, k.key);
@@ -559,24 +569,18 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
             <Icon name="settings" size={16} color={C.ink} />
             <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: C.ink }}>Giao diện màu nền</span>
           </div>
-          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 14 }}>Chọn 1 nền → cả app đổi theo (gồm chữ &amp; nền). Áp dụng ngay cho mọi máy đang đăng nhập trên thiết bị này.</div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12 }}>Chọn 1 nền có sẵn, hoặc tự chỉnh từng màu bên dưới. Đổi tới đâu cả app đồng bộ tới đó — phải bấm <b>Xác nhận</b> mới lưu.</div>
+
+          {/* 5 nền có sẵn */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {THEMES.map((t) => {
-              const active = theme === t.id;
+              const active = theme === t.id && Object.keys(custom).length === 0;
               const dark = t.id === "dem";
               const swatch = { trangsua: "#FAFAF8", xanhkhoi: "#E2F0EB", kemam: "#F0EADC", xamnhe: "#E9EBEE", dem: "#16241E" }[t.id];
               return (
-                <button
-                  key={t.id}
-                  onClick={() => { setTheme(t.id); setThemeState(t.id); }}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 9, padding: "9px 14px 9px 10px",
-                    borderRadius: 999, cursor: "pointer", fontFamily: font.body, fontWeight: 700, fontSize: 13.5,
-                    border: `2px solid ${active ? C.pine : C.line}`,
-                    background: active ? C.pineSoft : C.card,
-                    color: C.ink,
-                  }}
-                >
+                <button key={t.id}
+                  onClick={() => { applyTheme(t.id); setPending({ kind: "preset", id: t.id, label: t.label }); }}
+                  style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 14px 9px 10px", borderRadius: 999, cursor: "pointer", fontFamily: font.body, fontWeight: 700, fontSize: 13.5, border: `2px solid ${active ? C.pine : C.line}`, background: active ? C.pineSoft : C.card, color: C.ink }}>
                   <span style={{ width: 22, height: 22, borderRadius: 999, background: swatch, border: `1.5px solid ${dark ? "#000" : C.line}`, flexShrink: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                     {active && <Icon name="check" size={13} color={dark ? "#fff" : C.pine} />}
                   </span>
@@ -585,6 +589,52 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
               );
             })}
           </div>
+
+          {/* Tự chỉnh từng màu */}
+          <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
+            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: C.ink, marginBottom: 2 }}>Tự chỉnh màu</div>
+            <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Chạm vào ô màu để chọn. Có thể chỉnh đè lên nền đang chọn.</div>
+            {EDITABLE_COLORS.map((grp) => (
+              <div key={grp.group} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{grp.group}</div>
+                {grp.items.map((it) => {
+                  const shown = (pending && pending.kind === "color" && pending.key === it.key) ? pending.val : (custom[it.key] || currentColor(it.key));
+                  return (
+                    <div key={it.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "7px 0" }}>
+                      <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 600 }}>{it.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 11.5, color: C.sub, fontFamily: "monospace" }}>{String(shown).toUpperCase()}</span>
+                        <label style={{ width: 46, height: 30, borderRadius: 8, border: `1.5px solid ${C.line}`, background: shown, cursor: "pointer", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+                          <input type="color" value={/^#[0-9A-Fa-f]{6}$/.test(shown) ? shown : "#000000"}
+                            onChange={(e) => { const v = e.target.value; previewVar(it.key, v); setPending({ kind: "color", key: it.key, label: it.label, val: v }); }}
+                            style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer", border: "none" }} />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {Object.keys(custom).length > 0 && !pending && (
+              <button onClick={async () => { if (await ask("Khôi phục về màu của nền đang chọn? Mọi màu tự chỉnh sẽ bị xoá.", { okText: "Khôi phục" })) { resetCustom(); setCustomState({}); toast("Đã khôi phục màu nền"); } }}
+                style={{ marginTop: 4, padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.coral, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Icon name="refresh" size={14} color={C.coral} /> Khôi phục màu gốc
+              </button>
+            )}
+          </div>
+
+          {/* Thanh xác nhận */}
+          {pending && (
+            <div style={{ position: "sticky", bottom: 0, marginTop: 16, marginLeft: -16, marginRight: -16, marginBottom: -16, padding: "12px 16px", background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -4px 16px rgba(0,0,0,0.08)" }}>
+              <span style={{ flex: 1, fontSize: 13, color: C.ink }}>
+                Xem trước <b>{pending.label}</b>. Áp dụng?
+              </span>
+              <button onClick={cancelChange} style={{ padding: "9px 16px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>Huỷ</button>
+              <button onClick={confirmChange} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Icon name="check" size={15} color="#fff" /> Xác nhận
+              </button>
+            </div>
+          )}
         </Card>
       )}
       {sec === "backup" && <BackupExport meta={meta} students={students} />}
