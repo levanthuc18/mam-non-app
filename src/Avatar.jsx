@@ -42,7 +42,7 @@ export function Avatar({ hs, size = 32, onClick }) {
     display: "flex", alignItems: "center", justifyContent: "center",
     overflow: "hidden", cursor: onClick ? "pointer" : "default",
   };
-  if (src) return <div onClick={onClick} style={{ ...base, background: "#fff" }}><img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>;
+  if (src) return <div onClick={onClick} style={{ ...base, background: C.card }}><img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>;
   return <div onClick={onClick} style={{ ...base, background: g.bg, fontSize: Math.round(size * 0.56), lineHeight: 1 }}>{g.emoji}</div>;
 }
 
@@ -127,7 +127,7 @@ function AvatarCropper({ src, onCancel, onSave }) {
         <div
           ref={areaRef}
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={up} onWheel={wheel}
-          style={{ position: "relative", width: VIEW, height: VIEW, maxWidth: "100%", margin: "0 auto", borderRadius: 12, overflow: "hidden", background: "#111", touchAction: "none", cursor: "grab" }}
+          style={{ position: "relative", width: VIEW, height: VIEW, maxWidth: "100%", margin: "0 auto", borderRadius: 12, overflow: "hidden", background: C.inkBg, touchAction: "none", cursor: "grab" }}
         >
           <img ref={imgRef} src={src} alt="" draggable={false} onLoad={onImgLoad} style={{ position: "absolute", left: ox, top: oy, width: nat ? nat.w * scale : "auto", height: nat ? nat.h * scale : "auto", maxWidth: "none", userSelect: "none", pointerEvents: "none" }} />
           <div style={{ position: "absolute", left: 0, top: 0, width: VIEW, height: VIEW, borderRadius: "50%", boxShadow: "0 0 0 9999px rgba(0,0,0,.45)", border: "2px solid rgba(255,255,255,.9)", pointerEvents: "none" }} />
