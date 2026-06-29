@@ -504,7 +504,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                   return (
                     <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <label style={{ flex: 1, fontSize: 11, color: C.sub }}>{k.label}
-                        <input type="number" value={l[k.key] || 0} disabled={mode === "khong"} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, k.key, Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: mode === "khong" ? C.graySoft : "#FAFCFA", outline: "none" }} /></label>
+                        <input type="number" value={l[k.key] || 0} disabled={mode === "khong"} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, k.key, Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: mode === "khong" ? C.graySoft : C.card, outline: "none" }} /></label>
                       <button onClick={() => cycleKhoan(l.id, k.key)} title="Chạm để đổi: Thu / Không thu" style={{ alignSelf: "flex-end", marginBottom: 1, whiteSpace: "nowrap", padding: "6px 9px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 11, fontFamily: font.body, background: badge.bg, color: badge.fg, minWidth: 92, textAlign: "center" }}>{badge.t}</button>
                     </div>
                   );
