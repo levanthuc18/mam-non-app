@@ -259,7 +259,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               </label>
               {/* Icon ngày lễ (chỉ admin) */}
               {dow !== 0 && !locked && !isGV && (
-                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : "#fff", cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? "#fff" : C.coral} /></button>
+                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? "#fff" : C.coral} /></button>
               )}
               <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
@@ -277,7 +277,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
                 </span>
               )}
               {dow !== 0 && !isLeNgay && soNghiNgay > 0 && (
-                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : "#fff", color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="eye" size={13} color="currentColor" /> Cháu nghỉ ({soNghiNgay})</span>}</button>
+                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="eye" size={13} color="currentColor" /> Cháu nghỉ ({soNghiNgay})</span>}</button>
               )}
             </div>
           </Card>
@@ -355,7 +355,7 @@ const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locke
   const soNghi = Object.keys(a).length;
   const nhap = ngayNhapHocTrongThang(r.hs, year, month);
   return (
-    <tr style={{ background: index % 2 ? "#FAFCFA" : "#fff" }}>
+    <tr style={{ background: index % 2 ? C.graySoft : C.card }}>
       <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>
         <span onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ cursor: "pointer" }}>{r.hs.ten}</span>
         {nhap > 1 && nhap < 99 && <span style={{ fontSize: 9, color: C.amber, marginLeft: 4 }}>(nhập {nhap})</span>}
@@ -370,7 +370,7 @@ const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locke
           <td key={d} onClick={() => !disabled && toggle(r.hs.id, d)}
             title={chuaNhap || chuaNhapThang ? "Chưa nhập học" : ""}
             style={{ width: 34, height: 38, fontSize: 15, textAlign: "center", cursor: disabled ? "default" : "pointer",
-              background: isCN ? "#EFEFEC" : isLe ? C.amberSoft : chuaNhap || chuaNhapThang ? C.graySoft : off ? C.coralSoft : "transparent",
+              background: isCN ? C.graySoft : isLe ? C.amberSoft : chuaNhap || chuaNhapThang ? C.graySoft : off ? C.coralSoft : "transparent",
               color: chuaNhap || chuaNhapThang ? C.gray : C.coral, fontWeight: 700, border: `1px solid ${C.line}`, userSelect: "none",
               outline: d === todayD ? `1.5px solid ${C.pine}` : "none", outlineOffset: -1 }}>
             {chuaNhap || chuaNhapThang ? "·" : (off && !closed ? "✕" : "")}
