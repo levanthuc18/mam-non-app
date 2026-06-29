@@ -25,7 +25,7 @@ export function NumInput({ value, onChange, w = 70, disabled, warn }) {
       onFocus={(e) => { if (!disabled) { setFocused(true); e.target.style.borderColor = C.pine; setTimeout(() => e.target.select(), 0); } }}
       onChange={(e) => { const digits = e.target.value.replace(/[^\d]/g, ""); onChange(digits === "" ? 0 : Number(digits)); }}
       onBlur={(e) => { setFocused(false); e.target.style.borderColor = warn ? C.amber : C.line; }}
-      style={{ width: w, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${warn ? C.amber : C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: disabled ? C.graySoft : warn ? C.amberSoft : "#FAFCFA", textAlign: "right", outline: "none" }} />
+      style={{ width: w, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${warn ? C.amber : C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: disabled ? C.graySoft : warn ? C.amberSoft : C.card, textAlign: "right", outline: "none" }} />
   );
 }
 
@@ -33,7 +33,7 @@ export function ABBtn({ val, set, small, disabled }) {
   return (
     <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid ${C.line}`, opacity: disabled ? 0.6 : 1 }}>
       {["A", "B"].map((p) => (
-        <button key={p} onClick={() => !disabled && set(p)} style={{ padding: small ? "5px 11px" : "7px 13px", fontWeight: 700, fontSize: small ? 12 : 13, border: "none", cursor: disabled ? "default" : "pointer", background: val === p ? (p === "A" ? C.blueA : C.violetB) : "#fff", color: val === p ? "#fff" : C.sub, fontFamily: font.body }}>{p}</button>
+        <button key={p} onClick={() => !disabled && set(p)} style={{ padding: small ? "5px 11px" : "7px 13px", fontWeight: 700, fontSize: small ? 12 : 13, border: "none", cursor: disabled ? "default" : "pointer", background: val === p ? (p === "A" ? C.blueA : C.violetB) : C.card, color: val === p ? "#fff" : C.sub, fontFamily: font.body }}>{p}</button>
       ))}
     </div>
   );
@@ -76,7 +76,7 @@ export function StickyBar({ shrunk, children }) {
   return (
     <div style={{
       position: "sticky", top: 0, zIndex: 22,
-      background: shrunk ? "rgba(245,247,243,.96)" : "transparent",
+      background: shrunk ? C.bg : "transparent",
       backdropFilter: shrunk ? "blur(6px)" : "none", WebkitBackdropFilter: shrunk ? "blur(6px)" : "none",
       margin: "0 -14px", padding: shrunk ? "8px 14px 2px" : "0 14px",
       borderBottom: shrunk ? `1px solid ${C.line}` : "1px solid transparent",
