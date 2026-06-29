@@ -108,7 +108,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
     logAction(`Chuyển lớp HS "${student.ten}" (T${ym})`);
   };
 
-  const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: "#FAFCFA", outline: "none", width: "100%" };
+  const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.graySoft, outline: "none", width: "100%" };
   const lab = { fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 };
   
   return (
@@ -214,7 +214,7 @@ function ThuPhiTab({ student, meta }) {
         <Card key={h.thang} style={{ marginBottom: 8, padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>Tháng {h.thang.slice(5)}/{h.thang.slice(0, 4)}</div>
-            {h.daChot && <span style={{ fontSize: 11, background: C.goldSoft, color: "#7A5E12", display:"inline-flex", alignItems:"center", gap:3, padding: "2px 8px", borderRadius: 99 }}><Icon name="lock" size={11} color="#7A5E12" /> Đã chốt</span>}
+            {h.daChot && <span style={{ fontSize: 11, background: C.goldSoft, color: C.amber, display:"inline-flex", alignItems:"center", gap:3, padding: "2px 8px", borderRadius: 99 }}><Icon name="lock" size={11} color="#7A5E12" /> Đã chốt</span>}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: C.sub, padding: "3px 0" }}>
             <span>Phải thu</span><b style={{ color: C.ink }}>{fmt(h.ps)}</b>
