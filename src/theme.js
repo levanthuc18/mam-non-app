@@ -11,7 +11,7 @@ const COLOR_KEYS = [
   "bg", "card", "ink", "sub", "pine", "pineSoft", "coral", "coralSoft",
   "green", "greenSoft", "amber", "amberSoft", "gray", "graySoft", "line",
   "blueA", "blueASoft", "violetB", "violetBSoft", "gold", "goldSoft",
-  "orange", "orangeSoft",
+  "orange", "orangeSoft", "inkBg",
 ];
 
 // Bộ màu nhấn dùng chung cho các theme SÁNG (giữ đúng giá trị đang chạy)
@@ -21,7 +21,7 @@ const ACCENTS = {
   coral: "#D14B32", coralSoft: "#FBEAE5",
   green: "#2E8F63", greenSoft: "#E4F3EA",
   amber: "#A8731B", amberSoft: "#FBF1DC",
-  gray: "#8A938E",
+  gray: "#8A938E", inkBg: "#1C3530",
   blueA: "#2F6FBF", blueASoft: "#E7F0FB",
   violetB: "#8A56B8", violetBSoft: "#F2EAFA",
   gold: "#C99A2E", goldSoft: "#FBF1D8",
@@ -44,7 +44,7 @@ export const PALETTES = {
     coral: "#F2795E", coralSoft: "#3A2420",
     green: "#54B985", greenSoft: "#1C3328",
     amber: "#D9A94A", amberSoft: "#332914",
-    gray: "#8A938E", graySoft: "#222E28", line: "#2B3B34",
+    gray: "#8A938E", graySoft: "#222E28", line: "#2B3B34", inkBg: "#243A32",
     blueA: "#5B9BE0", blueASoft: "#1A2A3D",
     violetB: "#B584DC", violetBSoft: "#2A1F38",
     gold: "#D9B45E", goldSoft: "#332B14",
@@ -67,23 +67,65 @@ export const C = {
   xs: 4, sm: 8, md: 16, lg: 24, xl: 32, r: 16, r_kpi: 20,
 };
 
-// Ghi 1 bộ màu lên :root (đổi cả app, không cần render lại React).
+// Màu người dùng tự chỉnh trong Cài đặt (đè lên nền đang chọn). Lưu ở mn5:custom.
+export function getCustom() {
+  try { return JSON.parse(localStorage.getItem("mn5:custom") || "{}") || {}; } catch { return {}; }
+}
+export function setCustomColor(key, hex) {
+  const c = getCustom(); c[key] = hex;
+  try { localStorage.setItem("mn5:custom", JSON.stringify(c)); } catch {}
+  applyTheme(getTheme());
+}
+export function resetCustom() {
+  try { localStorage.removeItem("mn5:custom"); } catch {}
+  applyTheme(getTheme());
+}
+
+// Ghi 1 bộ màu lên :root = nền đang chọn + đè màu tự chỉnh (đổi cả app, không render lại).
 export function applyTheme(id) {
   const p = PALETTES[id] || PALETTES[DEFAULT_THEME];
   const def = PALETTES[DEFAULT_THEME];
+  const custom = getCustom();
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  COLOR_KEYS.forEach((k) => root.style.setProperty(`--c-${k}`, p[k] || def[k]));
+  COLOR_KEYS.forEach((k) => root.style.setProperty(`--c-${k}`, custom[k] || p[k] || def[k]));
   root.style.setProperty("color-scheme", id === "dem" ? "dark" : "light");
-  try { root.style.background = (p.bg || def.bg); } catch {}
+  try { root.style.background = (custom.bg || p.bg || def.bg); } catch {}
 }
 export function setTheme(id) {
+  // Chọn 1 nền có sẵn = xoá màu tự chỉnh để nền hiện đúng nguyên bản.
+  try { localStorage.removeItem("mn5:custom"); localStorage.setItem("mn5:theme", id); } catch {}
   applyTheme(id);
-  try { localStorage.setItem("mn5:theme", id); } catch {}
 }
 export function getTheme() {
   try { return localStorage.getItem("mn5:theme") || DEFAULT_THEME; } catch { return DEFAULT_THEME; }
 }
+
+// Lấy màu đang hiển thị của 1 khoá (để hiện trong ô chọn màu).
+export function currentColor(key) {
+  const c = getCustom();
+  const p = PALETTES[getTheme()] || PALETTES[DEFAULT_THEME];
+  return c[key] || p[key] || PALETTES[DEFAULT_THEME][key];
+}
+
+// Các màu cho phép chỉnh tay trong Cài đặt (gom nhóm + tên tiếng Việt dễ hiểu).
+export const EDITABLE_COLORS = [
+  { group: "Nền", items: [
+    { key: "bg", label: "Nền ứng dụng" },
+    { key: "card", label: "Nền thẻ / ô nhập" },
+  ]},
+  { group: "Chữ", items: [
+    { key: "ink", label: "Chữ chính" },
+    { key: "sub", label: "Chữ phụ" },
+    { key: "line", label: "Đường viền" },
+  ]},
+  { group: "Màu nhấn", items: [
+    { key: "pine", label: "Màu chủ đạo" },
+    { key: "coral", label: "Màu nợ / cảnh báo" },
+    { key: "green", label: "Màu hoàn thành" },
+    { key: "orange", label: "Màu tiền / nổi bật" },
+  ]},
+];
 
 // Áp ngay khi nạp (đọc nhanh từ localStorage để tránh nháy màu lúc mở app).
 applyTheme(getTheme());
