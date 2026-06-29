@@ -36,9 +36,9 @@ export function PhieuThu({
       {!isBatch && (
         <style>{`
           @media print {
-            @page { size: A5 portrait; margin: 0.4cm 0.6cm; }
+            @page { size: A5 portrait; margin: 0; }
             html, body { height: 99%; overflow: hidden; }
-            #phieu-in { box-shadow: none !important; background: #fff !important; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+            #phieu-in { box-shadow: none !important; background: #fff !important; height: 100%; padding: 0.5cm 0.6cm 0.6cm !important; display: flex; flex-direction: column; justify-content: space-between; }
             .no-print { display: none !important; }
           }
         `}</style>
