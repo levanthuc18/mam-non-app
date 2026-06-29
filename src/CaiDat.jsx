@@ -6,7 +6,7 @@ import {
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
   KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META,
-  THEMES, setTheme, getTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom
+  THEMES, setTheme, getTheme, applyTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom
 } from "./lib.js";
 import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
@@ -478,11 +478,11 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
           })}
         </Card>
       )}
-      <div style={{ display: "flex", gap: 6, marginBottom: 10, overflowX: "auto", paddingBottom: 4 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {[
           ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
-          <button key={k} onClick={() => setSec(k)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 10, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>{l}</button>
+          <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 15px", borderRadius: 999, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
         ))}
       </div>
 
@@ -623,14 +623,14 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
             )}
           </div>
 
-          {/* Thanh xác nhận */}
+          {/* Thanh xác nhận - cố định đáy màn hình để luôn thấy */}
           {pending && (
-            <div style={{ position: "sticky", bottom: 0, marginTop: 16, marginLeft: -16, marginRight: -16, marginBottom: -16, padding: "12px 16px", background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -4px 16px rgba(0,0,0,0.08)" }}>
+            <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 200, padding: "12px 16px calc(12px + env(safe-area-inset-bottom))", background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -6px 20px rgba(0,0,0,0.18)" }}>
               <span style={{ flex: 1, fontSize: 13, color: C.ink }}>
                 Xem trước <b>{pending.label}</b>. Áp dụng?
               </span>
-              <button onClick={cancelChange} style={{ padding: "9px 16px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>Huỷ</button>
-              <button onClick={confirmChange} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <button onClick={cancelChange} style={{ padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>Huỷ</button>
+              <button onClick={confirmChange} style={{ padding: "10px 18px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <Icon name="check" size={15} color="#fff" /> Xác nhận
               </button>
             </div>
