@@ -116,15 +116,20 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
   };
   const downloadTpl = () => {
     const csv = buildTpl();
-    try { const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `mau-nhap-hoc-sinh.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {}
+    try { const blob = new Blob(["\uFEFF" + "sep=,\n" + csv], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `mau-nhap-hoc-sinh.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {}
     setTplText(csv);
   };
-  const splitLine = (line) => { const out = []; let cur = "", q = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; } else if ((ch === "," || ch === "\t") && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((s) => s.trim()); };
+  const splitLine = (line, delim) => { const out = []; let cur = "", q = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; } else if (ch === delim && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((s) => s.trim()); };
   const parse = (text) => {
-    const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/); if (lines.length < 2) return [];
-    const hd = splitLine(lines[0]);
+    let lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
+    if (lines[0] && /^sep=/i.test(lines[0].trim())) lines = lines.slice(1);
+    if (lines.length < 2) return [];
+    const h0 = lines[0];
+    const cSemi = (h0.match(/;/g) || []).length, cTab = (h0.match(/\t/g) || []).length, cComma = (h0.match(/,/g) || []).length;
+    const delim = (cSemi >= cComma && cSemi >= cTab && cSemi > 0) ? ";" : (cTab >= cComma && cTab > 0) ? "\t" : ",";
+    const hd = splitLine(lines[0], delim);
     const rows = [];
-    for (let i = 1; i < lines.length; i++) { if (!lines[i].trim()) continue; const cells = splitLine(lines[i]); const o = {}; hd.forEach((h, idx) => (o[h.replace(/^\uFEFF/, "")] = cells[idx] || "")); rows.push(o); }
+    for (let i = 1; i < lines.length; i++) { if (!lines[i].trim()) continue; const cells = splitLine(lines[i], delim); const o = {}; hd.forEach((h, idx) => (o[h.replace(/^\uFEFF/, "")] = cells[idx] || "")); rows.push(o); }
     return rows;
   };
   const get = (o, keys) => { for (const k of keys) if (o[k] != null && o[k] !== "") return o[k]; return ""; };
