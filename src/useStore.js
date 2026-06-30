@@ -328,14 +328,15 @@ export function useStore() {
     });
     (mData?.chiPhi || []).forEach((c) => {
       const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-      if (c.loai === "CHUYEN") { if (c.huong === "A->B") { s.A -= e; s.B += e; } else { s.B -= e; s.A += e; } return; }
+      if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { s.A -= e; s.B += e; } else { s.B -= e; s.A += e; } return; }
       if (c.loai === "NO_AB") { if (c.huong === "A->B") s.noAB_AtoB += e - kk; else s.noAB_BtoA += e - kk; return; }
       if (c.loai === "TRA_NO") {
         if (c.nguoiChi === "A") s.traA += kk; else s.traB += kk;
         return;
       }
       if (c.loai === "RUT_LOI") {
-        if (c.nguoiChi === "A") s.rutA += kk; else s.rutB += kk;
+        const src = c.tuQuy || "A";
+        if (src === "A") s.rutA += kk; else s.rutB += kk;
         return;
       }
       if (c.nguoiChi === "A") { s.chiA += e; s.traA += kk; } else { s.chiB += e; s.traB += kk; }
