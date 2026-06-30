@@ -55,7 +55,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
       // Nợ NCC — trường nợ ra (bỏ CHUYEN/NO_AB/RUT_LOI, gồm TRA_NO để trừ)
       let mNcc = 0;
       (td.chiPhi || []).forEach((c) => {
-        if (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI") return;
+        if (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI" || c.loai === "HOAN_UNG") return;
         mNcc += (Number(c.soTien) || 0) - (Number(c.daTra) || 0);
       });
       if (mNcc !== 0) { nccCum += mNcc; nccChiTiet.push({ thang: m, delta: mNcc, cum: nccCum }); }
