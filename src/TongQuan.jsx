@@ -226,7 +226,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     const esc = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const head = ["Tháng", "Phải thu", "Đã thu", "Còn nợ HS", "Chi phí", "Đã chi", "Nợ NCC (lũy kế)", "LN kế toán", "LN tiền mặt", "Quỹ A (lũy kế)", "Quỹ B (lũy kế)"];
     const rows = lichSu.map((r) => [r.thang, r.psThang, r.thuThang, r.psThang - r.thuThang, r.chiThang, r.traThang, r.noNCC, r.laiKeToan, r.laiTienMat, r.giuACum, r.giuBCum]);
-    const csv = [head, ...rows].map((row) => row.map(esc).join(",")).join("\n");
+    const csv = "sep=,\n" + [head, ...rows].map((row) => row.map(esc).join(",")).join("\n");
     taiFile(csv, `bao-cao-tai-chinh-${ym}.csv`);
     toast("Đã xuất CSV");
   };
