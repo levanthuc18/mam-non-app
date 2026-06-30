@@ -44,13 +44,17 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [sheetCP, setSheetCP] = useState(false);
   const [sheetLN, setSheetLN] = useState(false);
   const [sheetLS, setSheetLS] = useState(false);
+  const [openBrk, setOpenBrk] = useState(false);
 
   useEffect(() => {
     let huy = false;
     (async () => {
       const dk = meta?.soDuDauKy || {};
-      let giuA = dk.tienMatA || 0, giuB = dk.tienMatB || 0;
-      let noNCC = 0; 
+      const openA = dk.tienMatA || 0, openB = dk.tienMatB || 0;
+      let giuA = openA, giuB = openB;
+      let noNCC = 0;
+      const bA = { open: openA, thu: 0, cIn: 0, cOut: 0, tra: 0, rut: 0 };
+      const bB = { open: openB, thu: 0, cIn: 0, cOut: 0, tra: 0, rut: 0 };
       const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort();
       const ls = [];
       for (const m of keys) {
@@ -59,6 +63,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
         const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
         let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
+        let cInA = 0, cInB = 0, cOutA = 0, cOutB = 0, rutA = 0, rutB = 0;
         let thangNoNCC = 0, tnPhaiThang = 0, tnThuThang = 0;
         Object.entries(td.fees || {}).forEach(([sid, rec]) => {
           const hs = students.find((s) => s.id === sid); if (!hs) return;
@@ -76,18 +81,24 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         });
         (td.chiPhi || []).forEach((c) => {
           const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-          if (c.loai === "CHUYEN") { if (c.huong === "A->B") { thuA -= e; thuB += e; } else { thuB -= e; thuA += e; } return; }
+          if (c.loai === "CHUYEN") { if (c.huong === "A->B") { cOutA += e; cInB += e; } else { cOutB += e; cInA += e; } return; }
           if (c.loai === "NO_AB") return;
+          if (c.loai === "RUT_LOI") { if (c.nguoiChi === "A") rutA += kk; else rutB += kk; return; }
           if (c.nguoiChi === "A") { chiA += e; traA += kk; } else { chiB += e; traB += kk; }
-          thangNoNCC += (e - kk); 
+          thangNoNCC += (e - kk);
         });
         noNCC += thangNoNCC;
-        giuA += thuA - traA; giuB += thuB - traB;
+        const deltaA = thuA + cInA - cOutA - traA - rutA;
+        const deltaB = thuB + cInB - cOutB - traB - rutB;
+        giuA += deltaA; giuB += deltaB;
+        bA.thu += thuA; bA.cIn += cInA; bA.cOut += cOutA; bA.tra += traA; bA.rut += rutA;
+        bB.thu += thuB; bB.cIn += cInB; bB.cOut += cOutB; bB.tra += traB; bB.rut += rutB;
         const [yy, mm] = m.split("-");
-        const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuA + thuB, traThang = traA + traB;
-        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA, thuB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA: thuA - traA, deltaB: thuB - traB, tnPhai: tnPhaiThang, tnThu: tnThuThang, noNCCThang: thangNoNCC });
+        const thuNetA = thuA + cInA - cOutA, thuNetB = thuB + cInB - cOutB;
+        const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuNetA + thuNetB, traThang = traA + traB;
+        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA: thuNetA, thuB: thuNetB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA, deltaB, tnPhai: tnPhaiThang, tnThu: tnThuThang, noNCCThang: thangNoNCC });
       }
-      if (!huy) { setLuyKe({ giuA, giuB, noNCC }); setLichSu(ls); }
+      if (!huy) { setLuyKe({ giuA, giuB, noNCC, brkA: bA, brkB: bB }); setLichSu(ls); }
     })();
     return () => { huy = true; };
   }, [meta, students, ym, mData]);
@@ -98,7 +109,15 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const add = () => {
     if (loai === "TRA_NO") {
       if (!nd.trim()) return;
+      if (!so || (Number(so) || 0) <= 0) { toast("Nhập số tiền trả"); return; }
       upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim(), soTien: 0, nguoiChi: ng, daTra: Number(so) || 0, loai: "TRA_NO" }] });
+      logAction(`${ng} trả nợ NCC "${nd.trim()}" ${fmt(Number(so) || 0)}đ (T${ym})`);
+      setNd(""); setSo(""); return;
+    }
+    if (loai === "RUT_LOI") {
+      if (!so || (Number(so) || 0) <= 0) { toast("Nhập số tiền rút"); return; }
+      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Rút chia lãi", soTien: 0, nguoiChi: ng, daTra: Number(so) || 0, loai: "RUT_LOI" }] });
+      logAction(`${ng} rút tiền chia lãi ${fmt(Number(so) || 0)}đ (T${ym})`);
       setNd(""); setSo(""); return;
     }
     if (!so) return;
@@ -132,7 +151,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const tyLeA = meta?.tyLeLaiA ?? 50;
   const noAB = tk.noAB_AtoB - tk.noAB_BtoA;
   const noNCC = tongChi - tongTra;
-  const tongTienMat = (luyKe ? luyKe.giuA + luyKe.giuB : (tk.A - tk.traA) + (tk.B - tk.traB));
+  const tongTienMat = (luyKe ? luyKe.giuA + luyKe.giuB : (tk.A - tk.traA - (tk.rutA || 0)) + (tk.B - tk.traB - (tk.rutB || 0)));
 
   const chotThang = async () => {
     const chuaThu = allRows.filter((r) => r.coRec && r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
@@ -145,7 +164,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const noLuyKe = {};
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
       const snapThuNgoai = (mData.thuNgoai || []).reduce((a, k) => a + ((Number(k.soTien) || 0) - (Number(k.thucThu) || 0)), 0);
-      const snapNCC = (mData.chiPhi || []).reduce((a, c) => (c.loai === "CHUYEN" || c.loai === "NO_AB") ? a : a + ((Number(c.soTien) || 0) - (Number(c.daTra) || 0)), 0);
+      const snapNCC = (mData.chiPhi || []).reduce((a, c) => (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI") ? a : a + ((Number(c.soTien) || 0) - (Number(c.daTra) || 0)), 0);
       await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
@@ -153,7 +172,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   };
   const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, snapThuNgoai, snapNCC, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
-  const giuThangA = tk.A - tk.traA, giuThangB = tk.B - tk.traB;
+  const giuThangA = tk.A - tk.traA - (tk.rutA || 0), giuThangB = tk.B - tk.traB - (tk.rutB || 0);
 
   const CardHeader = ({ icon, title, cardKey, children }) => (
     <div onClick={() => toggleCard(cardKey)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: "12px 14px", borderBottom: openCards[cardKey] ? `1px solid ${C.line}` : "none" }}>
@@ -188,6 +207,13 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   ].filter((g) => g[1].length > 0);
   const sheetTitle = { fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.ink, margin: "14px 0 8px" };
   const drillBtn = { background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", cursor: "pointer" };
+  const brkRow = (label, va, vb, neg, hideZero) => (hideZero && !va && !vb) ? null : (
+    <div style={{ display: "flex", fontSize: 12, padding: "5px 10px", borderTop: `1px solid ${C.line}` }}>
+      <span style={{ flex: 1.5, color: C.sub }}>{label}</span>
+      <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>{neg ? "−" : "+"}{fmt(va)}</span>
+      <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>{neg ? "−" : "+"}{fmt(vb)}</span>
+    </div>
+  );
 
   return (
     <>
@@ -309,6 +335,12 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
             </div>
           );
+          if (c.loai === "RUT_LOI") return (
+            <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
+              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="banknote" size={15} color={C.violetB} /> Rút chia lãi · <b style={{ color: c.nguoiChi === "A" ? C.blueA : C.violetB }}>[{c.nguoiChi}]</b> {c.noiDung} · <b style={{ color: C.coral }}>−{fmt(k)} đ</b></div>
+              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+            </div>
+          );
           if (isCT) return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
               <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="arrowRightLeft" size={15} color={C.blueA} /> Chuyển tiền <b style={{ color: c.huong === "A->B" ? C.blueA : C.violetB }}>{c.huong === "A->B" ? "A → B" : "B → A"}</b> · {fmt(e)} đ</div>
@@ -343,13 +375,11 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         {!locked && (
           <div style={{ marginTop: 10, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-              <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : "Khoản chi"} style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-              {loai !== "TRA_NO" && (
-                <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-              )}
+              <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : loai === "RUT_LOI" ? "Ghi chú (VD: rút đợt 1)" : "Khoản chi"} style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+              <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "TRA_NO") { setSo("0"); } }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{l === "PHAT_SINH" ? "Phát sinh" : l === "CO_DINH" ? "Cố định" : l === "NO_AB" ? "Nợ A↔B" : l === "TRA_NO" ? "💰 Trả nợ NCC" : "🔄 Chuyển tiền"}</option>)}</select>
+              <select value={loai} onChange={(e) => { setLoai(e.target.value); }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{l === "PHAT_SINH" ? "Phát sinh" : l === "CO_DINH" ? "Cố định" : l === "NO_AB" ? "Nợ A↔B" : l === "TRA_NO" ? "💰 Trả nợ NCC" : l === "RUT_LOI" ? "📤 Rút chia lãi" : "🔄 Chuyển tiền"}</option>)}</select>
               {(loai === "NO_AB" || loai === "CHUYEN") ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}><option value="A->B">A → B</option><option value="B->A">B → A</option></select> : <ABBtn val={ng} set={setNg} small />}
               <button onClick={() => { if (loai === "TRA_NO" && !nd.trim()) { toast("Nhập tên nợ cần trả"); return; } add(); }} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", marginLeft: "auto" }}>+ Thêm</button>
             </div>
@@ -414,6 +444,34 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingTop: 2 }}><span style={{ color: C.sub }}>Tổng quỹ trường đang giữ</span><b style={{ color: tongTienMat < 0 ? C.coral : C.pine }}>{fmt(tongTienMat)} đ</b></div>
         <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Quỹ âm = A/B đang ứng tiền túi, trường nợ lại.</div>
+
+        {luyKe && luyKe.brkA && (
+          <div style={{ marginTop: 8 }}>
+            <button onClick={() => setOpenBrk((v) => !v)} style={{ background: "none", border: "none", color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: "4px 0", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <Icon name="helpCircle" size={14} color={C.pine} /> Vì sao quỹ có số này? {openBrk ? "▾" : "▸"}
+            </button>
+            {openBrk && (
+              <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", marginTop: 4 }}>
+                <div style={{ display: "flex", background: C.graySoft, fontSize: 11.5, color: C.sub, fontWeight: 700, padding: "6px 10px" }}>
+                  <span style={{ flex: 1.5 }}>Lũy kế từ đầu</span>
+                  <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Tiền A giữ</span>
+                  <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Tiền B giữ</span>
+                </div>
+                {brkRow("Số dư đầu kỳ", luyKe.brkA.open, luyKe.brkB.open, false)}
+                {brkRow("Thu (học phí + ngoài)", luyKe.brkA.thu, luyKe.brkB.thu, false)}
+                {brkRow("Nhận chuyển từ người kia", luyKe.brkA.cIn, luyKe.brkB.cIn, false, true)}
+                {brkRow("Đã chi / trả NCC", luyKe.brkA.tra, luyKe.brkB.tra, true)}
+                {brkRow("Chuyển sang người kia", luyKe.brkA.cOut, luyKe.brkB.cOut, true, true)}
+                {brkRow("Đã rút chia lãi", luyKe.brkA.rut, luyKe.brkB.rut, true, true)}
+                <div style={{ display: "flex", fontSize: 12.5, padding: "7px 10px", borderTop: `2px solid ${C.line}`, background: C.greenSoft, fontWeight: 800 }}>
+                  <span style={{ flex: 1.5, color: C.ink }}>= Đang giữ</span>
+                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuA < 0 ? C.coral : C.blueA }}>{fmt(luyKe.giuA)}</span>
+                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuB < 0 ? C.coral : C.violetB }}>{fmt(luyKe.giuB)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {(tk.noAB_AtoB > 0 || tk.noAB_BtoA > 0) && (<>
           <div style={sheetTitle}>Nợ nội bộ A ↔ B</div>
