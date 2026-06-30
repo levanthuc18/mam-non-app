@@ -314,7 +314,7 @@ export function useStore() {
   }, [mData, allRows, students, meta, ym]);
 
   const tk = useMemo(() => {
-    const s = { ps: 0, thu: 0, no: 0, A: 0, B: 0, chiA: 0, chiB: 0, traA: 0, traB: 0, noList: [], noAB_AtoB: 0, noAB_BtoA: 0 };
+    const s = { ps: 0, thu: 0, no: 0, A: 0, B: 0, chiA: 0, chiB: 0, traA: 0, traB: 0, rutA: 0, rutB: 0, noList: [], noAB_AtoB: 0, noAB_BtoA: 0 };
     allRows.forEach((r) => {
       if (!r.coRec) return;
       s.ps += r.ps.tong; s.thu += r.rec.thucThu; 
@@ -332,6 +332,10 @@ export function useStore() {
       if (c.loai === "NO_AB") { if (c.huong === "A->B") s.noAB_AtoB += e - kk; else s.noAB_BtoA += e - kk; return; }
       if (c.loai === "TRA_NO") {
         if (c.nguoiChi === "A") s.traA += kk; else s.traB += kk;
+        return;
+      }
+      if (c.loai === "RUT_LOI") {
+        if (c.nguoiChi === "A") s.rutA += kk; else s.rutB += kk;
         return;
       }
       if (c.nguoiChi === "A") { s.chiA += e; s.traA += kk; } else { s.chiB += e; s.traB += kk; }
