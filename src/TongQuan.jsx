@@ -49,6 +49,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [soGD, setSoGD] = useState(null);
   const [gdNguoi, setGdNguoi] = useState("ALL");
   const [gdLoai, setGdLoai] = useState("ALL");
+  const [sheetBC, setSheetBC] = useState(false);
 
   useEffect(() => {
     let huy = false;
@@ -219,6 +220,17 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const guiQuyA = luyKe?.giuA ?? (tk.A - tk.traA - (tk.rutA || 0));
   const guiQuyB = luyKe?.giuB ?? (tk.B - tk.traB - (tk.rutB || 0));
 
+  const taiFile = (text, name) => { try { const blob = new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {} };
+  const xuatCSV = () => {
+    if (!lichSu || !lichSu.length) { toast("Chưa có dữ liệu tháng"); return; }
+    const esc = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const head = ["Tháng", "Phải thu", "Đã thu", "Còn nợ HS", "Chi phí", "Đã chi", "Nợ NCC (lũy kế)", "LN kế toán", "LN tiền mặt", "Quỹ A (lũy kế)", "Quỹ B (lũy kế)"];
+    const rows = lichSu.map((r) => [r.thang, r.psThang, r.thuThang, r.psThang - r.thuThang, r.chiThang, r.traThang, r.noNCC, r.laiKeToan, r.laiTienMat, r.giuACum, r.giuBCum]);
+    const csv = [head, ...rows].map((row) => row.map(esc).join(",")).join("\n");
+    taiFile(csv, `bao-cao-tai-chinh-${ym}.csv`);
+    toast("Đã xuất CSV");
+  };
+
   const chotThang = async () => {
     const chuaThu = allRows.filter((r) => r.coRec && r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
     const ngayAn0 = allRows.filter((r) => r.coRec && r.hs.pl !== "GV" && r.hs.pl !== "T7" && (r.rec.ngayAn || 0) === 0).length;
@@ -367,6 +379,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
 
       <button onClick={() => setSheetGD(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="receipt" size={15} color={C.pine} /> Sổ giao dịch tiền</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
+      </button>
+
+      <button onClick={() => setSheetBC(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="barChart" size={15} color={C.pine} /> Báo cáo & biểu đồ</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
       </button>
 
       {!locked
@@ -629,6 +645,26 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           </>
         )}
 
+        {!locked && (
+          <>
+            <div style={{ ...sheetTitle, display: "flex", alignItems: "center", gap: 8 }}><Icon name="banknote" size={17} color={C.pine} /> Kiểm tiền cuối tháng</div>
+            <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 7 }}><span style={{ color: C.sub }}>Theo app (quỹ hiện có)</span><b style={{ color: C.ink }}>{fmt(tongTienMat)} đ</b></div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, marginBottom: 7 }}>
+                <span style={{ color: C.sub }}>Đếm tiền thật</span>
+                <input type="number" value={mData?.demThat ?? ""} onChange={(e) => { const v = e.target.value; const m2 = { ...mData }; if (v === "") delete m2.demThat; else m2.demThat = Number(v) || 0; upMData(m2); }} placeholder="Nhập số đếm" style={{ width: 150, textAlign: "right", padding: "7px 9px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} />
+              </div>
+              {mData?.demThat != null && (() => {
+                const lech = (Number(mData.demThat) || 0) - tongTienMat;
+                return <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, paddingTop: 7, borderTop: `1px solid ${C.line}`, fontWeight: 800 }}><span style={{ color: C.ink }}>Lệch (thật − app)</span><b style={{ color: lech === 0 ? C.green : C.coral }}>{lech > 0 ? "+" : ""}{fmt(lech)} đ</b></div>;
+              })()}
+            </div>
+            {mData?.demThat != null && ((Number(mData.demThat) || 0) - tongTienMat !== 0) && (
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>{(Number(mData.demThat) || 0) - tongTienMat < 0 ? "Đếm thật ÍT hơn app → có thể thiếu tiền / quên ghi 1 khoản chi." : "Đếm thật NHIỀU hơn app → có thể quên ghi 1 khoản thu."}</div>
+            )}
+          </>
+        )}
+
         {(tk.noAB_AtoB > 0 || tk.noAB_BtoA > 0) && (<>
           <div style={sheetTitle}>Nợ nội bộ A ↔ B</div>
           {noAB > 0 && <div style={{ fontSize: 13.5 }}>A đang nợ B: <b style={{ color: C.gold }}>{fmt(noAB)} đ</b></div>}
@@ -756,6 +792,39 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         })()}
         <div style={{ fontSize: 10.5, color: C.sub, marginTop: 2, marginBottom: 8, textAlign: "center" }}>Học phí gộp theo tháng (không có ngày). Giao dịch nhập từ giờ có ngày cụ thể.</div>
         <button onClick={() => setSheetGD(false)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
+      </BottomSheet>
+
+      <BottomSheet open={sheetBC} onClose={() => setSheetBC(false)} title="Báo cáo & biểu đồ">
+        {!lichSu || !lichSu.length ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Chưa có dữ liệu tháng.</div> : (() => {
+          const data = [...lichSu].reverse();
+          const maxV = Math.max(1, ...lichSu.map((r) => Math.max(r.thuThang, r.chiThang)));
+          return (
+            <>
+              <div style={{ display: "flex", gap: 14, marginBottom: 12, fontSize: 11.5, color: C.sub }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: C.green, display: "inline-block" }} /> Đã thu</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: C.coral, display: "inline-block" }} /> Đã chi</span>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                {data.map((r) => (
+                  <div key={r.thang} style={{ marginBottom: 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}><b style={{ color: C.pine }}>{r.thang}</b><span style={{ color: r.laiKeToan < 0 ? C.coral : C.green, fontWeight: 700 }}>Lãi {fmt(r.laiKeToan)}</span></div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.thuThang / maxV * 100)}%`, height: "100%", background: C.green, borderRadius: 4 }} /></div>
+                      <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.thuThang)}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.chiThang / maxV * 100)}%`, height: "100%", background: C.coral, borderRadius: 4 }} /></div>
+                      <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.chiThang)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={xuatCSV} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 }}><Icon name="download" size={16} color={C.pine} /> Xuất báo cáo CSV (mở bằng Excel)</button>
+              <div style={{ fontSize: 10.5, color: C.sub, textAlign: "center", marginBottom: 8 }}>CSV gồm: phải thu · đã thu · còn nợ · chi phí · nợ NCC · LN kế toán/tiền mặt · quỹ A/B theo từng tháng.</div>
+            </>
+          );
+        })()}
+        <button onClick={() => setSheetBC(false)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
       </BottomSheet>
     </>
   );
