@@ -45,6 +45,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [sheetLN, setSheetLN] = useState(false);
   const [sheetLS, setSheetLS] = useState(false);
   const [openBrk, setOpenBrk] = useState(false);
+  const [sheetGD, setSheetGD] = useState(false);
+  const [soGD, setSoGD] = useState(null);
+  const [gdNguoi, setGdNguoi] = useState("ALL");
+  const [gdLoai, setGdLoai] = useState("ALL");
 
   useEffect(() => {
     let huy = false;
@@ -111,6 +115,44 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     return () => { huy = true; };
   }, [meta, students, ym, mData]);
 
+  useEffect(() => {
+    if (!sheetGD) return;
+    let huy = false;
+    (async () => {
+      const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort().reverse();
+      const out = [];
+      for (const m of keys) {
+        const td = await sGet(`mn5:thang:${m}`); if (!td) continue;
+        const evs = [];
+        let hpA = 0, hpB = 0;
+        Object.entries(td.fees || {}).forEach(([sid, rec]) => {
+          const hs = students.find((s) => s.id === sid); if (!hs) return;
+          const tt = Number(rec.thucThu) || 0; if (!tt) return;
+          if (hs.nguoiThu === "A") hpA += tt; else if (hs.nguoiThu === "B") hpB += tt;
+        });
+        if (hpA) evs.push({ ts: null, loai: "THU", nguoi: "A", label: "Thu học phí (gộp cả tháng)", amount: hpA, dau: "+" });
+        if (hpB) evs.push({ ts: null, loai: "THU", nguoi: "B", label: "Thu học phí (gộp cả tháng)", amount: hpB, dau: "+" });
+        (td.thuNgoai || []).forEach((k) => {
+          const tt = Number(k.thucThu) || 0; if (!tt) return;
+          evs.push({ ts: k.ts || null, loai: "THU", nguoi: k.nguoiThu || null, label: `Thu ngoài: ${k.noiDung || k.ten || "—"}`, amount: tt, dau: "+" });
+        });
+        (td.chiPhi || []).forEach((c) => {
+          const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
+          if (c.loai === "RUT_LOI") { evs.push({ ts: c.ts || null, loai: "RUT_LOI", nguoi: c.nhan || c.nguoiChi || "A", label: `Rút chia lãi · trừ quỹ ${c.tuQuy || "A"}${c.noiDung && c.noiDung !== "Rút chia lãi" ? " · " + c.noiDung : ""}`, amount: kk, dau: "-" }); return; }
+          if (c.loai === "HOAN_UNG") { const nl = c.huong === "A->B" ? "B" : "A"; evs.push({ ts: c.ts || null, loai: "HOAN_UNG", nguoi: nl, label: `Hoàn ứng cho ${nl}`, amount: e, dau: "" }); return; }
+          if (c.loai === "CHUYEN") { evs.push({ ts: c.ts || null, loai: "CHUYEN", nguoi: null, label: `Chuyển tiền ${c.huong === "A->B" ? "A→B" : "B→A"}`, amount: e, dau: "" }); return; }
+          if (c.loai === "NO_AB") { evs.push({ ts: c.ts || null, loai: "NO_AB", nguoi: null, label: `Ghi nợ A↔B ${c.huong || ""}`, amount: e, dau: "" }); return; }
+          if (c.loai === "TRA_NO") { if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Trả nợ NCC: ${c.noiDung || "—"}`, amount: kk, dau: "-" }); return; }
+          if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Chi: ${c.noiDung || "—"}`, amount: kk, dau: "-" });
+        });
+        evs.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        if (evs.length) out.push({ thang: m, label: `T${Number(m.slice(5))}/${m.slice(0, 4)}`, evs });
+      }
+      if (!huy) setSoGD(out);
+    })();
+    return () => { huy = true; };
+  }, [sheetGD, ym, students]);
+
   const cp = mData.chiPhi || [];
   const [nd, setNd] = useState(""); const [so, setSo] = useState(""); const [ng, setNg] = useState("A"); const [loai, setLoai] = useState("PHAT_SINH"); const [huong, setHuong] = useState("A->B"); const [truQuy, setTruQuy] = useState("A");
   const [showCoDinh, setShowCoDinh] = useState(true);
@@ -118,21 +160,21 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     if (loai === "TRA_NO") {
       if (!nd.trim()) return;
       if (!so || (Number(so) || 0) <= 0) { toast("Nhập số tiền trả"); return; }
-      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim(), soTien: 0, nguoiChi: ng, daTra: Number(so) || 0, loai: "TRA_NO" }] });
+      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim(), soTien: 0, nguoiChi: ng, daTra: Number(so) || 0, loai: "TRA_NO", ts: Date.now() }] });
       logAction(`${ng} trả nợ NCC "${nd.trim()}" ${fmt(Number(so) || 0)}đ (T${ym})`);
       setNd(""); setSo(""); return;
     }
     if (loai === "RUT_LOI") {
       if (!so || (Number(so) || 0) <= 0) { toast("Nhập số tiền rút"); return; }
-      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Rút chia lãi", soTien: 0, nhan: ng, tuQuy: truQuy, daTra: Number(so) || 0, loai: "RUT_LOI" }] });
+      upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Rút chia lãi", soTien: 0, nhan: ng, tuQuy: truQuy, daTra: Number(so) || 0, loai: "RUT_LOI", ts: Date.now() }] });
       logAction(`${ng} rút tiền chia lãi ${fmt(Number(so) || 0)}đ — trừ quỹ ${truQuy} (T${ym})`);
       setNd(""); setSo(""); return;
     }
     if (!so) return;
-    if (loai === "CHUYEN") { upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Chuyển tiền", soTien: Number(so), loai: "CHUYEN", huong, daTra: 0 }] }); setNd(""); setSo(""); return; }
-    if (loai === "HOAN_UNG") { const nhanLai = huong === "A->B" ? "B" : "A"; upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Hoàn ứng", soTien: Number(so), loai: "HOAN_UNG", huong, daTra: 0 }] }); logAction(`Hoàn ứng cho ${nhanLai} ${fmt(Number(so))}đ (T${ym})`); setNd(""); setSo(""); return; }
+    if (loai === "CHUYEN") { upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Chuyển tiền", soTien: Number(so), loai: "CHUYEN", huong, daTra: 0, ts: Date.now() }] }); setNd(""); setSo(""); return; }
+    if (loai === "HOAN_UNG") { const nhanLai = huong === "A->B" ? "B" : "A"; upMData({ ...mData, chiPhi: [...cp, { id: uid(), noiDung: nd.trim() || "Hoàn ứng", soTien: Number(so), loai: "HOAN_UNG", huong, daTra: 0, ts: Date.now() }] }); logAction(`Hoàn ứng cho ${nhanLai} ${fmt(Number(so))}đ (T${ym})`); setNd(""); setSo(""); return; }
     if (!nd.trim()) return;
-    const item = { id: uid(), noiDung: nd.trim(), soTien: Number(so), nguoiChi: ng, daTra: 0, loai }; if (loai === "NO_AB") item.huong = huong;
+    const item = { id: uid(), noiDung: nd.trim(), soTien: Number(so), nguoiChi: ng, daTra: 0, loai, ts: Date.now() }; if (loai === "NO_AB") item.huong = huong;
     upMData({ ...mData, chiPhi: [...cp, item] }); setNd(""); setSo("");
   };
   const set = (id, p) => upMData({ ...mData, chiPhi: cp.map((c) => (c.id === id ? { ...c, ...p } : c)) });
@@ -321,6 +363,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
 
       <button onClick={() => setSheetLS(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="trendingUp" size={15} color={C.pine} /> Lịch sử các tháng trước</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
+      </button>
+
+      <button onClick={() => setSheetGD(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="receipt" size={15} color={C.pine} /> Sổ giao dịch tiền</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
       </button>
 
       {!locked
@@ -664,6 +710,52 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           );
         })()}
         <button onClick={() => setSheetLS(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
+      </BottomSheet>
+
+      <BottomSheet open={sheetGD} onClose={() => setSheetGD(false)} title="Sổ giao dịch tiền">
+        <div style={{ display: "flex", gap: 6, marginBottom: 7, flexWrap: "wrap" }}>
+          {[["ALL", "Tất cả"], ["A", "Người A"], ["B", "Người B"]].map(([v, l]) => (
+            <button key={v} onClick={() => setGdNguoi(v)} style={{ padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${gdNguoi === v ? C.pine : C.line}`, background: gdNguoi === v ? C.pineSoft : C.card, color: gdNguoi === v ? C.pine : C.sub, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          {[["ALL", "Tất cả"], ["THU", "Thu"], ["CHI", "Chi"], ["CHUYEN", "Chuyển"], ["RUT_LOI", "Rút lãi"], ["HOAN_UNG", "Hoàn ứng"]].map(([v, l]) => (
+            <button key={v} onClick={() => setGdLoai(v)} style={{ padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${gdLoai === v ? C.pine : C.line}`, background: gdLoai === v ? C.pineSoft : C.card, color: gdLoai === v ? C.pine : C.sub, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
+          ))}
+        </div>
+        {soGD === null ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Đang tải…</div> : (() => {
+          const fmtNgay = (ts) => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; };
+          const colorOf = (dau) => dau === "+" ? C.green : dau === "-" ? C.coral : C.blueA;
+          let any = false;
+          const blocks = soGD.map((g) => {
+            const evs = g.evs.filter((ev) => (gdNguoi === "ALL" || ev.nguoi === gdNguoi) && (gdLoai === "ALL" || ev.loai === gdLoai));
+            if (!evs.length) return null;
+            any = true;
+            const tThu = evs.filter((e) => e.dau === "+").reduce((a, e) => a + e.amount, 0);
+            const tChi = evs.filter((e) => e.dau === "-").reduce((a, e) => a + e.amount, 0);
+            return (
+              <div key={g.thang} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                  <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: C.pine }}>{g.label}</span>
+                  <span style={{ fontSize: 11, color: C.sub }}>{tThu > 0 && <span style={{ color: C.green }}>+{fmt(tThu)} </span>}{tChi > 0 && <span style={{ color: C.coral }}>−{fmt(tChi)}</span>}</span>
+                </div>
+                <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
+                  {evs.map((ev, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderTop: i ? `1px solid ${C.line}` : "none" }}>
+                      <span style={{ fontSize: 10.5, color: C.sub, minWidth: 32, fontWeight: 600 }}>{ev.ts ? fmtNgay(ev.ts) : "—"}</span>
+                      {ev.nguoi && <span style={{ fontSize: 10.5, fontWeight: 800, color: ev.nguoi === "A" ? C.blueA : C.violetB }}>[{ev.nguoi}]</span>}
+                      <span style={{ flex: 1, fontSize: 12.5, color: C.ink }}>{ev.label}</span>
+                      <b style={{ fontSize: 12.5, color: colorOf(ev.dau), whiteSpace: "nowrap" }}>{ev.dau}{fmt(ev.amount)}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          });
+          return any ? <div>{blocks}</div> : <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Không có giao dịch khớp bộ lọc.</div>;
+        })()}
+        <div style={{ fontSize: 10.5, color: C.sub, marginTop: 2, marginBottom: 8, textAlign: "center" }}>Học phí gộp theo tháng (không có ngày). Giao dịch nhập từ giờ có ngày cụ thể.</div>
+        <button onClick={() => setSheetGD(false)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
       </BottomSheet>
     </>
   );
