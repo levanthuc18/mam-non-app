@@ -395,7 +395,7 @@ export function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, mon
         <thead><tr>
           <th style={{ position: "sticky", left: 0, background: C.card, textAlign: "left", padding: "4px 6px", minWidth: 106, zIndex: 2 }}>Học sinh</th>
           {dayArr.map((d) => { const dw = new Date(year, month - 1, d).getDay(); const isCN = dw === 0; const isLe = le[d]; return (
-            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : d === todayD ? C.pineSoft : "transparent", color: isCN ? "#B6BDB8" : isLe ? C.amber : d === todayD ? C.pine : dw === 6 ? C.blueA : C.sub, fontWeight: 600, borderBottom: d === todayD ? `2px solid ${C.pine}` : undefined }}>
+            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : d === todayD ? C.pineSoft : "transparent", color: isCN ? C.gray : isLe ? C.amber : d === todayD ? C.pine : dw === 6 ? C.blueA : C.sub, fontWeight: 600, borderBottom: d === todayD ? `2px solid ${C.pine}` : undefined }}>
               <div style={{ fontSize: 9, opacity: 0.8 }}>{TUAN[dw]}</div><div>{d}</div>{isLe && <div style={{ fontSize: 8 }}>lễ</div>}
             </th>); })}
           <th style={{ position: "sticky", right: 0, background: C.card, zIndex: 2, padding: "0 6px", color: C.coral, fontWeight: 700, borderLeft: `1px solid ${C.line}` }}>Nghỉ</th>
