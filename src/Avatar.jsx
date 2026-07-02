@@ -4,9 +4,9 @@ import { Icon } from "./Icon.jsx";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
 const GT_AVA = {
-  nam: { emoji: "👦", bg: "#DBEAFE" },
-  nu: { emoji: "👧", bg: "#FCE7F0" },
-  "": { emoji: "🧒", bg: C.graySoft || "#EEF2F0" },
+  nam: { emoji: "👦", bg: C.blueASoft },
+  nu: { emoji: "👧", bg: C.violetBSoft },
+  "": { emoji: "🧒", bg: C.graySoft },
 };
 
 // Cache ảnh thật theo id để khỏi gọi Supabase lại mỗi lần render
