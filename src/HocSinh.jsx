@@ -3,7 +3,7 @@ import { C, font, noDau, logAction, toast, ask, uid, sGet, sList, PHAN_LOAI, PL_
 import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, useStickyShrink, StickyBar } from "./ui.jsx";
 import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
-import { ImportHSExcel } from "./CaiDat.jsx";
+import { ImportHSExcel } from "./ImportHS.jsx";
 import { StudentProfile } from "./StudentProfile.jsx";
 
 export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, openStudentProfile }) {
