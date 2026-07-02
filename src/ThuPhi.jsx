@@ -320,9 +320,9 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
   let statusColor = C.coral, statusText = "CHƯA THU";
   if (isThieu) { statusColor = C.amber; statusText = "THU THIẾU"; }
   else if (isDu) { statusColor = C.green; statusText = "THU ĐỦ"; }
-  else if (isThua) { statusColor = "#2563EB"; statusText = "THU THỪA"; }
+  else if (isThua) { statusColor = C.blueA; statusText = "THU THỪA"; }
 
-  const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? "#2563EB" : C.green;
+  const borderLeftColor = isChuaThu || isThieu ? C.coral : isThua ? C.blueA : C.green;
 
   const dong = r.ps?.dong || [];
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
@@ -494,7 +494,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
                 <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
               </button>
             )}
-            <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn("#FFF9EE", C.amber, true, locked)}>
+            <button onClick={() => !locked && onQuickEdit(r)} disabled={locked} style={colBtn(C.amberSoft, C.amber, true, locked)}>
               <Icon name="edit" size={15} color={C.amber} />
               <span style={{ fontSize: 8.5, fontWeight: 700 }}>Sửa</span>
             </button>
@@ -700,17 +700,17 @@ function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }) {
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"inline-flex", alignItems:"center", gap:6, color: C.blueA }}><Icon name="plus" size={15} color={C.pine} /> Khoản thu áp cho cả lớp</div>
       <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Chọn lớp + nhập khoản → cộng vào mọi HS lớp đó tháng này. <b>Cố định</b> = khoản lặp hàng tháng; <b>không cố định</b> = chỉ tháng này. Sửa/xóa lẻ ở thẻ HS.</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-        <select value={lopAp} onChange={(e) => setLopAp(e.target.value)} style={{ flex: "1 1 120px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body, background: C.card }}>
+        <select value={lopAp} onChange={(e) => setLopAp(e.target.value)} style={{ flex: "1 1 120px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body, background: C.card }}>
           {classes.map((c) => <option key={c.id} value={c.id}>{c.ten} ({rows.filter((r) => r.lopId === c.id).length} HS)</option>)}
         </select>
-        <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid #C7DCF3` }}>
+        <div style={{ display: "inline-flex", borderRadius: 9, overflow: "hidden", border: `1.5px solid ${C.line}` }}>
           <button onClick={() => setCoDinh(false)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: !coDinh ? C.blueA : C.card, color: !coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Không cố định</button>
           <button onClick={() => setCoDinh(true)} style={{ padding: "8px 12px", fontWeight: 700, fontSize: 12, border: "none", cursor: "pointer", background: coDinh ? C.blueA : C.card, color: coDinh ? "#fff" : C.sub, fontFamily: font.body }}>Cố định</button>
         </div>
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        <input value={ten} onChange={(e) => setTen(e.target.value)} placeholder="Tên khoản (VD: Dã ngoại / Đầu năm)" style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-        <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid #C7DCF3`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+        <input value={ten} onChange={(e) => setTen(e.target.value)} placeholder="Tên khoản (VD: Dã ngoại / Đầu năm)" style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+        <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
         <button onClick={apply} style={{ background: C.blueA, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp dụng</button>
       </div>
     </Card>
@@ -781,7 +781,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
     { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
-    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: "#DBEAFE", color: C.blueA, border: `${C.line}` },
+    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: C.blueASoft, color: C.blueA, border: `${C.line}` },
   ];
 
   return (
