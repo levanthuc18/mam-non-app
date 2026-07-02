@@ -153,3 +153,26 @@ export function buildGiaoDichThang(td, students) {
   evs.sort((a, b) => (b.ts || 0) - (a.ts || 0));
   return evs;
 }
+
+// ---- Nhóm nợ NCC theo tên khoản (nhà cung cấp) xuyên nhiều tháng ----
+// monthsChiPhi: [{ m: "2026-06", chiPhi: [...] }, ...] bất kỳ thứ tự.
+// Nhóm theo `noiDung` (tên khoản/vendor) — TRA_NO cùng tên sẽ trừ đúng vào nhóm đó.
+// soThang = số tháng khác nhau khoản này còn xuất hiện → dùng làm "tuổi nợ".
+export function nhomNoNCC(monthsChiPhi) {
+  const groups = {};
+  (monthsChiPhi || []).forEach(({ m, chiPhi }) => {
+    (chiPhi || []).forEach((c) => {
+      if (GD_META[c.loai]?.tinhNCC === false) return;
+      const key = (c.noiDung || "Khác").trim() || "Khác";
+      if (!groups[key]) groups[key] = { ten: key, phaiTra: 0, daTra: 0, thangs: new Set() };
+      const e = c.loai === "TRA_NO" ? 0 : (Number(c.soTien) || 0);
+      const kk = Number(c.daTra) || 0;
+      groups[key].phaiTra += e; groups[key].daTra += kk;
+      groups[key].thangs.add(m);
+    });
+  });
+  return Object.values(groups)
+    .map((g) => ({ ten: g.ten, phaiTra: g.phaiTra, daTra: g.daTra, conNo: g.phaiTra - g.daTra, soThang: g.thangs.size }))
+    .filter((g) => g.conNo !== 0)
+    .sort((a, b) => b.conNo - a.conNo);
+}
