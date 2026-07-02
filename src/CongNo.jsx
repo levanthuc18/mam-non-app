@@ -165,18 +165,18 @@ export function CongNoTab({ students, meta, ym, mData }) {
         <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginTop: 10, overflow: "hidden" }}>
           <div onClick={() => setOpenNcc(!openNcc)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color="#9A6B00" /> Nợ nhà cung cấp (NCC)</div>
+              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color={C.amber} /> Nợ nhà cung cấp (NCC)</div>
               <div style={{ fontSize: 11.5, color: C.sub }}>Trường nợ ra — KHÔNG tính vào Tổng nợ HS</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: nccData.luyKe > 0 ? "#9A6B00" : C.green }}>{fmt(Math.abs(nccData.luyKe))}</div>
+              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: nccData.luyKe > 0 ? C.amber : C.green }}>{fmt(Math.abs(nccData.luyKe))}</div>
               <div style={{ fontSize: 11, color: C.sub }}>{nccData.luyKe > 0 ? "đang nợ" : "không nợ"}</div>
             </div>
           </div>
           {openNcc && (
             <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.amberSoft, fontSize: 12.5 }}>
               {nccData.chiTiet.map((c) => (
-                <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? "#9A6B00" : C.green }}>
+                <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? C.amber : C.green }}>
                   <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
                   <b>dồn: {fmt(c.cum)}</b>
                 </div>
