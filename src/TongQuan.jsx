@@ -10,6 +10,8 @@ import {
   Card, BottomSheet, NumInput, ABBtn, Badge
 } from "./ui.jsx";
 import { tinhThangFull, GD_META } from "./taichinh.js";
+import { SoGiaoDichSheet } from "./SoGiaoDich.jsx";
+import { BaoCaoSheet } from "./BaoCao.jsx";
 
 function BlurNum({ value, onCommit, placeholder, style }) {
   const [v, setV] = useState(value == null ? "" : String(value));
@@ -54,9 +56,6 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [sheetLS, setSheetLS] = useState(false);
   const [openBrk, setOpenBrk] = useState(false);
   const [sheetGD, setSheetGD] = useState(false);
-  const [soGD, setSoGD] = useState(null);
-  const [gdNguoi, setGdNguoi] = useState("ALL");
-  const [gdLoai, setGdLoai] = useState("ALL");
   const [sheetBC, setSheetBC] = useState(false);
 
   useEffect(() => {
@@ -101,43 +100,6 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     return () => { huy = true; };
   }, [meta, students, ym, mData]);
 
-  useEffect(() => {
-    if (!sheetGD) return;
-    let huy = false;
-    (async () => {
-      const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort().reverse();
-      const out = [];
-      for (const m of keys) {
-        const td = await sGet(`mn5:thang:${m}`); if (!td) continue;
-        const evs = [];
-        let hpA = 0, hpB = 0;
-        Object.entries(td.fees || {}).forEach(([sid, rec]) => {
-          const hs = students.find((s) => s.id === sid); if (!hs) return;
-          const tt = Number(rec.thucThu) || 0; if (!tt) return;
-          if (hs.nguoiThu === "A") hpA += tt; else if (hs.nguoiThu === "B") hpB += tt;
-        });
-        if (hpA) evs.push({ ts: null, loai: "THU", nguoi: "A", label: "Thu học phí (gộp cả tháng)", amount: hpA, dau: "+" });
-        if (hpB) evs.push({ ts: null, loai: "THU", nguoi: "B", label: "Thu học phí (gộp cả tháng)", amount: hpB, dau: "+" });
-        (td.thuNgoai || []).forEach((k) => {
-          const tt = Number(k.thucThu) || 0; if (!tt) return;
-          evs.push({ ts: k.ts || null, loai: "THU", nguoi: k.nguoiThu || null, label: `Thu ngoài: ${k.noiDung || k.ten || "—"}`, amount: tt, dau: "+" });
-        });
-        (td.chiPhi || []).forEach((c) => {
-          const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-          if (c.loai === "RUT_LOI") { evs.push({ ts: c.ts || null, loai: "RUT_LOI", nguoi: c.nhan || c.nguoiChi || "A", label: `Rút chia lãi · trừ quỹ ${c.tuQuy || "A"}${c.noiDung && c.noiDung !== "Rút chia lãi" ? " · " + c.noiDung : ""}`, amount: kk, dau: "-" }); return; }
-          if (c.loai === "HOAN_UNG") { const nl = c.huong === "A->B" ? "B" : "A"; evs.push({ ts: c.ts || null, loai: "HOAN_UNG", nguoi: nl, label: `Hoàn ứng cho ${nl}`, amount: e, dau: "" }); return; }
-          if (c.loai === "CHUYEN") { evs.push({ ts: c.ts || null, loai: "CHUYEN", nguoi: null, label: `Chuyển tiền ${c.huong === "A->B" ? "A→B" : "B→A"}`, amount: e, dau: "" }); return; }
-          if (c.loai === "NO_AB") { evs.push({ ts: c.ts || null, loai: "NO_AB", nguoi: null, label: `Ghi nợ A↔B ${c.huong || ""}`, amount: e, dau: "" }); return; }
-          if (c.loai === "TRA_NO") { if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Trả nợ NCC: ${c.noiDung || "—"}`, amount: kk, dau: "-" }); return; }
-          if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Chi: ${c.noiDung || "—"}`, amount: kk, dau: "-" });
-        });
-        evs.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        if (evs.length) out.push({ thang: m, label: `T${Number(m.slice(5))}/${m.slice(0, 4)}`, evs });
-      }
-      if (!huy) setSoGD(out);
-    })();
-    return () => { huy = true; };
-  }, [sheetGD, ym, students]);
 
   const cp = mData.chiPhi || [];
   const [nd, setNd] = useState(""); const [so, setSo] = useState(""); const [ng, setNg] = useState("A"); const [loai, setLoai] = useState("PHAT_SINH"); const [huong, setHuong] = useState("A->B"); const [truQuy, setTruQuy] = useState("A");
@@ -205,16 +167,6 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const guiQuyA = luyKe?.giuA ?? (tk.A - tk.traA - (tk.rutA || 0));
   const guiQuyB = luyKe?.giuB ?? (tk.B - tk.traB - (tk.rutB || 0));
 
-  const taiFile = (text, name) => { try { const blob = new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {} };
-  const xuatCSV = () => {
-    if (!lichSu || !lichSu.length) { toast("Chưa có dữ liệu tháng"); return; }
-    const esc = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ["Tháng", "Phải thu", "Đã thu", "Còn nợ HS", "Chi phí", "Đã chi", "Nợ NCC (lũy kế)", "LN kế toán", "LN tiền mặt", "Quỹ A (lũy kế)", "Quỹ B (lũy kế)"];
-    const rows = lichSu.map((r) => [r.thang, r.psThang, r.thuThang, r.psThang - r.thuThang, r.chiThang, r.traThang, r.noNCC, r.laiKeToan, r.laiTienMat, r.giuACum, r.giuBCum]);
-    const csv = "sep=,\n" + [head, ...rows].map((row) => row.map(esc).join(",")).join("\n");
-    taiFile(csv, `bao-cao-tai-chinh-${ym}.csv`);
-    toast("Đã xuất CSV");
-  };
 
   const chotThang = async () => {
     const chuaThu = allRows.filter((r) => r.coRec && r.ps.tong > 0 && (r.rec.thucThu || 0) === 0).length;
@@ -737,84 +689,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         <button onClick={() => setSheetLS(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
       </BottomSheet>
 
-      <BottomSheet open={sheetGD} onClose={() => setSheetGD(false)} title="Sổ giao dịch tiền">
-        <div style={{ display: "flex", gap: 6, marginBottom: 7, flexWrap: "wrap" }}>
-          {[["ALL", "Tất cả"], ["A", "Người A"], ["B", "Người B"]].map(([v, l]) => (
-            <button key={v} onClick={() => setGdNguoi(v)} style={{ padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${gdNguoi === v ? C.pine : C.line}`, background: gdNguoi === v ? C.pineSoft : C.card, color: gdNguoi === v ? C.pine : C.sub, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-          {[["ALL", "Tất cả"], ["THU", "Thu"], ["CHI", "Chi"], ["CHUYEN", "Chuyển"], ["RUT_LOI", "Rút lãi"], ["HOAN_UNG", "Hoàn ứng"]].map(([v, l]) => (
-            <button key={v} onClick={() => setGdLoai(v)} style={{ padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${gdLoai === v ? C.pine : C.line}`, background: gdLoai === v ? C.pineSoft : C.card, color: gdLoai === v ? C.pine : C.sub, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
-          ))}
-        </div>
-        {soGD === null ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Đang tải…</div> : (() => {
-          const fmtNgay = (ts) => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; };
-          const colorOf = (dau) => dau === "+" ? C.green : dau === "-" ? C.coral : C.blueA;
-          let any = false;
-          const blocks = soGD.map((g) => {
-            const evs = g.evs.filter((ev) => (gdNguoi === "ALL" || ev.nguoi === gdNguoi) && (gdLoai === "ALL" || ev.loai === gdLoai));
-            if (!evs.length) return null;
-            any = true;
-            const tThu = evs.filter((e) => e.dau === "+").reduce((a, e) => a + e.amount, 0);
-            const tChi = evs.filter((e) => e.dau === "-").reduce((a, e) => a + e.amount, 0);
-            return (
-              <div key={g.thang} style={{ marginBottom: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                  <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: C.pine }}>{g.label}</span>
-                  <span style={{ fontSize: 11, color: C.sub }}>{tThu > 0 && <span style={{ color: C.green }}>+{fmt(tThu)} </span>}{tChi > 0 && <span style={{ color: C.coral }}>−{fmt(tChi)}</span>}</span>
-                </div>
-                <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
-                  {evs.map((ev, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderTop: i ? `1px solid ${C.line}` : "none" }}>
-                      <span style={{ fontSize: 10.5, color: C.sub, minWidth: 32, fontWeight: 600 }}>{ev.ts ? fmtNgay(ev.ts) : "—"}</span>
-                      {ev.nguoi && <span style={{ fontSize: 10.5, fontWeight: 800, color: ev.nguoi === "A" ? C.blueA : C.violetB }}>[{ev.nguoi}]</span>}
-                      <span style={{ flex: 1, fontSize: 12.5, color: C.ink }}>{ev.label}</span>
-                      <b style={{ fontSize: 12.5, color: colorOf(ev.dau), whiteSpace: "nowrap" }}>{ev.dau}{fmt(ev.amount)}</b>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          });
-          return any ? <div>{blocks}</div> : <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Không có giao dịch khớp bộ lọc.</div>;
-        })()}
-        <div style={{ fontSize: 10.5, color: C.sub, marginTop: 2, marginBottom: 8, textAlign: "center" }}>Học phí gộp theo tháng (không có ngày). Giao dịch nhập từ giờ có ngày cụ thể.</div>
-        <button onClick={() => setSheetGD(false)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
-      </BottomSheet>
-
-      <BottomSheet open={sheetBC} onClose={() => setSheetBC(false)} title="Báo cáo & biểu đồ">
-        {!lichSu || !lichSu.length ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Chưa có dữ liệu tháng.</div> : (() => {
-          const data = [...lichSu].reverse();
-          const maxV = Math.max(1, ...lichSu.map((r) => Math.max(r.thuThang, r.chiThang)));
-          return (
-            <>
-              <div style={{ display: "flex", gap: 14, marginBottom: 12, fontSize: 11.5, color: C.sub }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: C.green, display: "inline-block" }} /> Đã thu</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 11, height: 11, borderRadius: 3, background: C.coral, display: "inline-block" }} /> Đã chi</span>
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                {data.map((r) => (
-                  <div key={r.thang} style={{ marginBottom: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}><b style={{ color: C.pine }}>{r.thang}</b><span style={{ color: r.laiKeToan < 0 ? C.coral : C.green, fontWeight: 700 }}>Lãi {fmt(r.laiKeToan)}</span></div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.thuThang / maxV * 100)}%`, height: "100%", background: C.green, borderRadius: 4 }} /></div>
-                      <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.thuThang)}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.chiThang / maxV * 100)}%`, height: "100%", background: C.coral, borderRadius: 4 }} /></div>
-                      <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.chiThang)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={xuatCSV} style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 13.5, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 8 }}><Icon name="download" size={16} color={C.pine} /> Xuất báo cáo CSV (mở bằng Excel)</button>
-              <div style={{ fontSize: 10.5, color: C.sub, textAlign: "center", marginBottom: 8 }}>CSV gồm: phải thu · đã thu · còn nợ · chi phí · nợ NCC · LN kế toán/tiền mặt · quỹ A/B theo từng tháng.</div>
-            </>
-          );
-        })()}
-        <button onClick={() => setSheetBC(false)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
-      </BottomSheet>
+      <SoGiaoDichSheet open={sheetGD} onClose={() => setSheetGD(false)} ym={ym} students={students} />
+      <BaoCaoSheet open={sheetBC} onClose={() => setSheetBC(false)} lichSu={lichSu} ym={ym} />
     </>
   );
 }
