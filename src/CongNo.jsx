@@ -3,7 +3,7 @@ import {
   sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR
 } from "./lib.js";
-import { tinhNoNCCThang } from "./taichinh.js";
+import { tinhNoNCCThang, nhomNoNCC } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, Chips, useStickyShrink, StickyBar } from "./ui.jsx";
 
@@ -16,8 +16,10 @@ export function CongNoTab({ students, meta, ym, mData }) {
   const [showDetail, setShowDetail] = useState(null);
   const [tnData, setTnData] = useState(null);
   const [nccData, setNccData] = useState(null);
+  const [nccVendors, setNccVendors] = useState([]);
   const [openTn, setOpenTn] = useState(false);
   const [openNcc, setOpenNcc] = useState(false);
+  const [xemThang, setXemThang] = useState(false);
   const { sentinelRef, shrunk } = useStickyShrink();
 
   useEffect(() => { (async () => {
@@ -27,7 +29,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
     const perHS = {};
     students.forEach((hs) => { perHS[hs.id] = { hs, phaiThu: 0, daThu: 0, chiTiet: [], noDauKy: hs.noDauKy || 0 }; });
     let tnPhai = 0, tnThu = 0; const tnChiTiet = [];
-    let nccCum = 0; const nccChiTiet = [];
+    let nccCum = 0; const nccChiTiet = []; const chiPhiTheoThang = [];
     for (const m of months) {
       const td = await sGet(`mn5:thang:${m}`);
       if (!td?.fees) continue;
@@ -56,6 +58,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
       // Nợ NCC — trường nợ ra (logic tập trung tại taichinh.js)
       const mNcc = tinhNoNCCThang(td.chiPhi);
       if (mNcc !== 0) { nccCum += mNcc; nccChiTiet.push({ thang: m, delta: mNcc, cum: nccCum }); }
+      if (td.chiPhi?.length) chiPhiTheoThang.push({ m, chiPhi: td.chiPhi });
     }
     let tNo = 0, tDu = 0;
     const arr = Object.values(perHS).map((x) => {
@@ -67,6 +70,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
     if (tnLuyKe > 0) tNo += tnLuyKe; else tDu += -tnLuyKe;
     setTnData({ luyKe: tnLuyKe, phai: tnPhai, thu: tnThu, chiTiet: tnChiTiet });
     setNccData({ luyKe: nccCum, chiTiet: nccChiTiet });
+    setNccVendors(nhomNoNCC(chiPhiTheoThang));
     setData(arr); setTongNo(tNo); setTongDu(tDu); setLoading(false);
   })(); }, [students, meta, ym, mData]);
 
@@ -172,12 +176,34 @@ export function CongNoTab({ students, meta, ym, mData }) {
           </div>
           {openNcc && (
             <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.amberSoft, fontSize: 12.5 }}>
-              {nccData.chiTiet.map((c) => (
-                <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? C.amber : C.green }}>
-                  <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
-                  <b>dồn: {fmt(c.cum)}</b>
+              {nccVendors.length > 0 ? (
+                <>
+                  <div style={{ fontSize: 11, color: C.sub, fontWeight: 700, marginBottom: 6 }}>Còn nợ từng nhà cung cấp:</div>
+                  {nccVendors.map((v) => {
+                    const lau = v.soThang >= 3;
+                    return (
+                      <div key={v.ten} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px dashed ${C.line}` }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: C.ink, fontWeight: 600 }}>{v.ten}</div>
+                          {lau && <div style={{ fontSize: 10.5, color: C.coral, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2 }}><Icon name="alertTriangle" size={11} color={C.coral} /> nợ đã {v.soThang} tháng</div>}
+                        </div>
+                        <b style={{ color: v.conNo > 0 ? C.amber : C.green, flexShrink: 0, marginLeft: 8 }}>{v.conNo > 0 ? fmt(v.conNo) : "+" + fmt(-v.conNo)}</b>
+                      </div>
+                    );
+                  })}
+                  <button onClick={() => setXemThang((x) => !x)} style={{ marginTop: 8, background: "none", border: "none", color: C.amber, fontWeight: 700, fontSize: 11.5, cursor: "pointer", padding: 0 }}>{xemThang ? "▾ Ẩn theo tháng" : "▸ Xem theo tháng"}</button>
+                </>
+              ) : null}
+              {(xemThang || nccVendors.length === 0) && (
+                <div style={{ marginTop: nccVendors.length > 0 ? 8 : 0 }}>
+                  {nccData.chiTiet.map((c) => (
+                    <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? C.amber : C.green }}>
+                      <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
+                      <b>dồn: {fmt(c.cum)}</b>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
