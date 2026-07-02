@@ -10,6 +10,13 @@ import {
   Card, BottomSheet, NumInput, ABBtn, Badge
 } from "./ui.jsx";
 
+function BlurNum({ value, onCommit, placeholder, style }) {
+  const [v, setV] = useState(value == null ? "" : String(value));
+  useEffect(() => { setV(value == null ? "" : String(value)); }, [value]);
+  const commit = () => { const t = String(v).trim(); onCommit(t === "" ? null : Number(t) || 0); };
+  return <input type="number" value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} placeholder={placeholder} style={style} />;
+}
+
 export function Donut({ pct, color, size = 76 }) {
   const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
   const dash = circ * Math.min(100, pct) / 100;
@@ -312,12 +319,12 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           </div>
         </div>
         {noRows.length > 0 && (
-          <button onClick={() => setTab && setTab("no")} style={{ width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 9, border: `1px solid #EFC9BF`, background: C.coralSoft, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {noRows.length} HS còn nợ — {fmt(conNoAll)} đ ❯</span></button>
+          <button onClick={() => setTab && setTab("no")} style={{ width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 9, border: `1px solid ${C.line}`, background: C.coralSoft, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {noRows.length} HS còn nợ — {fmt(conNoAll)} đ ❯</span></button>
         )}
       </Card>
 
       {cbGroups.length > 0 && (
-        <button onClick={() => setSheetCB(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "10px 14px", borderRadius: 12, border: `1px solid #EAD8A0`, background: C.amberSoft, color: C.amber, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <button onClick={() => setSheetCB(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.amberSoft, color: C.amber, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={14} color={C.coral} /> Cảnh báo: {cbGroups.map((g) => `${g[0]} (${g[1].length})`).join(" · ")}</span>
           <span style={{ flexShrink: 0, fontWeight: 700 }}>❯</span>
         </button>
@@ -547,8 +554,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               <button onClick={() => { const m2 = { ...mData }; delete m2.laiTay; upMData(m2); }} style={{ fontSize: 11, color: C.coral, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>↺ Tự động lại</button>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.blueA, marginBottom: 2, fontWeight: 600 }}>Lãi A</div><input type="number" value={laiTay.A} onChange={(e) => upMData({ ...mData, laiTay: { ...laiTay, A: Number(e.target.value) || 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.violetB, marginBottom: 2, fontWeight: 600 }}>Lãi B</div><input type="number" value={laiTay.B} onChange={(e) => upMData({ ...mData, laiTay: { ...laiTay, B: Number(e.target.value) || 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.blueA, marginBottom: 2, fontWeight: 600 }}>Lãi A</div><BlurNum value={laiTay.A} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, A: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.violetB, marginBottom: 2, fontWeight: 600 }}>Lãi B</div><BlurNum value={laiTay.B} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, B: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
             </div>
             <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>Tỷ lệ % không áp dụng cho tháng này. Tổng nên = LN kế toán ({fmt(lnKeToan)}).</div>
           </div>
@@ -652,7 +659,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 7 }}><span style={{ color: C.sub }}>Theo app (quỹ hiện có)</span><b style={{ color: C.ink }}>{fmt(tongTienMat)} đ</b></div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, marginBottom: 7 }}>
                 <span style={{ color: C.sub }}>Đếm tiền thật</span>
-                <input type="number" value={mData?.demThat ?? ""} onChange={(e) => { const v = e.target.value; const m2 = { ...mData }; if (v === "") delete m2.demThat; else m2.demThat = Number(v) || 0; upMData(m2); }} placeholder="Nhập số đếm" style={{ width: 150, textAlign: "right", padding: "7px 9px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} />
+                <BlurNum value={mData?.demThat ?? null} onCommit={(n) => { const m2 = { ...mData }; if (n == null) delete m2.demThat; else m2.demThat = n; upMData(m2); }} placeholder="Nhập số đếm" style={{ width: 150, textAlign: "right", padding: "7px 9px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} />
               </div>
               {mData?.demThat != null && (() => {
                 const lech = (Number(mData.demThat) || 0) - tongTienMat;
@@ -736,7 +743,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               </div>
               );
             })}
-            <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
+            <div style={{ background: C.goldSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
               <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 13.5, color: C.amber, marginBottom: 4 }}>Σ Cộng tất cả các tháng</div>
               <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN kế toán</span><b style={{ color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)} đ</b></div>
               <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN tiền mặt</span><b style={{ color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)} đ</b></div>
