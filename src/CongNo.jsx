@@ -3,6 +3,7 @@ import {
   sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR
 } from "./lib.js";
+import { tinhNoNCCThang } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, Chips, useStickyShrink, StickyBar } from "./ui.jsx";
 
@@ -52,12 +53,8 @@ export function CongNoTab({ students, meta, ym, mData }) {
         tnArr.forEach((k) => { mPhai += Number(k.soTien) || 0; mThu += Number(k.thucThu) || 0; });
         if (mPhai || mThu) { tnPhai += mPhai; tnThu += mThu; tnChiTiet.push({ thang: m, ps: mPhai, tt: mThu, no: mPhai - mThu }); }
       }
-      // Nợ NCC — trường nợ ra (bỏ CHUYEN/NO_AB/RUT_LOI, gồm TRA_NO để trừ)
-      let mNcc = 0;
-      (td.chiPhi || []).forEach((c) => {
-        if (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI" || c.loai === "HOAN_UNG") return;
-        mNcc += (Number(c.soTien) || 0) - (Number(c.daTra) || 0);
-      });
+      // Nợ NCC — trường nợ ra (logic tập trung tại taichinh.js)
+      const mNcc = tinhNoNCCThang(td.chiPhi);
       if (mNcc !== 0) { nccCum += mNcc; nccChiTiet.push({ thang: m, delta: mNcc, cum: nccCum }); }
     }
     let tNo = 0, tDu = 0;
