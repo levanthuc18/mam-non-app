@@ -9,47 +9,13 @@ import {
 import {
   Card, BottomSheet, NumInput, ABBtn, Badge
 } from "./ui.jsx";
+import { tinhThangFull, GD_META } from "./taichinh.js";
 
 function BlurNum({ value, onCommit, placeholder, style }) {
   const [v, setV] = useState(value == null ? "" : String(value));
   useEffect(() => { setV(value == null ? "" : String(value)); }, [value]);
   const commit = () => { const t = String(v).trim(); onCommit(t === "" ? null : Number(t) || 0); };
   return <input type="number" value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} placeholder={placeholder} style={style} />;
-}
-
-// Tính toàn bộ số liệu tài chính 1 tháng (thuần, không side-effect).
-// Dùng chung cho vòng lũy kế + chụp snapshot khi Chốt tháng.
-export function tinhThangFull(td, m, students, meta, ddPrevM, tyA0) {
-  let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
-  let cInA = 0, cInB = 0, cOutA = 0, cOutB = 0, rutA = 0, rutB = 0, rutNhanA = 0, rutNhanB = 0;
-  let noNCCThang = 0, tnPhai = 0, tnThu = 0;
-  Object.entries(td.fees || {}).forEach(([sid, rec]) => {
-    const hs = students.find((s) => s.id === sid); if (!hs) return;
-    const tt = Number(rec.thucThu) || 0;
-    if (hs.nguoiThu === "A") thuA += tt; else if (hs.nguoiThu === "B") thuB += tt;
-    const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
-    const nghi = Object.keys(ddPrevM[sid] || {}).length;
-    const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
-    if (hs.nguoiThu === "A") psA += ps; else if (hs.nguoiThu === "B") psB += ps;
-  });
-  (td.thuNgoai || []).forEach((k) => {
-    const tt = Number(k.thucThu) || 0, st = Number(k.soTien) || 0;
-    tnPhai += st; tnThu += tt;
-    if (k.nguoiThu === "A") { thuA += tt; psA += st; } else if (k.nguoiThu === "B") { thuB += tt; psB += st; }
-  });
-  (td.chiPhi || []).forEach((c) => {
-    const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-    if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { cOutA += e; cInB += e; } else { cOutB += e; cInA += e; } return; }
-    if (c.loai === "NO_AB") return;
-    if (c.loai === "RUT_LOI") { const src = c.tuQuy || "A"; if (src === "A") rutA += kk; else rutB += kk; const ben = c.nhan || c.nguoiChi || "A"; if (ben === "A") rutNhanA += kk; else rutNhanB += kk; return; }
-    if (c.nguoiChi === "A") { chiA += e; traA += kk; } else { chiB += e; traB += kk; }
-    noNCCThang += (e - kk);
-  });
-  const lkt = (psA + psB) - (chiA + chiB);
-  let dcA, dcB;
-  if (td.laiTay) { dcA = Number(td.laiTay.A) || 0; dcB = Number(td.laiTay.B) || 0; }
-  else { dcA = Math.round(lkt * tyA0 / 100); dcB = lkt - dcA; }
-  return { psA, psB, thuA, thuB, cInA, cInB, cOutA, cOutB, chiA, chiB, traA, traB, rutA, rutB, rutNhanA, rutNhanB, noNCCThang, tnPhai, tnThu, lkt, dcA, dcB, laiTay: !!td.laiTay };
 }
 
 export function Donut({ pct, color, size = 76 }) {
@@ -510,7 +476,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "RUT_LOI") setSo(String(goiYRut(ng))); }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{l === "PHAT_SINH" ? "Phát sinh" : l === "CO_DINH" ? "Cố định" : l === "NO_AB" ? "Nợ A↔B" : l === "TRA_NO" ? "💰 Trả nợ NCC" : l === "RUT_LOI" ? "📤 Rút chia lãi" : l === "HOAN_UNG" ? "↩️ Hoàn ứng" : "🔄 Chuyển tiền"}</option>)}</select>
+              <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "RUT_LOI") setSo(String(goiYRut(ng))); }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{GD_META[l]?.label || l}</option>)}</select>
               {(loai === "NO_AB" || loai === "CHUYEN" || loai === "HOAN_UNG")
                 ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}><option value="A->B">{loai === "HOAN_UNG" ? "Trả cho B" : "A → B"}</option><option value="B->A">{loai === "HOAN_UNG" ? "Trả cho A" : "B → A"}</option></select>
                 : loai === "RUT_LOI"
