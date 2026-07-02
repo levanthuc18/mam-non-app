@@ -318,7 +318,7 @@ function CongNoTab({ student, meta }) {
 
   return (
     <div>
-      <Card style={{ marginBottom: 12, background: debt.luyKe > 0 ? C.coralSoft : debt.luyKe < 0 ? C.greenSoft : C.graySoft, borderColor: debt.luyKe > 0 ? "#EFC9BF" : debt.luyKe < 0 ? "#BFE3CC" : C.line }}>
+      <Card style={{ marginBottom: 12, background: debt.luyKe > 0 ? C.coralSoft : debt.luyKe < 0 ? C.greenSoft : C.graySoft, borderColor: C.line }}>
         <div style={{ fontSize: 12, color: debt.luyKe > 0 ? C.coral : debt.luyKe < 0 ? C.green : C.sub, fontWeight: 600 }}>
           {debt.luyKe > 0 ? "Còn nợ" : debt.luyKe < 0 ? "Đóng dư" : "Không nợ"}
         </div>
