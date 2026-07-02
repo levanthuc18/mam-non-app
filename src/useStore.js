@@ -7,6 +7,7 @@ import {
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
   trangThaiThu, ask, toast, logAction
 } from "./lib.js";
+import { tinhTKThang } from "./taichinh.js";
 
 export function useStore() {
   const now = new Date();
@@ -314,36 +315,41 @@ export function useStore() {
   }, [mData, allRows, students, meta, ym]);
 
   const tk = useMemo(() => {
-    const s = { ps: 0, thu: 0, no: 0, A: 0, B: 0, chiA: 0, chiB: 0, traA: 0, traB: 0, rutA: 0, rutB: 0, noList: [], noAB_AtoB: 0, noAB_BtoA: 0 };
-    allRows.forEach((r) => {
-      if (!r.coRec) return;
-      s.ps += r.ps.tong; s.thu += r.rec.thucThu; 
-      if (r.conNo > 0) { s.no += r.conNo; s.noList.push({ ten: r.hs.ten, so: r.conNo, chua: r.rec.thucThu === 0 }); }
-      if (r.hs.nguoiThu === "A") s.A += r.rec.thucThu; else if (r.hs.nguoiThu === "B") s.B += r.rec.thucThu;
-    });
-    (mData?.thuNgoai || []).forEach((k) => {
-      const tt = Number(k.thucThu) || 0; s.ps += Number(k.soTien) || 0; s.thu += tt;
-      if (k.nguoiThu === "A") s.A += tt; else if (k.nguoiThu === "B") s.B += tt;
-      const no = (Number(k.soTien) || 0) - tt; if (no > 0) { s.no += no; s.noList.push({ ten: "(TN) " + k.ten, so: no, chua: tt === 0 }); }
-    });
-    (mData?.chiPhi || []).forEach((c) => {
-      const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-      if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { s.A -= e; s.B += e; } else { s.B -= e; s.A += e; } return; }
-      if (c.loai === "NO_AB") { if (c.huong === "A->B") s.noAB_AtoB += e - kk; else s.noAB_BtoA += e - kk; return; }
-      if (c.loai === "TRA_NO") {
-        if (c.nguoiChi === "A") s.traA += kk; else s.traB += kk;
-        return;
-      }
-      if (c.loai === "RUT_LOI") {
-        const src = c.tuQuy || "A";
-        if (src === "A") s.rutA += kk; else s.rutB += kk;
-        return;
-      }
-      if (c.nguoiChi === "A") { s.chiA += e; s.traA += kk; } else { s.chiB += e; s.traB += kk; }
-    });
-    const dk = meta?.soDuDauKy || {};
-    s.noAB_AtoB += (dk.AnoB || 0); s.noAB_BtoA += (dk.BnoA || 0);
-    return s;
+    const moi = tinhTKThang(allRows, mData, meta);
+    // --- shadow compare tạm (gỡ sau 1 đợt): đối chiếu code cũ vs taichinh.js ---
+    try {
+      const s = { ps: 0, thu: 0, no: 0, A: 0, B: 0, chiA: 0, chiB: 0, traA: 0, traB: 0, rutA: 0, rutB: 0, noList: [], noAB_AtoB: 0, noAB_BtoA: 0 };
+      allRows.forEach((r) => {
+        if (!r.coRec) return;
+        s.ps += r.ps.tong; s.thu += r.rec.thucThu;
+        if (r.conNo > 0) { s.no += r.conNo; s.noList.push({ ten: r.hs.ten, so: r.conNo, chua: r.rec.thucThu === 0 }); }
+        if (r.hs.nguoiThu === "A") s.A += r.rec.thucThu; else if (r.hs.nguoiThu === "B") s.B += r.rec.thucThu;
+      });
+      (mData?.thuNgoai || []).forEach((k) => {
+        const tt = Number(k.thucThu) || 0; s.ps += Number(k.soTien) || 0; s.thu += tt;
+        if (k.nguoiThu === "A") s.A += tt; else if (k.nguoiThu === "B") s.B += tt;
+        const no = (Number(k.soTien) || 0) - tt; if (no > 0) { s.no += no; s.noList.push({ ten: "(TN) " + k.ten, so: no, chua: tt === 0 }); }
+      });
+      (mData?.chiPhi || []).forEach((c) => {
+        const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
+        if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { s.A -= e; s.B += e; } else { s.B -= e; s.A += e; } return; }
+        if (c.loai === "NO_AB") { if (c.huong === "A->B") s.noAB_AtoB += e - kk; else s.noAB_BtoA += e - kk; return; }
+        if (c.loai === "TRA_NO") {
+          if (c.nguoiChi === "A") s.traA += kk; else s.traB += kk;
+          return;
+        }
+        if (c.loai === "RUT_LOI") {
+          const src = c.tuQuy || "A";
+          if (src === "A") s.rutA += kk; else s.rutB += kk;
+          return;
+        }
+        if (c.nguoiChi === "A") { s.chiA += e; s.traA += kk; } else { s.chiB += e; s.traB += kk; }
+      });
+      const dk = meta?.soDuDauKy || {};
+      s.noAB_AtoB += (dk.AnoB || 0); s.noAB_BtoA += (dk.BnoA || 0);
+      if (JSON.stringify(s) !== JSON.stringify(moi)) console.error("[taichinh] tk LỆCH!", { cu: s, moi });
+    } catch {}
+    return moi;
   }, [allRows, mData, meta]);
 
   return {
