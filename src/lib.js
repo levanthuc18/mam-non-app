@@ -117,7 +117,7 @@ export const normGt = (v) => {
 export const TRANG_THAI = ["Đang học", "Học thử", "Bảo lưu", "Nghỉ học", "Ra trường"];
 export const TT_COLOR = { "Đang học": C.green, "Học thử": C.blueA, "Bảo lưu": C.amber, "Nghỉ học": C.coral, "Ra trường": C.violetB };
 export const TT_THU_PHI = { "Đang học": true, "Học thử": true, "Bảo lưu": false, "Nghỉ học": false, "Ra trường": false };
-export const LOAI_CHI = ["PHAT_SINH", "CO_DINH", "NO_AB", "CHUYEN", "TRA_NO", "RUT_LOI", "HOAN_UNG"];
+export { LOAI_CHI, GD_META } from "./taichinh.js";
 
 export const KHOAN = [
   { key: "hocPhi", label: "Học phí", src: "hocPhi" },
