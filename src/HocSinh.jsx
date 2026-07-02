@@ -137,7 +137,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
 
       {/* THANH CÔNG CỤ CHỌN NHIỀU */}
       {bulkMode && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, padding: "8px 12px", background: C.pineSoft, borderRadius: 10, border: `1.5px solid #BFE0D4` }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, padding: "8px 12px", background: C.pineSoft, borderRadius: 10, border: `1.5px solid ${C.line}` }}>
           <button onClick={toggleSelectAll} style={{ padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${allFilteredSelected ? C.pine : C.line}`, background: allFilteredSelected ? C.pine : C.card, color: C.pine, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{allFilteredSelected ? <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="x" size={14} color={C.pine} /> Bỏ chọn</span> : <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="check" size={14} color={C.pine} /> Chọn tất cả</span>}</button>
           {selectedHS.length > 0 && <span style={{ fontSize: 12, color: C.sub, flex: 1 }}><b>{selectedHS.length}</b> đã chọn</span>}
           {selectedHS.length > 0 && <button onClick={() => setThaoTacOpen(true)} style={{ marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="settings" size={14} color="#fff" /> Thao tác</button>}
