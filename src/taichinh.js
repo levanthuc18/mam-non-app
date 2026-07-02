@@ -124,3 +124,32 @@ export function tinhThangFull(td, m, students, meta, ddPrevM, tyA0) {
     noNCCThang: d.noNCC, tnPhai, tnThu, lkt, dcA, dcB, laiTay: !!td.laiTay,
   };
 }
+
+// ---- Sổ giao dịch: dựng danh sách sự kiện tiền của 1 tháng ----
+// (SoGiaoDich.jsx chỉ fetch + render; toàn bộ diễn giải nằm ở đây)
+export function buildGiaoDichThang(td, students) {
+  const evs = [];
+  let hpA = 0, hpB = 0;
+  Object.entries(td.fees || {}).forEach(([sid, rec]) => {
+    const hs = students.find((s) => s.id === sid); if (!hs) return;
+    const tt = Number(rec.thucThu) || 0; if (!tt) return;
+    if (hs.nguoiThu === "A") hpA += tt; else if (hs.nguoiThu === "B") hpB += tt;
+  });
+  if (hpA) evs.push({ ts: null, loai: "THU", nguoi: "A", label: "Thu học phí (gộp cả tháng)", amount: hpA, dau: "+" });
+  if (hpB) evs.push({ ts: null, loai: "THU", nguoi: "B", label: "Thu học phí (gộp cả tháng)", amount: hpB, dau: "+" });
+  (td.thuNgoai || []).forEach((k) => {
+    const tt = Number(k.thucThu) || 0; if (!tt) return;
+    evs.push({ ts: k.ts || null, loai: "THU", nguoi: k.nguoiThu || null, label: `Thu ngoài: ${k.noiDung || k.ten || "—"}`, amount: tt, dau: "+" });
+  });
+  (td.chiPhi || []).forEach((c) => {
+    const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
+    if (c.loai === "RUT_LOI") { evs.push({ ts: c.ts || null, loai: "RUT_LOI", nguoi: c.nhan || c.nguoiChi || "A", label: `Rút chia lãi · trừ quỹ ${c.tuQuy || "A"}${c.noiDung && c.noiDung !== "Rút chia lãi" ? " · " + c.noiDung : ""}`, amount: kk, dau: "-" }); return; }
+    if (c.loai === "HOAN_UNG") { const nl = c.huong === "A->B" ? "B" : "A"; evs.push({ ts: c.ts || null, loai: "HOAN_UNG", nguoi: nl, label: `Hoàn ứng cho ${nl}`, amount: e, dau: "" }); return; }
+    if (c.loai === "CHUYEN") { evs.push({ ts: c.ts || null, loai: "CHUYEN", nguoi: null, label: `Chuyển tiền ${c.huong === "A->B" ? "A→B" : "B→A"}`, amount: e, dau: "" }); return; }
+    if (c.loai === "NO_AB") { evs.push({ ts: c.ts || null, loai: "NO_AB", nguoi: null, label: `Ghi nợ A↔B ${c.huong || ""}`, amount: e, dau: "" }); return; }
+    if (c.loai === "TRA_NO") { if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Trả nợ NCC: ${c.noiDung || "—"}`, amount: kk, dau: "-" }); return; }
+    if (kk > 0) evs.push({ ts: c.ts || null, loai: "CHI", nguoi: c.nguoiChi || null, label: `Chi: ${c.noiDung || "—"}`, amount: kk, dau: "-" });
+  });
+  evs.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return evs;
+}
