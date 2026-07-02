@@ -129,8 +129,8 @@ function Tile({ name, tint, iconColor, title, sub, onClick }) {
 // Giữ lại AlertRow để dự phòng
 function AlertRow({ type, message, actionLabel, onAction }) {
   const colors = useMemo(() => ({
-    danger: { bg: C.coralSoft, border: `${C.line}`, fg: C.coral, btn: "#E4573D" },
-    warning: { bg: C.amberSoft, border: `${C.line}`, fg: "#7A5E12", btn: C.amber },
+    danger: { bg: C.coralSoft, border: `${C.line}`, fg: C.coral, btn: C.coral },
+    warning: { bg: C.amberSoft, border: `${C.line}`, fg: C.amber, btn: C.amber },
   }), []);
   const c = colors[type] || colors.warning;
   return (
