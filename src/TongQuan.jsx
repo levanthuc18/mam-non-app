@@ -17,6 +17,41 @@ function BlurNum({ value, onCommit, placeholder, style }) {
   return <input type="number" value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} placeholder={placeholder} style={style} />;
 }
 
+// Tính toàn bộ số liệu tài chính 1 tháng (thuần, không side-effect).
+// Dùng chung cho vòng lũy kế + chụp snapshot khi Chốt tháng.
+export function tinhThangFull(td, m, students, meta, ddPrevM, tyA0) {
+  let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
+  let cInA = 0, cInB = 0, cOutA = 0, cOutB = 0, rutA = 0, rutB = 0, rutNhanA = 0, rutNhanB = 0;
+  let noNCCThang = 0, tnPhai = 0, tnThu = 0;
+  Object.entries(td.fees || {}).forEach(([sid, rec]) => {
+    const hs = students.find((s) => s.id === sid); if (!hs) return;
+    const tt = Number(rec.thucThu) || 0;
+    if (hs.nguoiThu === "A") thuA += tt; else if (hs.nguoiThu === "B") thuB += tt;
+    const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
+    const nghi = Object.keys(ddPrevM[sid] || {}).length;
+    const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
+    if (hs.nguoiThu === "A") psA += ps; else if (hs.nguoiThu === "B") psB += ps;
+  });
+  (td.thuNgoai || []).forEach((k) => {
+    const tt = Number(k.thucThu) || 0, st = Number(k.soTien) || 0;
+    tnPhai += st; tnThu += tt;
+    if (k.nguoiThu === "A") { thuA += tt; psA += st; } else if (k.nguoiThu === "B") { thuB += tt; psB += st; }
+  });
+  (td.chiPhi || []).forEach((c) => {
+    const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
+    if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { cOutA += e; cInB += e; } else { cOutB += e; cInA += e; } return; }
+    if (c.loai === "NO_AB") return;
+    if (c.loai === "RUT_LOI") { const src = c.tuQuy || "A"; if (src === "A") rutA += kk; else rutB += kk; const ben = c.nhan || c.nguoiChi || "A"; if (ben === "A") rutNhanA += kk; else rutNhanB += kk; return; }
+    if (c.nguoiChi === "A") { chiA += e; traA += kk; } else { chiB += e; traB += kk; }
+    noNCCThang += (e - kk);
+  });
+  const lkt = (psA + psB) - (chiA + chiB);
+  let dcA, dcB;
+  if (td.laiTay) { dcA = Number(td.laiTay.A) || 0; dcB = Number(td.laiTay.B) || 0; }
+  else { dcA = Math.round(lkt * tyA0 / 100); dcB = lkt - dcA; }
+  return { psA, psB, thuA, thuB, cInA, cInB, cOutA, cOutB, chiA, chiB, traA, traB, rutA, rutB, rutNhanA, rutNhanB, noNCCThang, tnPhai, tnThu, lkt, dcA, dcB, laiTay: !!td.laiTay };
+}
+
 export function Donut({ pct, color, size = 76 }) {
   const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
   const dash = circ * Math.min(100, pct) / 100;
@@ -73,50 +108,27 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const ls = [];
       for (const m of keys) {
         const td = await sGet(`mn5:thang:${m}`); if (!td) continue;
-        const my = Number(m.slice(0, 4)), mmo = Number(m.slice(5));
-        const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
-        const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
-        let thuA = 0, thuB = 0, chiA = 0, chiB = 0, traA = 0, traB = 0, psA = 0, psB = 0;
-        let cInA = 0, cInB = 0, cOutA = 0, cOutB = 0, rutA = 0, rutB = 0;
-        let thangNoNCC = 0, tnPhaiThang = 0, tnThuThang = 0;
-        Object.entries(td.fees || {}).forEach(([sid, rec]) => {
-          const hs = students.find((s) => s.id === sid); if (!hs) return;
-          const tt = Number(rec.thucThu) || 0;
-          if (hs.nguoiThu === "A") thuA += tt; else if (hs.nguoiThu === "B") thuB += tt;
-          const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
-          const nghi = Object.keys(ddPrevM[sid] || {}).length;
-          const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
-          if (hs.nguoiThu === "A") psA += ps; else if (hs.nguoiThu === "B") psB += ps;
-        });
-        (td.thuNgoai || []).forEach((k) => {
-          const tt = Number(k.thucThu) || 0, st = Number(k.soTien) || 0;
-          tnPhaiThang += st; tnThuThang += tt;
-          if (k.nguoiThu === "A") { thuA += tt; psA += st; } else if (k.nguoiThu === "B") { thuB += tt; psB += st; }
-        });
-        (td.chiPhi || []).forEach((c) => {
-          const e = Number(c.soTien) || 0, kk = Number(c.daTra) || 0;
-          if (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") { if (c.huong === "A->B") { cOutA += e; cInB += e; } else { cOutB += e; cInA += e; } return; }
-          if (c.loai === "NO_AB") return;
-          if (c.loai === "RUT_LOI") { const src = c.tuQuy || "A"; if (src === "A") rutA += kk; else rutB += kk; const ben = c.nhan || c.nguoiChi || "A"; if (ben === "A") rutNhanA += kk; else rutNhanB += kk; return; }
-          if (c.nguoiChi === "A") { chiA += e; traA += kk; } else { chiB += e; traB += kk; }
-          thangNoNCC += (e - kk);
-        });
-        noNCC += thangNoNCC;
-        const deltaA = thuA + cInA - cOutA - traA - rutA;
-        const deltaB = thuB + cInB - cOutB - traB - rutB;
+        let t;
+        if (td.daChot && td.snapTK) { t = td.snapTK; }
+        else {
+          const my = Number(m.slice(0, 4)), mmo = Number(m.slice(5));
+          const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
+          const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
+          t = tinhThangFull(td, m, students, meta, ddPrevM, tyA0);
+        }
+        rutNhanA += t.rutNhanA; rutNhanB += t.rutNhanB;
+        noNCC += t.noNCCThang;
+        const deltaA = t.thuA + t.cInA - t.cOutA - t.traA - t.rutA;
+        const deltaB = t.thuB + t.cInB - t.cOutB - t.traB - t.rutB;
         giuA += deltaA; giuB += deltaB;
-        bA.thu += thuA; bA.cIn += cInA; bA.cOut += cOutA; bA.tra += traA; bA.rut += rutA;
-        bB.thu += thuB; bB.cIn += cInB; bB.cOut += cOutB; bB.tra += traB; bB.rut += rutB;
+        bA.thu += t.thuA; bA.cIn += t.cInA; bA.cOut += t.cOutA; bA.tra += t.traA; bA.rut += t.rutA;
+        bB.thu += t.thuB; bB.cIn += t.cInB; bB.cOut += t.cOutB; bB.tra += t.traB; bB.rut += t.rutB;
         const [yy, mm] = m.split("-");
-        const thuNetA = thuA + cInA - cOutA, thuNetB = thuB + cInB - cOutB;
-        const psThang = psA + psB, chiThang = chiA + chiB, thuThang = thuNetA + thuNetB, traThang = traA + traB;
-        const lkt_m = psThang - chiThang;
-        tongLKT += lkt_m;
-        let dcA_m, dcB_m;
-        if (td.laiTay) { dcA_m = Number(td.laiTay.A) || 0; dcB_m = Number(td.laiTay.B) || 0; }
-        else { dcA_m = Math.round(lkt_m * tyA0 / 100); dcB_m = lkt_m - dcA_m; }
-        duocChiaCumA += dcA_m; duocChiaCumB += dcB_m;
-        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: psThang - chiThang, laiA: dcA_m, laiB: dcB_m, laiTay: !!td.laiTay, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA: thuNetA, thuB: thuNetB, traA, traB, chiA, chiB, giuACum: giuA, giuBCum: giuB, deltaA, deltaB, tnPhai: tnPhaiThang, tnThu: tnThuThang, noNCCThang: thangNoNCC });
+        const thuNetA = t.thuA + t.cInA - t.cOutA, thuNetB = t.thuB + t.cInB - t.cOutB;
+        const psThang = t.psA + t.psB, chiThang = t.chiA + t.chiB, thuThang = thuNetA + thuNetB, traThang = t.traA + t.traB;
+        tongLKT += t.lkt;
+        duocChiaCumA += t.dcA; duocChiaCumB += t.dcB;
+        ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: t.lkt, laiA: t.dcA, laiB: t.dcB, laiTay: t.laiTay, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA: thuNetA, thuB: thuNetB, traA: t.traA, traB: t.traB, chiA: t.chiA, chiB: t.chiB, giuACum: giuA, giuBCum: giuB, deltaA, deltaB, tnPhai: t.tnPhai, tnThu: t.tnThu, noNCCThang: t.noNCCThang, daChot: !!td.daChot });
       }
       if (!huy) { setLuyKe({ giuA, giuB, noNCC, brkA: bA, brkB: bB, tongLKT, rutNhanA, rutNhanB, duocChiaCumA, duocChiaCumB }); setLichSu(ls); }
     })();
@@ -250,12 +262,16 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       allRows.forEach((r) => { if (r.coRec) noLuyKe[r.hs.id] = r.conNo; });
       const snapThuNgoai = (mData.thuNgoai || []).reduce((a, k) => a + ((Number(k.soTien) || 0) - (Number(k.thucThu) || 0)), 0);
       const snapNCC = (mData.chiPhi || []).reduce((a, c) => (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI" || c.loai === "HOAN_UNG") ? a : a + ((Number(c.soTien) || 0) - (Number(c.daTra) || 0)), 0);
-      await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC });
+      const [cy, cm] = ym.split("-").map(Number);
+      const pmo = cm === 1 ? 12 : cm - 1, pyy = cm === 1 ? cy - 1 : cy;
+      const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
+      const snapTK = tinhThangFull(mData, ym, students, meta, ddPrevM, meta?.tyLeLaiA ?? 50);
+      await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC, snapTK });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, snapThuNgoai, snapNCC, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, snapThuNgoai, snapNCC, snapTK, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
 
   const giuThangA = tk.A - tk.traA - (tk.rutA || 0), giuThangB = tk.B - tk.traB - (tk.rutB || 0);
 
@@ -701,7 +717,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               const aKT = r.laiA != null ? r.laiA : splitA(r.laiKeToan), bKT = r.laiB != null ? r.laiB : (r.laiKeToan - aKT);
               return (
               <div key={r.thang} style={{ border: `1px solid ${C.line}`, borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
-                <div style={{ background: C.pineSoft, padding: "8px 12px", fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: C.pine }}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="calendarCheck" size={14} color={C.pine} /> Tháng {r.mm}/{r.yy}</span></div>
+                <div style={{ background: C.pineSoft, padding: "8px 12px", fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: C.pine, display: "flex", justifyContent: "space-between", alignItems: "center" }}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="calendarCheck" size={14} color={C.pine} /> Tháng {r.mm}/{r.yy}</span>{r.daChot && <span style={{ fontSize: 10.5, fontWeight: 700, color: C.pine, display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name="lock" size={11} color={C.pine} /> đã chốt</span>}</div>
                 <div style={{ padding: "10px 12px" }}>
                   <div style={rowLine}><span style={{ color: C.sub, fontWeight: 600, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="receipt" size={13} color={C.sub} /> Doanh thu (thực thu)</span><b style={{ color: C.ink }}>{fmt(r.thuThang)} đ</b></div>
                   {sub2("A thu:", r.thuA, "B thu:", r.thuB)}
