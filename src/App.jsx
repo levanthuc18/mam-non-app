@@ -57,7 +57,7 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {alerts.map((a, i) => {
-            const c = a.type === 'danger' ? { bg: C.coralSoft, border: `${C.line}`, fg: C.coral } : a.type === 'warning' ? { bg: C.amberSoft, border: `${C.line}`, fg: "#7A5E12" } : { bg: C.greenSoft, border: `${C.line}`, fg: C.green };
+            const c = a.type === 'danger' ? { bg: C.coralSoft, border: `${C.line}`, fg: C.coral } : a.type === 'warning' ? { bg: C.amberSoft, border: `${C.line}`, fg: C.amber } : { bg: C.greenSoft, border: `${C.line}`, fg: C.green };
             return (
               <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 10, height: 10, borderRadius: 99, background: c.fg, flexShrink: 0, marginTop: 4 }} />
@@ -197,7 +197,7 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
-        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid #BFE0D4`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
+        {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {tab === "home" && (
           <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
