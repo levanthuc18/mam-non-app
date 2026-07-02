@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { C, font, noDau, logAction, toast, uid, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
+import { C, font, noDau, logAction, toast, ask, uid, sGet, sList, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
 import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, useStickyShrink, StickyBar } from "./ui.jsx";
 import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
@@ -70,7 +70,25 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
   const bulkPatch = (patch, logMsg, toastMsg) => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, ...patch } : s), true); doneBulk(logMsg, toastMsg); };
   const bulkChuyenLop = () => { const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten; upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; }), true); doneBulk(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop}`, `Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); };
   const bulkRaTruong = () => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, ngayNghiHoc: bulkRaNgay, trangThai: "Ra trường" } : s), true); doneBulk(`Cho ra trường hàng loạt ${selectedHS.length} HS`, `Đã cho ${selectedHS.length} HS ra trường`); };
-  const bulkDelete = () => { const n = selectedHS.length; upStudents(students.filter((s) => !selectedHS.includes(s.id)), true); doneBulk(`XÓA VĨNH VIỄN ${n} HS`, `Đã xóa vĩnh viễn ${n} HS`); };
+  const bulkDelete = async () => {
+    const n = selectedHS.length;
+    const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k));
+    const co = new Set();
+    for (const k of keys) {
+      const td = await sGet(k); if (!td?.fees) continue;
+      selectedHS.forEach((id) => { const rec = td.fees[id]; if (rec && (Number(rec.thucThu) || 0) > 0) co.add(id); });
+      if (co.size === n) break;
+    }
+    if (co.size > 0) {
+      const xoaDuoc = selectedHS.filter((id) => !co.has(id));
+      if (!(await ask(`${co.size}/${n} HS đã có lịch sử thu tiền — xóa hẳn sẽ làm SAI số quỹ/lãi các tháng cũ.\n\n→ ${co.size} HS đó sẽ chuyển "Ra trường" (giữ lịch sử)${xoaDuoc.length ? `, ${xoaDuoc.length} HS chưa có dữ liệu sẽ xóa hẳn` : ""}. Tiếp tục?`, { okText: "Tiếp tục" }))) return;
+      upStudents(students.filter((s) => !xoaDuoc.includes(s.id)).map((s) => (co.has(s.id) ? { ...s, trangThai: "Ra trường" } : s)), true);
+      doneBulk(`Xóa ${xoaDuoc.length} HS + chuyển ${co.size} HS → Ra trường (có lịch sử thu)`, `Đã xóa ${xoaDuoc.length}, chuyển Ra trường ${co.size} HS`);
+      return;
+    }
+    upStudents(students.filter((s) => !selectedHS.includes(s.id)), true);
+    doneBulk(`XÓA VĨNH VIỄN ${n} HS`, `Đã xóa vĩnh viễn ${n} HS`);
+  };
 
   const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.graySoft, outline: "none", width: "100%" };
 
