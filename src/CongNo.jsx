@@ -82,7 +82,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
     <>
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
         <Card style={{ flex: 1, background: C.coralSoft, borderColor: C.line, padding: "12px 14px" }}>
-          <div style={{ fontSize: 12, color: C.coral, fontWeight: 600 }}>Tổng nợ ({noList.length} HS)</div>
+          <div style={{ fontSize: 12, color: C.coral, fontWeight: 600 }}>Tổng nợ ({noList.length} HS + KV4)</div>
           <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.coral }}>{fmt(tongNo)} đ</div>
         </Card>
         <Card style={{ flex: 1, background: C.greenSoft, borderColor: C.line, padding: "12px 14px" }}>
@@ -90,7 +90,55 @@ export function CongNoTab({ students, meta, ym, mData }) {
           <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.green }}>{fmt(tongDu)} đ</div>
         </Card>
       </div>
-      <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Lũy kế xuyên tháng, bù trừ thừa/thiếu. Bao gồm cả HS đã nghỉ học còn nợ. Thu ngoài (KV4) đã gộp vào Tổng nợ; Nợ NCC để mục riêng bên dưới.</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 10 }}>Lũy kế xuyên tháng, bù trừ thừa/thiếu. Bao gồm cả HS đã nghỉ học còn nợ. <b style={{ color: C.ink }}>"Tổng nợ" đã gộp cả Thu ngoài (KV4)</b> — không gồm Nợ NCC (chiều ngược lại: trường nợ ra, xem thẻ bên dưới).</div>
+
+      {nccData && nccData.chiTiet.length > 0 && (
+        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginBottom: 12, overflow: "hidden" }}>
+          <div onClick={() => setOpenNcc(!openNcc)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color={C.amber} /> Nợ nhà cung cấp (NCC)</div>
+              <div style={{ fontSize: 11.5, color: C.sub }}>Trường nợ ra — chiều ngược với Tổng nợ HS ở trên</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: nccData.luyKe > 0 ? C.amber : C.green }}>{fmt(Math.abs(nccData.luyKe))}</div>
+              <div style={{ fontSize: 11, color: C.sub }}>{nccData.luyKe > 0 ? "đang nợ" : "không nợ"}</div>
+            </div>
+          </div>
+          {openNcc && (
+            <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.amberSoft, fontSize: 12.5 }}>
+              {nccVendors.length > 0 ? (
+                <>
+                  <div style={{ fontSize: 11, color: C.sub, fontWeight: 700, marginBottom: 6 }}>Còn nợ từng nhà cung cấp:</div>
+                  {nccVendors.map((v) => {
+                    const lau = v.soThang >= 3;
+                    return (
+                      <div key={v.ten} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px dashed ${C.line}` }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: C.ink, fontWeight: 600 }}>{v.ten}</div>
+                          {lau && <div style={{ fontSize: 10.5, color: C.coral, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2 }}><Icon name="alertTriangle" size={11} color={C.coral} /> nợ đã {v.soThang} tháng</div>}
+                        </div>
+                        <b style={{ color: v.conNo > 0 ? C.amber : C.green, flexShrink: 0, marginLeft: 8 }}>{v.conNo > 0 ? fmt(v.conNo) : "+" + fmt(-v.conNo)}</b>
+                      </div>
+                    );
+                  })}
+                  <button onClick={() => setXemThang((x) => !x)} style={{ marginTop: 8, background: "none", border: "none", color: C.amber, fontWeight: 700, fontSize: 11.5, cursor: "pointer", padding: 0 }}>{xemThang ? "▾ Ẩn theo tháng" : "▸ Xem theo tháng"}</button>
+                </>
+              ) : null}
+              {(xemThang || nccVendors.length === 0) && (
+                <div style={{ marginTop: nccVendors.length > 0 ? 8 : 0 }}>
+                  {nccData.chiTiet.map((c) => (
+                    <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? C.amber : C.green }}>
+                      <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
+                      <b>dồn: {fmt(c.cum)}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div ref={sentinelRef} style={{ height: 1 }} />
       <StickyBar shrunk={shrunk}>
         <Chips items={[["all", "Tất cả"], ["g500", "Nợ > 500k"], ["g1tr", "Nợ > 1 triệu"], ["m3", "Nợ ≥ 3 tháng"], ["thua", "Thu thừa"]]} val={noFilter} set={setNoFilter} />
@@ -162,52 +210,6 @@ export function CongNoTab({ students, meta, ym, mData }) {
         </div>
       )}
 
-      {nccData && nccData.chiTiet.length > 0 && (
-        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginTop: 10, overflow: "hidden" }}>
-          <div onClick={() => setOpenNcc(!openNcc)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, display:"flex", alignItems:"center", gap:6 }}><Icon name="building" size={16} color={C.amber} /> Nợ nhà cung cấp (NCC)</div>
-              <div style={{ fontSize: 11.5, color: C.sub }}>Trường nợ ra — KHÔNG tính vào Tổng nợ HS</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: nccData.luyKe > 0 ? C.amber : C.green }}>{fmt(Math.abs(nccData.luyKe))}</div>
-              <div style={{ fontSize: 11, color: C.sub }}>{nccData.luyKe > 0 ? "đang nợ" : "không nợ"}</div>
-            </div>
-          </div>
-          {openNcc && (
-            <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.amberSoft, fontSize: 12.5 }}>
-              {nccVendors.length > 0 ? (
-                <>
-                  <div style={{ fontSize: 11, color: C.sub, fontWeight: 700, marginBottom: 6 }}>Còn nợ từng nhà cung cấp:</div>
-                  {nccVendors.map((v) => {
-                    const lau = v.soThang >= 3;
-                    return (
-                      <div key={v.ten} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px dashed ${C.line}` }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ color: C.ink, fontWeight: 600 }}>{v.ten}</div>
-                          {lau && <div style={{ fontSize: 10.5, color: C.coral, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2 }}><Icon name="alertTriangle" size={11} color={C.coral} /> nợ đã {v.soThang} tháng</div>}
-                        </div>
-                        <b style={{ color: v.conNo > 0 ? C.amber : C.green, flexShrink: 0, marginLeft: 8 }}>{v.conNo > 0 ? fmt(v.conNo) : "+" + fmt(-v.conNo)}</b>
-                      </div>
-                    );
-                  })}
-                  <button onClick={() => setXemThang((x) => !x)} style={{ marginTop: 8, background: "none", border: "none", color: C.amber, fontWeight: 700, fontSize: 11.5, cursor: "pointer", padding: 0 }}>{xemThang ? "▾ Ẩn theo tháng" : "▸ Xem theo tháng"}</button>
-                </>
-              ) : null}
-              {(xemThang || nccVendors.length === 0) && (
-                <div style={{ marginTop: nccVendors.length > 0 ? 8 : 0 }}>
-                  {nccData.chiTiet.map((c) => (
-                    <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.delta > 0 ? C.amber : C.green }}>
-                      <span>Th{c.thang.slice(5)}: {c.delta > 0 ? "nợ thêm" : "trả bớt"} {fmt(Math.abs(c.delta))}</span>
-                      <b>dồn: {fmt(c.cum)}</b>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </>
   );
 }
