@@ -267,7 +267,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="banknote" size={16} color={C.coral} /><span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15 }}>Chi phí tháng {month}</span></div>
-          <span style={{ fontSize: 12, color: C.sub }}>Tổng chi: <b style={{ color: C.ink }}>{fmt(tongChi)}</b></span>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 11.5, color: C.sub }}>Phải chi: <b style={{ color: C.ink }}>{fmt(tongChi)}</b></div>
+            <div style={{ fontSize: 11.5, color: C.sub }}>Đã chi: <b style={{ color: tongTra > 0 ? C.green : C.ink }}>{fmt(tongTra)}</b></div>
+          </div>
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="barChart" size={13} color={C.sub} /> {cpDone.length}/{cpKhoan.length} khoản đã xử lý</div>
         <div style={{ height: 8, borderRadius: 99, background: C.line, overflow: "hidden", marginBottom: 10 }}>
