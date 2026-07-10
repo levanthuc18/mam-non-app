@@ -163,6 +163,16 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
             <input type="date" value={student.ngayNghiHoc || ""} onChange={(e) => setHS(e.target.value ? { ngayNghiHoc: e.target.value, trangThai: "Ra trường" } : { ngayNghiHoc: "" })} style={inp} />
           </div>
         </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>Tên phụ huynh</label>
+            <input value={student.phuHuynh?.ten || ""} onChange={(e) => setHS({ phuHuynh: { ...(student.phuHuynh || {}), ten: e.target.value } })} placeholder="(không bắt buộc)" style={inp} />
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={lab}>SĐT phụ huynh {!student.phuHuynh?.sdt && <span style={{ color: C.coral, fontWeight: 700 }}>· cần cho Nhắc Zalo</span>}</label>
+            <input type="tel" inputMode="tel" value={student.phuHuynh?.sdt || ""} onChange={(e) => setHS({ phuHuynh: { ...(student.phuHuynh || {}), sdt: e.target.value } })} placeholder="VD: 0912345678" style={inp} />
+          </div>
+        </div>
       </Card>
       <Card>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.ink }}>Lịch sử chuyển lớp</div>
