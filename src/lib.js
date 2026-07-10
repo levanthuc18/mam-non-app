@@ -35,11 +35,65 @@ export function printWithName(name, delay = 0) {
 export function fileName(s) { return (s || "").replace(/[\/\\:*?"<>|]+/g, "").replace(/\s+/g, " ").trim(); }
 export let storageOK = true;
 
+// ===== Đồng bộ & offline (3 tầng) =====
+// VER[k]  : updated_at server đã thấy lần cuối (phát hiện máy khác sửa)
+// PENDING : hàng đợi ghi thất bại, bền qua F5/đóng app (localStorage)
+const VER = {};
+let PENDING = {};
+try { PENDING = JSON.parse(localStorage.getItem("mn5:pendingWrites") || "{}"); } catch {}
+const savePending = () => { try { localStorage.setItem("mn5:pendingWrites", JSON.stringify(PENDING)); } catch {} };
+let syncErr = false;
+const syncSubs = new Set();
+export function getSyncState() { return { pending: Object.keys(PENDING).length, err: syncErr }; }
+export function subSync(cb) { syncSubs.add(cb); cb(getSyncState()); return () => syncSubs.delete(cb); }
+const notifySync = () => { const s = getSyncState(); syncSubs.forEach((cb) => { try { cb(s); } catch {} }); };
+const markErr = (e) => { if (syncErr !== e) { syncErr = e; notifySync(); } };
+const enqueue = (k, v) => { PENDING[k] = v; savePending(); notifySync(); };
+const dequeue = (k) => { if (k in PENDING) { delete PENDING[k]; savePending(); notifySync(); } };
+
+// Ghi thẳng lên Supabase (không kiểm xung đột) — dùng cho flush + ghi đè
+async function rawWrite(k, v) {
+  const isDel = (v && v.__del) || (v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0);
+  if (isDel) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
+    return r.ok;
+  }
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
+    method: "POST",
+    headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ key: k, value: v, updated_at: new Date().toISOString() }),
+  });
+  if (r.ok) { try { const d = await r.json(); if (d?.[0]?.updated_at) VER[k] = d[0].updated_at; } catch {} }
+  return r.ok;
+}
+
+// Đẩy hàng đợi lên server (khi có mạng lại / bấm Thử lại / định kỳ)
+let flushing = false;
+export async function flushPending() {
+  if (flushing || !SB) return;
+  const keys = Object.keys(PENDING);
+  if (!keys.length) { markErr(false); return; }
+  flushing = true;
+  let allOk = true;
+  for (const k of keys) {
+    try { if (await rawWrite(k, PENDING[k])) dequeue(k); else allOk = false; }
+    catch { allOk = false; }
+  }
+  flushing = false;
+  markErr(!allOk);
+  if (allOk && keys.length) { try { toast(`Đã đồng bộ ${keys.length} thay đổi chờ`); } catch {} }
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => { flushPending(); });
+  setInterval(() => { if (Object.keys(PENDING).length) flushPending(); }, 30000);
+  setTimeout(() => { if (Object.keys(PENDING).length) flushPending(); }, 2500);
+}
+
 export async function sGet(k) {
   if (SB) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
-      if (r.ok) { const d = await r.json(); const v = d?.[0] ? d[0].value : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+      if (r.ok) { const d = await r.json(); const row = d?.[0]; if (row) { MEM[k] = row.value; VER[k] = row.updated_at; } return row?.value ?? MEM[k] ?? null; }
     } catch {}
     return MEM[k] ?? null;
   }
@@ -58,24 +112,39 @@ export async function sProbe(k, v) {
     return { ok: r.ok, status: r.status, text: r.ok ? "" : (await r.text()).slice(0, 120) };
   } catch (e) { return { ok: false, status: -1, text: String(e).slice(0, 120) }; }
 }
+// Các key không kiểm xung đột (ghi dày, xung đột vô hại)
+const NO_CONFLICT = new Set(["mn5:log"]);
 export async function sSet(k, v) {
   MEM[k] = v;
   const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
   if (SB) {
     try {
-      if (emptyObj) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
-        if (!r.ok) storageOK = false;
-        return r.ok;
+      // Tầng 3 — kiểm xung đột: máy khác đã sửa key này sau lần mình đọc?
+      if (!emptyObj && !NO_CONFLICT.has(k) && VER[k]) {
+        try {
+          const rc = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+          if (rc.ok) {
+            const dc = await rc.json();
+            const srvVer = dc?.[0]?.updated_at;
+            if (srvVer && srvVer !== VER[k]) {
+              let ghiDe = true;
+              try { ghiDe = await ask("⚠ Dữ liệu này vừa được máy khác cập nhật.\n\nGhi đè bằng bản trên máy này? (Chọn Hủy để lấy bản của máy kia — app sẽ tải lại)", { okText: "Ghi đè", danger: true }); } catch {}
+              if (!ghiDe) {
+                const rv = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+                if (rv.ok) { const dv = await rv.json(); if (dv?.[0]) { MEM[k] = dv[0].value; VER[k] = dv[0].updated_at; } }
+                try { toast("Đã giữ bản của máy kia — đang tải lại…"); } catch {}
+                setTimeout(() => { try { window.location.reload(); } catch {} }, 900);
+                return false;
+              }
+              try { logAction(`Ghi đè xung đột dữ liệu (${k})`); } catch {}
+            }
+          }
+        } catch {}
       }
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?on_conflict=key`, {
-        method: "POST",
-        headers: { ...SB_H, Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({ key: k, value: v, updated_at: new Date().toISOString() }),
-      });
-      if (!r.ok) storageOK = false;
-      return r.ok;
-    } catch { storageOK = false; return false; }
+      const ok = await rawWrite(k, emptyObj ? { __del: true } : v);
+      if (ok) { dequeue(k); markErr(false); return true; }
+      enqueue(k, emptyObj ? { __del: true } : v); markErr(true); storageOK = false; return false;
+    } catch { enqueue(k, emptyObj ? { __del: true } : v); markErr(true); storageOK = false; return false; }
   }
   try {
     if (emptyObj) { await window.storage.delete(k); return true; }
