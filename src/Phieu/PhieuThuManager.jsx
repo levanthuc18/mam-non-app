@@ -131,7 +131,7 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
           <div onClick={closeShareModal} className="no-print" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 2000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16 }}>
             <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 16, maxWidth: 430, width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
               <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.ink, marginBottom: 6 }}>Ảnh phiếu thu</div>
-              <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12, lineHeight: 1.5 }}>Nhấn giữ vào ảnh để <b>Lưu ảnh</b> hoặc <b>Chia sẻ</b> sang Zalo, Messenger... Hoặc dùng nút bên dưới.</div>
+              <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12, lineHeight: 1.5 }}>Muốn gửi <b>đúng chat phụ huynh</b>: bấm <b>Tải ảnh về</b>, rồi mở Zalo phụ huynh và chọn ảnh vừa lưu. Nút "Chia sẻ ngay" mở khay hệ thống — có thể không hiện đúng người.</div>
               <img src={shareModal.url} alt="Phiếu thu" style={{ width: "100%", borderRadius: 10, border: `1px solid ${C.line}`, display: "block" }} />
               <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
                 {canShareImageFile(shareModal.file) && (
