@@ -6,7 +6,8 @@ import {
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
   KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META,
-  THEMES, setTheme, getTheme, applyTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom
+  THEMES, setTheme, getTheme, applyTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom,
+  sha256Hex, getPinHash, setPinHash
 } from "./lib.js";
 import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
@@ -409,7 +410,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {[
-          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
+          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["baomat", "Bảo mật"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 15px", borderRadius: 999, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
         ))}
@@ -566,6 +567,8 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
           )}
         </Card>
       )}
+      {sec === "baomat" && <DoiPin />}
+
       {sec === "backup" && <BackupExport meta={meta} students={students} />}
       {sec === "log" && <AuditLog />}
 
@@ -577,5 +580,41 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
         </Card>
       )}
     </>
+  );
+}
+
+// ===== Đổi mã PIN quản lý =====
+function DoiPin() {
+  const [cu, setCu] = useState(""); const [m1, setM1] = useState(""); const [m2, setM2] = useState("");
+  const [busy, setBusy] = useState(false);
+  const inp = { width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 15, fontFamily: font.body, boxSizing: "border-box", letterSpacing: 3, textAlign: "center" };
+  const doi = async () => {
+    if (busy) return;
+    const c = cu.trim(), a = m1.trim(), b = m2.trim();
+    if (!/^\d{6,}$/.test(a)) { toast("PIN mới tối thiểu 6 chữ số"); return; }
+    if (a !== b) { toast("Hai lần nhập PIN mới không khớp"); return; }
+    if (a === c) { toast("PIN mới phải khác PIN cũ"); return; }
+    setBusy(true);
+    try {
+      const [hashCu, hashLuu] = await Promise.all([sha256Hex(c), getPinHash()]);
+      if (hashCu !== hashLuu) { toast("PIN cũ không đúng"); setBusy(false); return; }
+      await setPinHash(await sha256Hex(a));
+      logAction("Đổi mã PIN quản lý");
+      setCu(""); setM1(""); setM2("");
+      toast("Đã đổi PIN. Dùng PIN mới từ lần đăng nhập sau.");
+    } catch { toast("Lỗi khi lưu, thử lại"); }
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, marginBottom: 4, display: "inline-flex", alignItems: "center", gap: 7 }}><Icon name="lock" size={16} color={C.pine} /> Đổi mã PIN quản lý</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 12 }}>PIN dùng để vào vai trò Quản lý. Nên đặt <b>tối thiểu 6 chữ số</b>, không dùng ngày sinh dễ đoán. PIN được lưu dạng mã hóa một chiều — không ai (kể cả app) đọc lại được chữ gốc.</div>
+      <div style={{ display: "grid", gap: 10, maxWidth: 320 }}>
+        <div><div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>PIN hiện tại</div><input type="password" inputMode="numeric" value={cu} onChange={(e) => setCu(e.target.value)} style={inp} /></div>
+        <div><div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>PIN mới (≥ 6 số)</div><input type="password" inputMode="numeric" value={m1} onChange={(e) => setM1(e.target.value)} style={inp} /></div>
+        <div><div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>Nhập lại PIN mới</div><input type="password" inputMode="numeric" value={m2} onChange={(e) => setM2(e.target.value)} style={inp} /></div>
+        <button onClick={doi} disabled={busy} style={{ padding: "11px 0", borderRadius: 10, border: "none", background: busy ? C.graySoft : C.pine, color: busy ? C.sub : "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: busy ? "default" : "pointer" }}>{busy ? "Đang lưu…" : "🔐 Đổi PIN"}</button>
+      </div>
+    </Card>
   );
 }
