@@ -17,14 +17,17 @@ export function Emo({ children, size = 18, box }) {
 export function PLBadge({ pl }) { const c = PL_COLOR[pl] || PL_COLOR.Bthg; return <span style={{ fontSize: 10.5, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: c.bg, color: c.fg, whiteSpace: "nowrap" }}>{pl}</span>; }
 export function Badge({ s }) { return <span style={{ background: s.bg, color: s.c, fontFamily: font.body, fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99, whiteSpace: "nowrap" }}>{s.t}</span>; }
 
-export function NumInput({ value, onChange, w = 70, disabled, warn }) {
+export function NumInput({ value, onChange, w = 70, disabled, warn, lazy }) {
   const [focused, setFocused] = useState(false);
-  const display = focused ? (value === 0 || value == null ? "" : String(value)) : (value === 0 || value == null ? "" : Number(value).toLocaleString("vi-VN"));
+  const [draft, setDraft] = useState(null); // lazy: giữ nháp khi đang gõ, chỉ lưu khi rời ô
+  const cur = (lazy && focused && draft != null) ? draft : value;
+  const display = focused ? (cur === 0 || cur == null ? "" : String(cur)) : (cur === 0 || cur == null ? "" : Number(cur).toLocaleString("vi-VN"));
   return (
     <input type="text" inputMode="numeric" value={display} disabled={disabled} placeholder="0"
-      onFocus={(e) => { if (!disabled) { setFocused(true); e.target.style.borderColor = C.pine; setTimeout(() => e.target.select(), 0); } }}
-      onChange={(e) => { const digits = e.target.value.replace(/[^\d]/g, ""); onChange(digits === "" ? 0 : Number(digits)); }}
-      onBlur={(e) => { setFocused(false); e.target.style.borderColor = warn ? C.amber : C.line; }}
+      onFocus={(e) => { if (!disabled) { setFocused(true); if (lazy) setDraft(value ?? 0); e.target.style.borderColor = C.pine; setTimeout(() => e.target.select(), 0); } }}
+      onChange={(e) => { const digits = e.target.value.replace(/[^\d]/g, ""); const n = digits === "" ? 0 : Number(digits); if (lazy) setDraft(n); else onChange(n); }}
+      onKeyDown={(e) => { if (lazy && e.key === "Enter") e.target.blur(); }}
+      onBlur={(e) => { setFocused(false); e.target.style.borderColor = warn ? C.amber : C.line; if (lazy && draft != null) { if (draft !== (value ?? 0)) onChange(draft); setDraft(null); } }}
       style={{ width: w, padding: "6px 8px", borderRadius: 8, border: `1.5px solid ${warn ? C.amber : C.line}`, fontFamily: font.body, fontSize: 14, color: C.ink, background: disabled ? C.graySoft : warn ? C.amberSoft : C.card, textAlign: "right", outline: "none" }} />
   );
 }
