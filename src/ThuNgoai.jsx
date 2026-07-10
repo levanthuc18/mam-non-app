@@ -51,7 +51,7 @@ function ThuNgoaiItem({ k, locked, set, del }) {
         {!locked ? (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             <ABBtn val={k.nguoiThu} set={(p) => set(k.id, { nguoiThu: p })} small disabled={locked} />
-            <NumInput value={k.thucThu} onChange={(v) => set(k.id, { thucThu: v })} w={100} disabled={locked} />
+            <NumInput lazy value={k.thucThu} onChange={(v) => set(k.id, { thucThu: v })} w={100} disabled={locked} />
             <button 
               onClick={() => set(k.id, { thucThu: k.soTien })} 
               style={{ background: C.green, color: "#fff", border: "none", borderRadius: 8, width: 32, height: 32, fontSize: 14, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
