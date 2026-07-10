@@ -410,7 +410,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
         {[
-          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["baomat", "Bảo mật"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
+          ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["thuphi", "Thu học phí"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["baomat", "Bảo mật"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
           <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 15px", borderRadius: 999, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
         ))}
@@ -569,6 +569,8 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       )}
       {sec === "baomat" && <DoiPin />}
 
+      {sec === "thuphi" && <ThuPhiCaiDat meta={meta} upMeta={upMeta} />}
+
       {sec === "backup" && <BackupExport meta={meta} students={students} />}
       {sec === "log" && <AuditLog />}
 
@@ -614,6 +616,24 @@ function DoiPin() {
         <div><div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>PIN mới (≥ 6 số)</div><input type="password" inputMode="numeric" value={m1} onChange={(e) => setM1(e.target.value)} style={inp} /></div>
         <div><div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>Nhập lại PIN mới</div><input type="password" inputMode="numeric" value={m2} onChange={(e) => setM2(e.target.value)} style={inp} /></div>
         <button onClick={doi} disabled={busy} style={{ padding: "11px 0", borderRadius: 10, border: "none", background: busy ? C.graySoft : C.pine, color: busy ? C.sub : "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: busy ? "default" : "pointer" }}>{busy ? "Đang lưu…" : "🔐 Đổi PIN"}</button>
+      </div>
+    </Card>
+  );
+}
+
+// ===== Cài đặt Thu học phí (hạn đóng, sau này: mẫu tin, ngày tạo tháng...) =====
+function ThuPhiCaiDat({ meta, upMeta }) {
+  const [hd, setHd] = useState(meta?.hanDong || "");
+  useEffect(() => { setHd(meta?.hanDong || ""); }, [meta?.hanDong]);
+  const luu = () => { const v = hd.trim(); if (v === (meta?.hanDong || "")) return; upMeta({ ...meta, hanDong: v }); toast(v ? "Đã lưu hạn đóng" : "Đã bỏ hạn đóng"); };
+  return (
+    <Card>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, marginBottom: 4, display: "inline-flex", alignItems: "center", gap: 7 }}><Icon name="calendarCheck" size={16} color={C.pine} /> Thu học phí</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 12 }}>Thiết lập chung cho việc thu học phí. Hạn đóng sẽ tự chèn vào tin nhắc Zalo (để trống = không ghi hạn).</div>
+      <div style={{ maxWidth: 340 }}>
+        <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 3 }}>Hạn đóng học phí</div>
+        <input value={hd} onChange={(e) => setHd(e.target.value)} onBlur={luu} onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} placeholder="VD: trước ngày 10 hàng tháng" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, boxSizing: "border-box" }} />
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 5 }}>Tin nhắc sẽ thành: "…hoàn thành giúp nhà trường <b>{hd.trim() || "(không ghi hạn)"}</b>."</div>
       </div>
     </Card>
   );
