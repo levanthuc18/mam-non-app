@@ -314,3 +314,20 @@ export function buildVietQR({ bin, accountNo, amount, addInfo }) {
   s += "6304";
   return s + crc16ccitt(s);
 }
+
+// ===== PIN quản lý (hash SHA-256, không lưu chữ thường) =====
+// Hash mặc định khi chưa từng đổi PIN; đổi xong thì mã cũ hết hiệu lực.
+const PIN_MAC_DINH = "9113b98df80f877c7a2ee5d865a04c9514b4e9bf25a49d315b0b15f115d2f0d2";
+export async function sha256Hex(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+export async function getPinHash() {
+  try { const h = await sGet("mn5:pinhash"); if (h && typeof h === "string") { try { localStorage.setItem("mn5:pinhash", h); } catch {} return h; } } catch {}
+  try { const lc = localStorage.getItem("mn5:pinhash"); if (lc) return lc; } catch {}
+  return PIN_MAC_DINH;
+}
+export async function setPinHash(h) {
+  try { localStorage.setItem("mn5:pinhash", h); } catch {}
+  await sSet("mn5:pinhash", h);
+}
