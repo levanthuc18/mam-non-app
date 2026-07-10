@@ -331,3 +331,4 @@ export async function setPinHash(h) {
   try { localStorage.setItem("mn5:pinhash", h); } catch {}
   await sSet("mn5:pinhash", h);
 }
+export function getCurrentActor() { return CURRENT_ACTOR; }
