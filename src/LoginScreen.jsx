@@ -1,6 +1,6 @@
 // LoginScreen.jsx — màn chọn vai trò + nhập PIN (phong cách mầm non)
 import { useState } from "react";
-import { C, font } from "./lib.js";
+import { C, font, sha256Hex, getPinHash } from "./lib.js";
 import { Icon } from "./Icon.jsx";
 import { Logo } from "./Brand.jsx";
 import { Cloud, Sun, Grass, School } from "./Decor.jsx";
@@ -9,7 +9,16 @@ export function LoginScreen({ meta, onLogin }) {
   const [mode, setMode] = useState(null);
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
-  const tryAdmin = () => { if (pin.trim() === "1989") onLogin({ role: "admin" }); else setErr("Mã quản lý không đúng"); };
+  const [checking, setChecking] = useState(false);
+  const tryAdmin = async () => {
+    if (checking) return;
+    setChecking(true);
+    try {
+      const [nhap, luu] = await Promise.all([sha256Hex(pin.trim()), getPinHash()]);
+      if (nhap === luu) onLogin({ role: "admin" }); else setErr("Mã quản lý không đúng");
+    } catch { setErr("Không kiểm tra được mã, thử lại"); }
+    setChecking(false);
+  };
   const tryGV = () => { const gv = meta?.giaoVien?.find((g) => g.pin === pin.trim()); if (gv) onLogin({ role: "gv", gvId: gv.id, ten: gv.ten, lopId: gv.lopId }); else setErr("PIN không đúng"); };
   const lopTen = (id) => meta?.classes.find((c) => c.id === id)?.ten || "?";
 
