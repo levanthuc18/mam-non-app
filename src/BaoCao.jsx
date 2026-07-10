@@ -7,7 +7,7 @@ export function BaoCaoSheet({ open, onClose, lichSu, ym }) {
   const taiFile = (text, name) => { try { const blob = new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {} };
   const xuatCSV = () => {
     if (!lichSu || !lichSu.length) { toast("Chưa có dữ liệu tháng"); return; }
-    const esc = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const esc = (v) => { if (typeof v === "number") return String(v); let s = String(v ?? ""); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const head = ["Tháng", "Phải thu", "Đã thu", "Còn nợ HS", "Chi phí", "Đã chi", "Nợ NCC (lũy kế)", "LN kế toán", "LN tiền mặt", "Quỹ A (lũy kế)", "Quỹ B (lũy kế)"];
     const rows = lichSu.map((r) => [r.thang, r.psThang, r.thuThang, r.psThang - r.thuThang, r.chiThang, r.traThang, r.noNCC, r.laiKeToan, r.laiTienMat, r.giuACum, r.giuBCum]);
     const csv = "sep=,\n" + [head, ...rows].map((row) => row.map(esc).join(",")).join("\n");
