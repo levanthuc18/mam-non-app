@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   sList, sGet, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
-  C, font, TT_COLOR, toast, getCurrentActor
+  C, font, TT_COLOR, toast, ask, getCurrentActor
 } from "./lib.js";
 import { tinhNoNCCThang, nhomNoNCC } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, Chips, useStickyShrink, StickyBar, BottomSheet } from "./ui.jsx";
 
-export function CongNoTab({ students, meta, ym, mData }) {
+export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [tongNo, setTongNo] = useState(0);
@@ -24,7 +24,6 @@ export function CongNoTab({ students, meta, ym, mData }) {
   const [nhacHS, setNhacHS] = useState(null);
   const [nhacGhiChu, setNhacGhiChu] = useState("");
   const [daCopy, setDaCopy] = useState(false);
-  const [copyFlash, setCopyFlash] = useState(false);
   const { sentinelRef, shrunk } = useStickyShrink();
 
   useEffect(() => { (async () => {
@@ -89,7 +88,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
     const r = nhacMap[x.hs.id];
     if (!r) return { t: "Chưa nhắc", c: C.coral, bg: C.coralSoft };
     const d = new Date(r.ts);
-    const t = `Nhắc ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const t = `Đã nhắc ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     return (Date.now() - r.ts > 7 * 86400000) ? { t, c: C.amber, bg: C.amberSoft } : { t, c: C.green, bg: C.greenSoft };
   };
   const tenLop = (hs) => meta.classes.find((c) => c.id === lopOfMonth(hs, ym))?.ten || "";
@@ -100,17 +99,26 @@ export function CongNoTab({ students, meta, ym, mData }) {
     return `Kính gửi phụ huynh bé ${x.hs.ten}. Nhà trường xin thông báo học phí của bé đến tháng ${Number(mm)}/${yy} hiện còn học phí chưa thanh toán là ${fmt(x.luyKe)}đ. Kính mong phụ huynh sắp xếp hoàn thành giúp nhà trường${hd ? ` ${hd}` : ""}. ${bank?.stk ? `Thông tin chuyển khoản: ${bank.chu} – ${bank.stk} – ${bank.nh}. Nội dung chuyển khoản: ${x.hs.ten} ${tenLop(x.hs)}. ` : ""}Xin chân thành cảm ơn Quý phụ huynh! 🌸`;
   };
   const sdtCua = (x) => (x.hs.phuHuynh?.sdt || "").replace(/\D/g, "");
-  const moNhac = (x) => { setNhacHS(x); setNhacGhiChu(nhacMap[x.hs.id]?.ghiChu || ""); setDaCopy(false); setCopyFlash(false); };
+  const moNhac = (x) => { setNhacHS(x); setNhacGhiChu(nhacMap[x.hs.id]?.ghiChu || ""); setDaCopy(false); };
   const copyTin = async () => {
     const x = nhacHS; if (!x) return;
     const text = buildTin(x);
     try { await navigator.clipboard.writeText(text); }
     catch { try { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); } catch { toast("Không copy được, chép tay giúp mình"); return; } }
-    const nm = { ...nhacMap, [x.hs.id]: { ts: Date.now(), nguoi: getCurrentActor(), soTien: x.luyKe, ghiChu: nhacGhiChu.trim(), version: 1 } };
-    setNhacMap(nm); sSet("mn5:nhacno", nm);
-    setCopyFlash(true); setTimeout(() => setCopyFlash(false), 1000);
     setDaCopy(true);
     toast("Đã copy — dán vào Zalo");
+  };
+  const xacNhanGui = () => {
+    const x = nhacHS; if (!x) return;
+    const nm = { ...nhacMap, [x.hs.id]: { ts: Date.now(), nguoi: getCurrentActor(), soTien: x.luyKe, ghiChu: nhacGhiChu.trim(), ym, kenh: "zalo", version: 1 } };
+    setNhacMap(nm); sSet("mn5:nhacno", nm);
+    setNhacHS(null);
+    toast("Đã ghi nhận: đã nhắc phụ huynh");
+  };
+  const xemPhieu = async () => {
+    const x = nhacHS; if (!x || !setPhieuId) return;
+    if (nhacGhiChu.trim() && !(await ask("Mở phiếu thu sẽ đóng bảng nhắc, ghi chú vừa gõ sẽ mất. Tiếp tục?", { okText: "Mở phiếu" }))) return;
+    setNhacHS(null); setPhieuId(x.hs.id); setTab("phieu");
   };
   const moZalo = () => { const s = sdtCua(nhacHS); if (s) window.open(`https://zalo.me/${s}`, "_blank"); };
 
@@ -218,7 +226,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
                     <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${C.line}` }}>
                       {nhacMap[x.hs.id] && (() => { const r = nhacMap[x.hs.id]; const d = new Date(r.ts); return (
                         <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 7 }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bell" size={12} color={C.sub} /> Nhắc gần nhất: <b style={{ color: C.ink }}>{String(d.getDate()).padStart(2, "0")}/{String(d.getMonth() + 1).padStart(2, "0")} {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</b> · {r.nguoi} · khi còn nợ <b style={{ color: C.ink }}>{fmt(r.soTien)}đ</b></span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}><Icon name="bell" size={12} color={C.sub} /> Nhắc gần nhất: <b style={{ color: C.ink }}>{String(d.getDate()).padStart(2, "0")}/{String(d.getMonth() + 1).padStart(2, "0")} {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</b> · {r.nguoi} · khi còn nợ <b style={{ color: C.ink }}>{fmt(r.soTien)}đ</b>{r.ym ? ` · kỳ ${Number(r.ym.slice(5))}/${r.ym.slice(0, 4)}` : ""}</span>
                           {r.ghiChu && <div style={{ marginTop: 2, fontStyle: "italic" }}>Ghi chú: "{r.ghiChu}"</div>}
                         </div>
                       ); })()}
@@ -271,8 +279,13 @@ export function CongNoTab({ students, meta, ym, mData }) {
               <div style={{ border: `1.5px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: C.ink, whiteSpace: "pre-wrap", marginBottom: 10, userSelect: "text", lineHeight: 1.5 }}>{buildTin(nhacHS)}</div>
               <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 4 }}>Ghi chú (tuỳ chọn)</div>
               <input value={nhacGhiChu} onChange={(e) => setNhacGhiChu(e.target.value)} placeholder="VD: hứa chuyển tối" style={{ width: "100%", padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box", marginBottom: 12 }} />
-              <button onClick={copyTin} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: copyFlash ? C.green : C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 8 }}>{copyFlash ? "✓ Đã copy" : "📋 Copy nội dung"}</button>
-              {sdt && <button onClick={moZalo} disabled={!daCopy} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: `1.5px solid ${daCopy ? C.pine : C.line}`, background: C.card, color: daCopy ? C.pine : C.sub, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: daCopy ? "pointer" : "default", marginBottom: 8, opacity: daCopy ? 1 : 0.6 }}>Mở Zalo</button>}
+              <button onClick={copyTin} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: daCopy ? C.green : C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 8 }}>{daCopy ? "✓ Đã copy nội dung" : "📋 Copy nội dung"}</button>
+              <div style={{ fontSize: 11, color: C.sub, marginBottom: 8, lineHeight: 1.5 }}>Copy xong → mở phiếu chia sẻ ảnh qua Zalo → dán nội dung → gửi → quay lại bấm <b>Đã gửi xong</b>.</div>
+              {setPhieuId && <button onClick={xemPhieu} style={{ width: "100%", padding: "11px 0", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer", marginBottom: 8, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="receipt" size={15} color={C.pine} /> Mở phiếu thu để gửi ảnh</button>}
+              {sdt && <button onClick={moZalo} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 8 }}>Mở Zalo</button>}
+              <div style={{ borderTop: `1px dashed ${C.line}`, paddingTop: 10, marginTop: 2 }}>
+                <button onClick={xacNhanGui} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: `1.5px solid ${C.green}`, background: C.greenSoft, color: C.green, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 8 }}>✓ Đã gửi xong</button>
+              </div>
               <button onClick={() => setNhacHS(null)} style={{ width: "100%", padding: "10px 0", borderRadius: 11, border: "none", background: "none", color: C.sub, fontFamily: font.body, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>Hủy</button>
             </>
           );
