@@ -152,7 +152,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
           </div>
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Nợ đầu kỳ</label>
-            <NumInput value={student.noDauKy || 0} onChange={(v) => setHS({ noDauKy: v })} w="100%" />
+            <NumInput lazy value={student.noDauKy || 0} onChange={(v) => setHS({ noDauKy: v })} w="100%" />
           </div>
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Ngày nhập học</label>
