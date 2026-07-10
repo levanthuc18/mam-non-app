@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt } from "./lib.js";
+import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending } from "./lib.js";
 import { BottomSheet } from "./ui.jsx";
 import { useStore } from "./useStore.js";
 import { HomeTab } from "./Home.jsx";
@@ -71,6 +71,21 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
         </div>
       )}
     </BottomSheet>
+  );
+}
+
+function SyncBanner() {
+  const [st, setSt] = useState({ pending: 0, err: false });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => subSync(setSt), []);
+  if (!st.pending && !st.err) return null;
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, background: C.coralSoft, borderBottom: `1.5px solid ${C.coral}`, padding: "8px 12px calc(8px)", display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
+      <span style={{ flex: 1, color: C.coral, fontWeight: 700 }}>
+        ⚠ {st.pending > 0 ? `${st.pending} thay đổi CHƯA lưu lên server` : "Mất kết nối server"} — đừng đóng app khi chưa đồng bộ
+      </span>
+      <button disabled={busy} onClick={async () => { setBusy(true); await flushPending(); setBusy(false); }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>{busy ? "Đang thử…" : "↻ Thử lại"}</button>
+    </div>
   );
 }
 
@@ -349,6 +364,7 @@ export default function App() {
       
       <ConfirmHost />
       <ToastHost />
+      <SyncBanner />
     </div>
   );
 }
