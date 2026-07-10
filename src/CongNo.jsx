@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
-  C, font, TT_COLOR
+  sList, sGet, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
+  C, font, TT_COLOR, toast, getCurrentActor
 } from "./lib.js";
 import { tinhNoNCCThang, nhomNoNCC } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
-import { Card, Chips, useStickyShrink, StickyBar } from "./ui.jsx";
+import { Card, Chips, useStickyShrink, StickyBar, BottomSheet } from "./ui.jsx";
 
 export function CongNoTab({ students, meta, ym, mData }) {
   const [loading, setLoading] = useState(true);
@@ -20,6 +20,11 @@ export function CongNoTab({ students, meta, ym, mData }) {
   const [openTn, setOpenTn] = useState(false);
   const [openNcc, setOpenNcc] = useState(false);
   const [xemThang, setXemThang] = useState(false);
+  const [nhacMap, setNhacMap] = useState({});
+  const [nhacHS, setNhacHS] = useState(null);
+  const [nhacGhiChu, setNhacGhiChu] = useState("");
+  const [daCopy, setDaCopy] = useState(false);
+  const [copyFlash, setCopyFlash] = useState(false);
   const { sentinelRef, shrunk } = useStickyShrink();
 
   useEffect(() => { (async () => {
@@ -71,12 +76,43 @@ export function CongNoTab({ students, meta, ym, mData }) {
     setTnData({ luyKe: tnLuyKe, phai: tnPhai, thu: tnThu, chiTiet: tnChiTiet });
     setNccData({ luyKe: nccCum, chiTiet: nccChiTiet });
     setNccVendors(nhomNoNCC(chiPhiTheoThang));
+    setNhacMap((await sGet("mn5:nhacno")) || {});
     setData(arr); setTongNo(tNo); setTongDu(tDu); setLoading(false);
   })(); }, [students, meta, ym, mData]);
 
   if (loading) return <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 30 }}>Đang tính công nợ lũy kế…</div>;
   const noList = data.filter((x) => x.luyKe > 0);
   const duList = data.filter((x) => x.luyKe < 0);
+
+  // ===== Nhắc nợ Zalo (GĐ1) =====
+  const chipNhac = (x) => {
+    const r = nhacMap[x.hs.id];
+    if (!r) return { t: "Chưa nhắc", c: C.coral, bg: C.coralSoft };
+    const d = new Date(r.ts);
+    const t = `Nhắc ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return (Date.now() - r.ts > 7 * 86400000) ? { t, c: C.amber, bg: C.amberSoft } : { t, c: C.green, bg: C.greenSoft };
+  };
+  const tenLop = (hs) => meta.classes.find((c) => c.id === lopOfMonth(hs, ym))?.ten || "";
+  const buildTin = (x) => {
+    const [yy, mm] = ym.split("-");
+    const bank = meta.bank?.[x.hs.nguoiThu];
+    const hd = (meta.hanDong || "").trim();
+    return `Kính gửi phụ huynh bé ${x.hs.ten}. Nhà trường xin thông báo học phí của bé đến tháng ${Number(mm)}/${yy} hiện còn học phí chưa thanh toán là ${fmt(x.luyKe)}đ. Kính mong phụ huynh sắp xếp hoàn thành giúp nhà trường${hd ? ` ${hd}` : ""}. ${bank?.stk ? `Thông tin chuyển khoản: ${bank.chu} – ${bank.stk} – ${bank.nh}. Nội dung chuyển khoản: ${x.hs.ten} ${tenLop(x.hs)}. ` : ""}Xin chân thành cảm ơn Quý phụ huynh! 🌸`;
+  };
+  const sdtCua = (x) => (x.hs.phuHuynh?.sdt || "").replace(/\D/g, "");
+  const moNhac = (x) => { setNhacHS(x); setNhacGhiChu(nhacMap[x.hs.id]?.ghiChu || ""); setDaCopy(false); setCopyFlash(false); };
+  const copyTin = async () => {
+    const x = nhacHS; if (!x) return;
+    const text = buildTin(x);
+    try { await navigator.clipboard.writeText(text); }
+    catch { try { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); } catch { toast("Không copy được, chép tay giúp mình"); return; } }
+    const nm = { ...nhacMap, [x.hs.id]: { ts: Date.now(), nguoi: getCurrentActor(), soTien: x.luyKe, ghiChu: nhacGhiChu.trim(), version: 1 } };
+    setNhacMap(nm); sSet("mn5:nhacno", nm);
+    setCopyFlash(true); setTimeout(() => setCopyFlash(false), 1000);
+    setDaCopy(true);
+    toast("Đã copy — dán vào Zalo");
+  };
+  const moZalo = () => { const s = sdtCua(nhacHS); if (s) window.open(`https://zalo.me/${s}`, "_blank"); };
 
   return (
     <>
@@ -160,7 +196,7 @@ export function CongNoTab({ students, meta, ym, mData }) {
             <div key={x.hs.id} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.line}`, marginBottom: 8, overflow: "hidden" }}>
               <div onClick={() => setShowDetail(open ? null : x.hs.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", cursor: "pointer" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14.5 }}>{x.hs.ten}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14.5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{x.hs.ten}{x.luyKe > 0 && (() => { const ch = chipNhac(x); return <span style={{ fontSize: 10, fontWeight: 700, color: ch.c, background: ch.bg, borderRadius: 99, padding: "2px 8px", whiteSpace: "nowrap" }}>{ch.t}</span>; })()}</div>
                   <div style={{ fontSize: 11.5, color: TT_COLOR[x.hs.trangThai] }}>{x.hs.trangThai}{x.noDauKy ? ` · nợ đầu kỳ ${fmt(x.noDauKy)}` : ""}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -178,6 +214,17 @@ export function CongNoTab({ students, meta, ym, mData }) {
                     </div>
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, marginTop: 4, borderTop: `1px solid ${C.line}`, fontWeight: 700 }}><span>Lũy kế</span><span style={{ color: x.luyKe > 0 ? C.coral : C.green }}>{x.luyKe > 0 ? fmt(x.luyKe) : "+" + fmt(-x.luyKe)} đ</span></div>
+                  {x.luyKe > 0 && (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${C.line}` }}>
+                      {nhacMap[x.hs.id] && (() => { const r = nhacMap[x.hs.id]; const d = new Date(r.ts); return (
+                        <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 7 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bell" size={12} color={C.sub} /> Nhắc gần nhất: <b style={{ color: C.ink }}>{String(d.getDate()).padStart(2, "0")}/{String(d.getMonth() + 1).padStart(2, "0")} {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</b> · {r.nguoi} · khi còn nợ <b style={{ color: C.ink }}>{fmt(r.soTien)}đ</b></span>
+                          {r.ghiChu && <div style={{ marginTop: 2, fontStyle: "italic" }}>Ghi chú: "{r.ghiChu}"</div>}
+                        </div>
+                      ); })()}
+                      <button onClick={() => moNhac(x)} style={{ width: "100%", padding: "9px 0", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Icon name="bell" size={14} color="#fff" /> Nhắc Zalo</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -210,6 +257,27 @@ export function CongNoTab({ students, meta, ym, mData }) {
         </div>
       )}
 
+      <BottomSheet open={!!nhacHS} onClose={() => setNhacHS(null)} title="Nhắc học phí qua Zalo">
+        {nhacHS && (() => {
+          const sdt = sdtCua(nhacHS);
+          return (
+            <>
+              <div style={{ background: C.graySoft, borderRadius: 10, padding: "10px 12px", marginBottom: 10, fontSize: 13 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span style={{ color: C.sub }}>Bé</span><b style={{ color: C.ink }}>{nhacHS.hs.ten} · {tenLop(nhacHS.hs)}</b></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}><span style={{ color: C.sub }}>Còn nợ</span><b style={{ color: C.coral }}>{fmt(nhacHS.luyKe)} đ</b></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: C.sub }}>SĐT phụ huynh</span>{sdt ? <b style={{ color: C.ink }}>{nhacHS.hs.phuHuynh.sdt}</b> : <b style={{ color: C.coral }}>⚠ Chưa có SĐT</b>}</div>
+              </div>
+              <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 4 }}>Nội dung tin nhắn</div>
+              <div style={{ border: `1.5px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: C.ink, whiteSpace: "pre-wrap", marginBottom: 10, userSelect: "text", lineHeight: 1.5 }}>{buildTin(nhacHS)}</div>
+              <div style={{ fontSize: 11.5, color: C.sub, fontWeight: 600, marginBottom: 4 }}>Ghi chú (tuỳ chọn)</div>
+              <input value={nhacGhiChu} onChange={(e) => setNhacGhiChu(e.target.value)} placeholder="VD: hứa chuyển tối" style={{ width: "100%", padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box", marginBottom: 12 }} />
+              <button onClick={copyTin} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: copyFlash ? C.green : C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 8 }}>{copyFlash ? "✓ Đã copy" : "📋 Copy nội dung"}</button>
+              {sdt && <button onClick={moZalo} disabled={!daCopy} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: `1.5px solid ${daCopy ? C.pine : C.line}`, background: C.card, color: daCopy ? C.pine : C.sub, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: daCopy ? "pointer" : "default", marginBottom: 8, opacity: daCopy ? 1 : 0.6 }}>Mở Zalo</button>}
+              <button onClick={() => setNhacHS(null)} style={{ width: "100%", padding: "10px 0", borderRadius: 11, border: "none", background: "none", color: C.sub, fontFamily: font.body, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>Hủy</button>
+            </>
+          );
+        })()}
+      </BottomSheet>
     </>
   );
 }
