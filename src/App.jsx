@@ -262,7 +262,7 @@ export default function App() {
         )}
         
         {tab === "no" && (
-          <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} />
+          <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} setPhieuId={setPhieuId} setTab={setTab} />
         )}
         
         {tab === "caidat" && (
