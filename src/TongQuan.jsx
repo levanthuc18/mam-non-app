@@ -410,12 +410,12 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
                   <span style={{ minWidth: 52 }}>Phải trả</span>
                   {c.loai === "CO_DINH" && !locked
-                    ? (<><NumInput value={c.soTien} onChange={(v) => set(c.id, { soTien: v })} w={120} /><ABBtn val={c.nguoiChi} set={(p) => set(c.id, { nguoiChi: p })} small disabled={locked} /></>)
+                    ? (<><NumInput lazy value={c.soTien} onChange={(v) => set(c.id, { soTien: v })} w={120} /><ABBtn val={c.nguoiChi} set={(p) => set(c.id, { nguoiChi: p })} small disabled={locked} /></>)
                     : (<b style={{ color: C.ink }}>{fmt(e)}</b>)}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
                   <span style={{ minWidth: 52 }}>Đã trả</span>
-                  <NumInput value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={120} disabled={locked} />
+                  <NumInput lazy value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={120} disabled={locked} />
                   {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
                   {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
                 </div>
