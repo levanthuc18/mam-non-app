@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
-  sGet, sSet, sList, sDel, MEM, CHOT_MEM, saveChotMem,
+  sGet, sGetSafe, sSet, sList, sDel, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
@@ -21,25 +21,37 @@ export function useStore() {
   const [ddPrev, setDDPrev] = useState({});
   const [nextChot, setNextChot] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const [prevDebt, setPrevDebt] = useState({});
   const saveT = useRef({});
   const ym = ymKey(year, month);
 
   const doSeed = async () => {
+    // ⛔ CHỐT CHẶN: chỉ seed (ghi rỗng) khi CHẮC CHẮN server đang trống.
+    const chk = await sGetSafe("mn5:students");
+    if (!chk.ok) throw new Error("seed-abort-network"); // đọc lỗi → KHÔNG seed
+    if (Array.isArray(chk.value) && chk.value.length > 0) {
+      // Server đang có học sinh → KHÔNG seed, dùng dữ liệu thật.
+      const m2 = await sGetSafe("mn5:meta");
+      return { m: (m2.ok && m2.value) ? m2.value : SEED_META, st: chk.value, skipped: true };
+    }
     const m = SEED_META, st = [];
-    await sSet("mn5:meta", m); await sSet("mn5:students", st);
-    await sSet("mn5:seedVersion", 14);
+    await sSet("mn5:meta", m, { force: true }); await sSet("mn5:students", st, { force: true });
+    await sSet("mn5:seedVersion", 14, { force: true });
     return { m, st };
   };
 
   useEffect(() => { (async () => {
-    let m = await sGet("mn5:meta");
-    let st = await sGet("mn5:students");
-    const sv = await sGet("mn5:seedVersion");
-    if (!m || !st || sv !== 14) {
-      const r = await doSeed();
-      m = r.m; st = r.st; setSeeded(true);
+    // Đọc CÓ PHÂN BIỆT LỖI — mạng lỗi thì KHÔNG được seed (đó là lỗi từng xóa sạch dữ liệu).
+    const mR = await sGetSafe("mn5:meta");
+    const sR = await sGetSafe("mn5:students");
+    const svR = await sGetSafe("mn5:seedVersion");
+    if (!mR.ok || !sR.ok || !svR.ok) { setLoadErr(true); setLoading(false); return; }
+    let m = mR.value, st = sR.value; const sv = svR.value;
+    if (m == null || st == null || sv !== 14) {
+      try { const r = await doSeed(); m = r.m; st = r.st; if (!r.skipped) setSeeded(true); }
+      catch { setLoadErr(true); setLoading(false); return; }
     }
     setMeta(m); setStudents(st); setLoading(false);
   })(); }, []);
@@ -48,8 +60,9 @@ export function useStore() {
     const keys = await sList("mn5:");
     for (const k of keys) await sDel(k);
     Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]); saveChotMem();
-    const r = await doSeed();
-    setMeta({ ...r.m }); setStudents([...r.st]);
+    const m = SEED_META, st = [];
+    await sSet("mn5:meta", m, { force: true }); await sSet("mn5:students", st, { force: true }); await sSet("mn5:seedVersion", 14, { force: true });
+    setMeta({ ...m }); setStudents([...st]);
     setMData(null); setSeeded(true);
     setMonth(now.getMonth() + 1); setYear(now.getFullYear());
   };
@@ -318,7 +331,7 @@ export function useStore() {
 
   return {
     meta, students, month, year, setMonth, setYear,
-    mData, ddData, leData, ddPrev, nextChot, loading, seeded, ym,
+    mData, ddData, leData, ddPrev, nextChot, loading, loadErr, seeded, ym,
     reseedAll, upMeta, upStudents, upMData, upDDData, upLeData,
     taoThang, delThang, setRec, thuDuNhieu, setKhoan, resetKhoan,
     resetAllKhoan, setNgayAnAll, addPhuThuHS, delPhuThuHS,
