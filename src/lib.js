@@ -101,6 +101,20 @@ export async function sGet(k) {
   try { const r = await window.storage.get(k); const v = r ? JSON.parse(r.value) : null; if (v != null) MEM[k] = v; return v ?? MEM[k] ?? null; }
   catch { storageOK = false; return MEM[k] ?? null; }
 }
+// Đọc CÓ PHÂN BIỆT LỖI: { ok, value }.
+// ok=false nghĩa là KHÔNG đọc được (mạng lỗi/timeout) — nơi gọi TUYỆT ĐỐI không được coi là "chưa có dữ liệu".
+// ok=true + value=null nghĩa là server trả lời thành công và thật sự chưa có key đó.
+export async function sGetSafe(k) {
+  if (SB) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+      if (r.ok) { const d = await r.json(); const row = d?.[0]; if (row) { MEM[k] = row.value; VER[k] = row.updated_at; markHad(k, row.value); return { ok: true, value: row.value }; } return { ok: true, value: null }; }
+      return { ok: false, value: MEM[k] ?? null };
+    } catch { return { ok: false, value: MEM[k] ?? null }; }
+  }
+  try { const r = await window.storage.get(k); const v = r ? JSON.parse(r.value) : null; if (v != null) MEM[k] = v; return { ok: true, value: v }; }
+  catch { return { ok: false, value: MEM[k] ?? null }; }
+}
 export async function sProbe(k, v) {
   if (!SB) return { ok: false, status: 0, text: "no-supabase" };
   try {
@@ -114,7 +128,37 @@ export async function sProbe(k, v) {
 }
 // Các key không kiểm xung đột (ghi dày, xung đột vô hại)
 const NO_CONFLICT = new Set(["mn5:log"]);
-export async function sSet(k, v) {
+// Các key TỐI QUAN TRỌNG: không bao giờ để ghi rỗng đè lên bản đang có dữ liệu (trừ khi force = xóa chủ đích).
+const PROTECT_KEYS = new Set(["mn5:students", "mn5:meta"]);
+// Cờ BỀN (localStorage): đánh dấu key này ĐÃ TỪNG có dữ liệu thật — dùng làm mốc chặn kể cả khi RAM (MEM) trống lúc app vừa mở.
+function hadKey(k) { try { return localStorage.getItem("mn5:had:" + k) === "1"; } catch { return false; } }
+function markHad(k, v) {
+  if (!PROTECT_KEYS.has(k)) return;
+  let co = false;
+  if (k === "mn5:students") co = Array.isArray(v) && v.length > 0;
+  else if (k === "mn5:meta") co = !!(v && v.classes && v.classes.length > 0);
+  try { if (co) localStorage.setItem("mn5:had:" + k, "1"); else localStorage.removeItem("mn5:had:" + k); } catch {}
+}
+function laRong(k, v) {
+  if (k === "mn5:students") return Array.isArray(v) && v.length === 0;
+  if (k === "mn5:meta") return !v || !v.classes || v.classes.length === 0;
+  return false;
+}
+function dangCoDL(k) {
+  const cur = MEM[k];
+  if (k === "mn5:students") { if (Array.isArray(cur) && cur.length > 0) return true; }
+  else if (k === "mn5:meta") { if (cur && cur.classes && cur.classes.length > 0) return true; }
+  // MEM trống (app vừa mở) nhưng cờ bền nói TỪNG có data → vẫn coi là đang có, để chặn ghi rỗng
+  return hadKey(k);
+}
+export async function sSet(k, v, opts = {}) {
+  // ⛔ CHỐT CHẶN chống mất dữ liệu: từ chối ghi RỖNG đè lên dữ liệu đang có.
+  if (!opts.force && PROTECT_KEYS.has(k) && laRong(k, v) && dangCoDL(k)) {
+    try { logAction(`⛔ Đã chặn ghi rỗng đè ${k} (bản đang có còn dữ liệu)`); } catch {}
+    try { toast("Đã chặn thao tác xóa toàn bộ bất thường (bảo vệ dữ liệu)"); } catch {}
+    return false;
+  }
+  if (PROTECT_KEYS.has(k)) markHad(k, v);
   MEM[k] = v;
   const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
   if (SB) {
