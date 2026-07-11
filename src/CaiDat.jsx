@@ -232,6 +232,18 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const [tenLopMoi, setTenLopMoi] = useState("");
   const [lopMo, setLopMo] = useState(null);
   const [renameLop, setRenameLop] = useState(null);
+  const [lopDraft, setLopDraft] = useState(null);
+  const [luaFlash, setLuuFlash] = useState(false);
+  const GIA_FIELDS = ["t7", "hocPhi", "banTru", "tienAn", "veSinh", "tiengAnh", "ngoaiKhoa", "dauNam"];
+  const clsView = lopDraft || meta.classes;
+  const eqCls = (a, b) => a.length === b.length && a.every((c, i) => { const d = b[i]; if (!d || c.id !== d.id) return false; if (GIA_FIELDS.some((f) => (c[f] || 0) !== (d[f] || 0))) return false; return JSON.stringify(c.lapLai || {}) === JSON.stringify(d.lapLai || {}); });
+  const demThayDoi = () => { if (!lopDraft) return 0; let n = 0; lopDraft.forEach((c) => { const g = meta.classes.find((x) => x.id === c.id); if (!g) { n++; return; } GIA_FIELDS.forEach((f) => { if ((c[f] || 0) !== (g[f] || 0)) n++; }); if (JSON.stringify(c.lapLai || {}) !== JSON.stringify(g.lapLai || {})) n++; }); return n; };
+  const editCls = (id, k, v) => {
+    const base = lopDraft || meta.classes;
+    const next = base.map((c) => (c.id === id ? { ...c, [k]: v } : c));
+    setLopDraft(eqCls(next, meta.classes) ? null : next);
+  };
+  const luuLop = () => { if (!lopDraft) return; upMeta({ ...meta, classes: lopDraft }); logAction("Cập nhật bảng giá lớp"); setLopDraft(null); setLuuFlash(true); setTimeout(() => setLuuFlash(false), 1200); };
   const [gvTen, setGvTen] = useState("");
   const [gvPin, setGvPin] = useState("");
   const [gvLop, setGvLop] = useState(meta.classes[0]?.id || "");
@@ -321,13 +333,15 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
     }));
     if (hs) logAction(`Chuyển lớp HS "${hs.ten}" → ${tenLop} (từ T${ym})`);
   };
-  const themLop = () => { const t = tenLopMoi.trim(); if (!t) return; upMeta({ ...meta, classes: [...meta.classes, { id: "c" + uid(), ten: t, hocPhi: 800000, banTru: 200000, tienAn: 30000, t7: 80000, veSinh: 20000, tiengAnh: 100000, ngoaiKhoa: 100000, dauNam: 1200000 }] }); setTenLopMoi(""); logAction(`Thêm lớp "${t}"`); };
-  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } const lopCu = meta.classes.find((c) => c.id === id); if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { const newClasses = meta.classes.filter((c) => c.id !== id); upMeta({ ...meta, classes: newClasses }); logAction(`Xóa lớp "${lopCu?.ten || id}"`); toast("Đã xóa lớp", lopCu ? () => upMeta({ ...meta, classes: [...newClasses, lopCu] }) : undefined); } };
-  const setLopGia = (id, k, v) => upMeta({ ...meta, classes: meta.classes.map((c) => (c.id === id ? { ...c, [k]: v } : c)) });
+  const themLop = () => { const t = tenLopMoi.trim(); if (!t) return; const base = lopDraft || meta.classes; upMeta({ ...meta, classes: [...base, { id: "c" + uid(), ten: t, hocPhi: 800000, banTru: 200000, tienAn: 30000, t7: 80000, veSinh: 20000, tiengAnh: 100000, ngoaiKhoa: 100000, dauNam: 1200000 }] }); setLopDraft(null); setTenLopMoi(""); logAction(`Thêm lớp "${t}"`); };
+  const xoaLop = async (id) => { if (students.some((s) => lopHienTai(s) === id)) { toast("Lớp còn HS — chuyển HS trước."); return; } if (meta.classes.length === 1) { toast("Phải còn ít nhất 1 lớp."); return; } const lopCu = meta.classes.find((c) => c.id === id); if (await ask("Xóa lớp này?", { danger: true, okText: "Xóa" })) { const base = lopDraft || meta.classes; const newClasses = base.filter((c) => c.id !== id); upMeta({ ...meta, classes: newClasses }); setLopDraft(null); logAction(`Xóa lớp "${lopCu?.ten || id}"`); toast("Đã xóa lớp", lopCu ? () => upMeta({ ...meta, classes: [...newClasses, lopCu] }) : undefined); } };
+  const setLopGia = (id, k, v) => editCls(id, k, v);
   const cycleKhoan = (id, key) => {
-    const cur = khoanMode(meta.classes.find((c) => c.id === id), key);
+    const cur = khoanMode((lopDraft || meta.classes).find((c) => c.id === id), key);
     const next = cur === "thu" ? "khong" : "thu";
-    upMeta({ ...meta, classes: meta.classes.map((c) => (c.id === id ? { ...c, lapLai: { ...(c.lapLai || {}), [key]: next } } : c)) });
+    const base = lopDraft || meta.classes;
+    const nx = base.map((c) => (c.id === id ? { ...c, lapLai: { ...(c.lapLai || {}), [key]: next } } : c));
+    setLopDraft(eqCls(nx, meta.classes) ? null : nx);
   };
   const setBank = (p, k, v) => upMeta({ ...meta, bank: { ...meta.bank, [p]: { ...meta.bank[p], [k]: v } } });
   const themGV = () => { const t = gvTen.trim(), p = gvPin.trim(); if (!t || !p || !gvLop) { toast("Nhập đủ tên, PIN, lớp."); return; } if ((meta.giaoVien || []).some((g) => g.pin === p)) { toast("PIN này đã dùng — chọn PIN khác."); return; } upMeta({ ...meta, giaoVien: [...(meta.giaoVien || []), { id: "gv" + uid(), ten: t, pin: p, lopId: gvLop }] }); setGvTen(""); setGvPin(""); logAction(`Thêm giáo viên "${t}"`); toast("Đã thêm giáo viên."); };
@@ -420,10 +434,19 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
 
       {sec === "lop" && (
         <>
+          <style>{`@keyframes cdFade{from{opacity:0}to{opacity:1}}@keyframes cdSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
           <div style={{ fontSize: 13, color: C.sub, marginBottom: 12, lineHeight: 1.55 }}>Chạm tên lớp để mở/gập bảng giá. Thêm lớp = thêm 1 dòng, mọi tính toán tự nhận lớp mới.</div>
-          {meta.classes.map((l) => {
+          {clsView.length === 0 && (
+            <div style={{ textAlign: "center", padding: "30px 0", color: C.sub }}>
+              <div style={{ fontSize: 34, marginBottom: 8 }}>🏫</div>
+              <div style={{ fontSize: 13.5 }}>Chưa có lớp nào. Thêm lớp đầu tiên bên dưới.</div>
+            </div>
+          )}
+          {clsView.map((l) => {
             const mo = lopMo === l.id;
-            const soKhoan = KHOAN.filter((k) => khoanMode(l, k.key) === "thu").length;
+            const siSo = students.filter((s) => lopHienTai(s) === l.id && s.trangThai !== "Ra trường").length;
+            const kFmt = (n) => n >= 1000000 ? (n / 1000000).toString().replace(/\.0$/, "") + "tr" : Math.round(n / 1000) + "k";
+            const ctx = `${siSo} HS · HP ${kFmt(l.hocPhi || 0)} · Ăn ${kFmt(l.tienAn || 0)}/ngày`;
             return (
             <Card key={l.id} style={{ padding: 0, marginBottom: 10, overflow: "hidden" }}>
               <div onClick={() => setLopMo(mo ? null : l.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 14px", cursor: "pointer" }}>
@@ -431,13 +454,13 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                   <span style={{ color: C.sub, fontSize: 12, transform: mo ? "rotate(90deg)" : "none", transition: "transform .15s" }}>❯</span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.ten}</div>
-                    {!mo && <div style={{ fontSize: 11.5, color: C.sub }}>{soKhoan} khoản thu</div>}
+                    <div style={{ fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ctx}</div>
                   </div>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); setRenameLop({ id: l.id, ten: l.ten }); }} style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="edit" size={16} color={C.sub} /></button>
               </div>
               {mo && (
-                <div style={{ padding: "0 14px 14px" }}>
+                <div style={{ padding: "0 14px 14px", animation: "cdFade .12s ease-out" }}>
                   <label style={{ fontSize: 11, color: C.sub, display: "block", marginBottom: 10 }}>Buổi T7 (giá/buổi)
                     <div style={{ marginTop: 4 }}><NumInput lazy value={l.t7 || 0} onChange={(v) => setLopGia(l.id, "t7", v)} w={"100%"} /></div></label>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -453,20 +476,31 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
                       );
                     })}
                   </div>
-                  <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>Đổi giá hoặc tắt khoản sẽ cập nhật ngay vào tháng đang xem (trừ HS đã sửa tay & tháng đã chốt).</div>
+                  <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>Đổi giá hoặc tắt khoản sẽ cập nhật vào tháng đang xem khi bấm Lưu (trừ HS đã sửa tay & tháng đã chốt).</div>
                 </div>
               )}
             </Card>
             );
           })}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: lopDraft || luaFlash ? 70 : 0 }}>
             <input value={tenLopMoi} onChange={(e) => setTenLopMoi(e.target.value)} placeholder="Tên lớp mới" style={{ ...inp, flex: 1, minWidth: 0 }} />
             <button onClick={themLop} style={{ padding: "0 18px", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>+ Thêm lớp</button>
           </div>
+          {(lopDraft || luaFlash) && (
+            <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 900, background: luaFlash ? C.greenSoft : C.card, borderTop: `1.5px solid ${luaFlash ? C.green : C.amber}`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -3px 12px rgba(0,0,0,.08)", animation: "cdSlideUp .18s ease-out" }}>
+              {luaFlash ? (
+                <span style={{ flex: 1, color: C.green, fontWeight: 700, fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6 }}>✓ Đã lưu bảng giá</span>
+              ) : (<>
+                <span style={{ flex: 1, color: C.amber, fontWeight: 700, fontSize: 13.5 }}>⚠ {demThayDoi()} thay đổi chưa lưu</span>
+                <button onClick={() => setLopDraft(null)} style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Hủy</button>
+                <button onClick={luuLop} style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>Lưu</button>
+              </>)}
+            </div>
+          )}
           <BottomSheet open={!!renameLop} onClose={() => setRenameLop(null)} title="Đổi tên lớp">
             {renameLop && <>
               <input value={renameLop.ten} onChange={(e) => setRenameLop({ ...renameLop, ten: e.target.value })} autoFocus style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 15, fontFamily: font.body, boxSizing: "border-box", marginBottom: 12 }} />
-              <button onClick={() => { const t = renameLop.ten.trim(); if (t) { setLopGia(renameLop.id, "ten", t); logAction(`Đổi tên lớp → "${t}"`); } setRenameLop(null); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Lưu tên</button>
+              <button onClick={() => { const t = renameLop.ten.trim(); if (t) { const base = lopDraft || meta.classes; upMeta({ ...meta, classes: base.map((c) => (c.id === renameLop.id ? { ...c, ten: t } : c)) }); setLopDraft(null); logAction(`Đổi tên lớp → "${t}"`); } setRenameLop(null); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Lưu tên</button>
             </>}
           </BottomSheet>
         </>
@@ -484,6 +518,12 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
               <button onClick={() => xoaGV(gv.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", display:"inline-flex", alignItems:"center" }}><Icon name="trash" size={16} color={C.coral} /></button>
             </Card>
           ))}
+          {(meta.giaoVien || []).length === 0 && (
+            <div style={{ textAlign: "center", padding: "24px 0", color: C.sub }}>
+              <div style={{ fontSize: 32, marginBottom: 6 }}>👩‍🏫</div>
+              <div style={{ fontSize: 13.5 }}>Chưa có giáo viên. Thêm bên dưới để cấp quyền điểm danh.</div>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
             <input value={gvTen} onChange={(e) => setGvTen(e.target.value)} placeholder="Tên GV" style={{ ...inp, flex: "2 1 120px", minWidth: 0 }} />
             <input value={gvPin} onChange={(e) => setGvPin(e.target.value)} placeholder="PIN" inputMode="numeric" style={{ ...inp, flex: "1 1 70px", width: 80, minWidth: 0 }} />
@@ -497,9 +537,15 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
         <>
           <input value={meta.tenTruong} onChange={(e) => upMeta({ ...meta, tenTruong: e.target.value })} placeholder="Tên trường" style={{ ...inp, width: "100%", marginBottom: 12, fontFamily: font.display, fontWeight: 700 }} />
           {["A", "B"].map((p) => (
-            <Card key={p} style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: p === "A" ? C.blueA : C.violetB, marginBottom: 8 }}>Người {p} (in lên phiếu)</div>
-              {[["Chủ TK", "chu"], ["Số TK", "stk"], ["Ngân hàng", "nh"]].map(([lb, k]) => (<label key={k} style={{ fontSize: 12, color: C.sub, display: "block", marginBottom: 7 }}>{lb}<input value={meta.bank[p][k]} onChange={(e) => setBank(p, k, e.target.value)} style={{ ...inp, width: "100%", marginTop: 3 }} /></label>))}
+            <Card key={p} style={{ marginBottom: 12, padding: 0, overflow: "hidden" }}>
+              <div style={{ background: p === "A" ? C.blueASoft : C.violetBSoft, padding: "9px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon name="users" size={16} color={p === "A" ? C.blueA : C.violetB} />
+                <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14.5, color: p === "A" ? C.blueA : C.violetB }}>Người thu {p}</span>
+                <span style={{ fontSize: 11, color: C.sub }}>· in lên phiếu</span>
+              </div>
+              <div style={{ padding: "12px 14px" }}>
+                {[["Chủ TK", "chu"], ["Số TK", "stk"], ["Ngân hàng", "nh"]].map(([lb, k]) => (<label key={k} style={{ fontSize: 12, color: C.sub, display: "block", marginBottom: 7 }}>{lb}<input value={meta.bank[p][k]} onChange={(e) => setBank(p, k, e.target.value)} style={{ ...inp, width: "100%", marginTop: 3 }} /></label>))}
+              </div>
             </Card>
           ))}
         </>
