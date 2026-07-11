@@ -69,7 +69,7 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
             margin: 0 !important;
             padding: 5mm 6mm !important;
             aspect-ratio: auto !important;
-            min-height: 0 !important;
+            min-height: 205mm !important;
             height: auto !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
