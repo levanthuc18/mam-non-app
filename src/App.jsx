@@ -112,7 +112,7 @@ export default function App() {
   }, [tab]); 
   
   const store = useStore();
-  const { meta, students, loading } = store;
+  const { meta, students, loading, loadErr } = store;
 
   const isAdmin = auth?.role === "admin";
   const isGV = auth?.role === "gv";
@@ -134,6 +134,15 @@ export default function App() {
   useEffect(() => { (async () => { const a = await sGet("mn5:auth"); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); })(); }, []);
 
   if (!splashDone) return <Splash onDone={() => setSplashDone(true)} />;
+  if (loadErr)
+    return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, padding: 24, fontFamily: font.body }}>
+      <div style={{ textAlign: "center", maxWidth: 340 }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>📡</div>
+        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>Không kết nối được máy chủ</div>
+        <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6, marginBottom: 18 }}>App tạm thời không tải được dữ liệu (mạng hoặc máy chủ đang trục trặc). <b style={{ color: C.ink }}>Dữ liệu của bạn vẫn an toàn</b> — app sẽ không khởi tạo lại khi chưa đọc được. Vui lòng kiểm tra mạng và thử lại.</div>
+        <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>
+      </div>
+    </div>;
   if (loading || !meta || !students)
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, color: C.sub, fontFamily: font.body }}>Đang tải dữ liệu…</div>;
   if (!auth) return <LoginScreen meta={meta} onLogin={login} />;
