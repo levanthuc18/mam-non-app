@@ -74,6 +74,7 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             box-sizing: border-box !important;
+            zoom: .9;
             box-shadow: none !important;
           }
           .phieu-page:last-child { 
