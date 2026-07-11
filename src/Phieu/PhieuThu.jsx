@@ -49,7 +49,9 @@ export function PhieuThu({
           @media print {
             @page { size: A5 portrait; margin: 0; }
             html, body { margin: 0 !important; padding: 0 !important; }
-            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 0 !important; height: auto !important; padding: 5mm 6mm !important; break-inside: avoid !important; page-break-inside: avoid !important; box-sizing: border-box !important; }
+            body * { visibility: hidden !important; }
+            #phieu-in, #phieu-in * { visibility: visible !important; }
+            #phieu-in { position: absolute !important; left: 0 !important; top: 0 !important; margin: 0 !important; box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 0 !important; height: auto !important; padding: 5mm 6mm !important; box-sizing: border-box !important; break-inside: avoid !important; page-break-inside: avoid !important; zoom: .9; }
             .no-print { display: none !important; }
           }
         `}</style>
