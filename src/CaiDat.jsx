@@ -18,7 +18,7 @@ export function BackupExport({ meta, students }) {
   const [outText, setOutText] = useState("");
   const [outName, setOutName] = useState("");
   const [pasteText, setPasteText] = useState("");
-  const dl = (text, name, type) => { try { const blob = new Blob([type === "csv" ? "\uFEFF" + text : text], { type: type === "csv" ? "text/csv;charset=utf-8;" : "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch (e) {} };
+  const dl = (text, name, type) => { try { const blob = new Blob([type === "csv" ? "\uFEFF" + text : text], { type: type === "csv" ? "text/csv;charset=utf-8;" : "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); const d = new Date(); const hh = String(d.getHours()).padStart(2, "0"), mi = String(d.getMinutes()).padStart(2, "0"); try { localStorage.setItem("mn5:lastBackup", `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hh}:${mi}`); } catch {} } catch (e) {} };
 
   const buildJSON = async () => {
     const keys = await sList("mn5:"); const data = {};
@@ -230,6 +230,8 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const [phSdt, setPhSdt] = useState("");
   const [ngayNhap, setNgayNhap] = useState(new Date().toISOString().slice(0, 10));
   const [tenLopMoi, setTenLopMoi] = useState("");
+  const [lopMo, setLopMo] = useState(null);
+  const [renameLop, setRenameLop] = useState(null);
   const [gvTen, setGvTen] = useState("");
   const [gvPin, setGvPin] = useState("");
   const [gvLop, setGvLop] = useState(meta.classes[0]?.id || "");
@@ -408,45 +410,65 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
           })}
         </Card>
       )}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2, scrollbarWidth: "none" }}>
         {[
           ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["thuphi", "Thu học phí"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["baomat", "Bảo mật"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
-          <button key={k} onClick={() => setSec(k)} style={{ padding: "8px 15px", borderRadius: 999, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{l}</button>
+          <button key={k} onClick={() => setSec(k)} style={{ flexShrink: 0, padding: "8px 15px", borderRadius: 999, border: `1.5px solid ${sec === k ? C.pine : C.line}`, background: sec === k ? C.pine : C.card, color: sec === k ? "#fff" : C.sub, fontFamily: font.body, fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>{l}</button>
         ))}
       </div>
 
       {sec === "lop" && (
         <>
-          <div style={{ fontSize: 13, color: C.sub, marginBottom: 12, lineHeight: 1.55 }}>Thêm lớp = thêm 1 dòng, mọi tính toán tự nhận lớp mới.</div>
-          {meta.classes.map((l) => (
-            <Card key={l.id} style={{ padding: "12px 14px", marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <input value={l.ten} onChange={(e) => setLopGia(l.id, "ten", e.target.value)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, border: "none", background: "none", color: C.ink, outline: "none", width: "70%" }} />
-                <button onClick={() => xoaLop(l.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={16} color={C.coral} /></button>
+          <div style={{ fontSize: 13, color: C.sub, marginBottom: 12, lineHeight: 1.55 }}>Chạm tên lớp để mở/gập bảng giá. Thêm lớp = thêm 1 dòng, mọi tính toán tự nhận lớp mới.</div>
+          {meta.classes.map((l) => {
+            const mo = lopMo === l.id;
+            const soKhoan = KHOAN.filter((k) => khoanMode(l, k.key) === "thu").length;
+            return (
+            <Card key={l.id} style={{ padding: 0, marginBottom: 10, overflow: "hidden" }}>
+              <div onClick={() => setLopMo(mo ? null : l.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 14px", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <span style={{ color: C.sub, fontSize: 12, transform: mo ? "rotate(90deg)" : "none", transition: "transform .15s" }}>❯</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.ten}</div>
+                    {!mo && <div style={{ fontSize: 11.5, color: C.sub }}>{soKhoan} khoản thu</div>}
+                  </div>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setRenameLop({ id: l.id, ten: l.ten }); }} style={{ flexShrink: 0, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="edit" size={16} color={C.sub} /></button>
               </div>
-              <label style={{ fontSize: 11, color: C.sub, display: "block", marginBottom: 10 }}>Buổi T7 (giá/buổi)
-                <input type="number" value={l.t7 || 0} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, "t7", Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: C.graySoft, outline: "none" }} /></label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {KHOAN.map((k) => {
-                  const mode = khoanMode(l, k.key);
-                  const badge = mode === "thu" ? { t: "✓ Thu", bg: C.greenSoft, fg: C.green } : { t: "Không thu", bg: C.coralSoft, fg: C.coral };
-                  return (
-                    <div key={k.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <label style={{ flex: 1, fontSize: 11, color: C.sub }}>{k.label}
-                        <input type="number" value={l[k.key] || 0} disabled={mode === "khong"} onFocus={(e) => e.target.select()} onChange={(e) => setLopGia(l.id, k.key, Number(e.target.value) || 0)} style={{ width: "100%", marginTop: 3, padding: "6px 7px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontFamily: font.body, fontSize: 13, color: C.ink, background: mode === "khong" ? C.graySoft : C.card, outline: "none" }} /></label>
-                      <button onClick={() => cycleKhoan(l.id, k.key)} title="Chạm để đổi: Thu / Không thu" style={{ alignSelf: "flex-end", marginBottom: 1, whiteSpace: "nowrap", padding: "6px 9px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 11, fontFamily: font.body, background: badge.bg, color: badge.fg, minWidth: 92, textAlign: "center" }}>{badge.t}</button>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>Chạm nút bên phải để bật/tắt. Đổi giá hoặc tắt khoản sẽ cập nhật ngay vào tháng đang xem (trừ HS đã sửa tay & tháng đã chốt).</div>
+              {mo && (
+                <div style={{ padding: "0 14px 14px" }}>
+                  <label style={{ fontSize: 11, color: C.sub, display: "block", marginBottom: 10 }}>Buổi T7 (giá/buổi)
+                    <div style={{ marginTop: 4 }}><NumInput lazy value={l.t7 || 0} onChange={(v) => setLopGia(l.id, "t7", v)} w={"100%"} /></div></label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {KHOAN.map((k) => {
+                      const mode = khoanMode(l, k.key);
+                      const on = mode === "thu";
+                      return (
+                        <div key={k.key} style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                          <label style={{ flex: 1, fontSize: 11, color: C.sub, minWidth: 0 }}>{k.label}
+                            <div style={{ marginTop: 3 }}><NumInput lazy value={l[k.key] || 0} disabled={!on} onChange={(v) => setLopGia(l.id, k.key, v)} w={"100%"} /></div></label>
+                          <button onClick={() => cycleKhoan(l.id, k.key)} title="Chạm để đổi: Thu / Không thu" style={{ flexShrink: 0, marginBottom: 5, whiteSpace: "nowrap", padding: "5px 10px", borderRadius: 99, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 11, fontFamily: font.body, background: on ? C.greenSoft : C.coralSoft, color: on ? C.green : C.coral }}>{on ? "✓ Thu" : "Tắt"}</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>Đổi giá hoặc tắt khoản sẽ cập nhật ngay vào tháng đang xem (trừ HS đã sửa tay & tháng đã chốt).</div>
+                </div>
+              )}
             </Card>
-          ))}
+            );
+          })}
           <div style={{ display: "flex", gap: 8 }}>
             <input value={tenLopMoi} onChange={(e) => setTenLopMoi(e.target.value)} placeholder="Tên lớp mới" style={{ ...inp, flex: 1, minWidth: 0 }} />
             <button onClick={themLop} style={{ padding: "0 18px", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>+ Thêm lớp</button>
           </div>
+          <BottomSheet open={!!renameLop} onClose={() => setRenameLop(null)} title="Đổi tên lớp">
+            {renameLop && <>
+              <input value={renameLop.ten} onChange={(e) => setRenameLop({ ...renameLop, ten: e.target.value })} autoFocus style={{ width: "100%", padding: "11px 13px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 15, fontFamily: font.body, boxSizing: "border-box", marginBottom: 12 }} />
+              <button onClick={() => { const t = renameLop.ten.trim(); if (t) { setLopGia(renameLop.id, "ten", t); logAction(`Đổi tên lớp → "${t}"`); } setRenameLop(null); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Lưu tên</button>
+            </>}
+          </BottomSheet>
         </>
       )}
 
