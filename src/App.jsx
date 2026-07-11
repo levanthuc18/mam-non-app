@@ -297,7 +297,7 @@ export default function App() {
         )}
 
         {tab === "more" && (
-          <MoreMenu setTab={setTab} onLogout={logout} />
+          <MoreMenu setTab={setTab} onLogout={logout} students={students} meta={meta} />
         )}
 
         {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
