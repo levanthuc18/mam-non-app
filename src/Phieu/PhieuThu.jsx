@@ -24,8 +24,8 @@ export function PhieuThu({
   // Tự nén theo số khoản thu để gói gọn 1 trang (không cắt nội dung).
   const nKhoan = phieuRow.ps.dong.length + (phieuRow.noTruoc !== 0 ? 1 : 0);
   const dense = nKhoan >= 10 ? 2 : nKhoan >= 7 ? 1 : 0;
-  const rowPad = dense === 2 ? 2.5 : dense === 1 ? 4 : 5.5;
-  const rowFont = dense === 2 ? 11.5 : dense === 1 ? 12 : 13;
+  const rowPad = nKhoan >= 12 ? 2 : dense === 2 ? 2.5 : dense === 1 ? 4 : 5.5;
+  const rowFont = nKhoan >= 12 ? 11 : dense === 2 ? 11.5 : dense === 1 ? 12 : 13;
 
   const inPhieu = () => {
     const printTitle = fileName(`${phieuRow.lop?.ten ? phieuRow.lop.ten + " - " : ""}${phieuRow.hs.ten} - T${month}.${year}`);
@@ -48,7 +48,8 @@ export function PhieuThu({
         <style>{`
           @media print {
             @page { size: A5 portrait; margin: 0; }
-            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 18.6cm !important; }
+            html, body { margin: 0 !important; padding: 0 !important; }
+            #phieu-in { box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 0 !important; height: auto !important; padding: 5mm 6mm !important; break-inside: avoid !important; page-break-inside: avoid !important; box-sizing: border-box !important; }
             .no-print { display: none !important; }
           }
         `}</style>
