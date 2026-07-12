@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   C, font, fmt, ask, toast, logAction, uid,
   LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec,
-  sGet, sList
+  sGet, sGetSafe, sList
 } from "./lib.js";
 import {
   Card, BottomSheet, NumInput, ABBtn, Badge
@@ -50,6 +50,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const [topNoLimit, setTopNoLimit] = useState(3);
   const [luyKe, setLuyKe] = useState(null);
   const [lichSu, setLichSu] = useState(null);
+  const [lkErr, setLkErr] = useState(false);
   const [sheetCB, setSheetCB] = useState(false);
   const [sheetCP, setSheetCP] = useState(false);
   const [sheetLN, setSheetLN] = useState(false);
@@ -71,14 +72,19 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const tyA0 = meta?.tyLeLaiA ?? 50;
       const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort();
       const ls = [];
+      let docLoi = false;
       for (const m of keys) {
-        const td = await sGet(`mn5:thang:${m}`); if (!td) continue;
+        const tdR = await sGetSafe(`mn5:thang:${m}`);
+        if (!tdR.ok) { docLoi = true; break; }  // mạng lỗi → DỪNG, không tính thiếu tháng
+        const td = tdR.value; if (!td) continue;
         let t;
         if (td.daChot && td.snapTK) { t = td.snapTK; }
         else {
           const my = Number(m.slice(0, 4)), mmo = Number(m.slice(5));
           const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
-          const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
+          const ddR = await sGetSafe(`mn5:dd:${ymKey(pyy, pmo)}`);
+          if (!ddR.ok) { docLoi = true; break; }
+          const ddPrevM = ddR.value || {};
           t = tinhThangFull(td, m, students, meta, ddPrevM, tyA0);
         }
         rutNhanA += t.rutNhanA; rutNhanB += t.rutNhanB;
@@ -95,7 +101,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         duocChiaCumA += t.dcA; duocChiaCumB += t.dcB;
         ls.push({ thang: `T${Number(mm)}/${yy}`, mm: Number(mm), yy: Number(yy), laiKeToan: t.lkt, laiA: t.dcA, laiB: t.dcB, laiTay: t.laiTay, laiTienMat: thuThang - traThang, psThang, chiThang, thuThang, traThang, noNCC, thuA: thuNetA, thuB: thuNetB, traA: t.traA, traB: t.traB, chiA: t.chiA, chiB: t.chiB, giuACum: giuA, giuBCum: giuB, deltaA, deltaB, tnPhai: t.tnPhai, tnThu: t.tnThu, noNCCThang: t.noNCCThang, daChot: !!td.daChot });
       }
-      if (!huy) { setLuyKe({ giuA, giuB, noNCC, brkA: bA, brkB: bB, tongLKT, rutNhanA, rutNhanB, duocChiaCumA, duocChiaCumB }); setLichSu(ls); }
+      if (!huy) {
+        setLkErr(docLoi);
+        if (!docLoi) { setLuyKe({ giuA, giuB, noNCC, brkA: bA, brkB: bB, tongLKT, rutNhanA, rutNhanB, duocChiaCumA, duocChiaCumB }); setLichSu(ls); }
+      }
     })();
     return () => { huy = true; };
   }, [meta, students, ym, mData]);
@@ -182,7 +191,9 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const snapNCC = (mData.chiPhi || []).reduce((a, c) => (c.loai === "CHUYEN" || c.loai === "NO_AB" || c.loai === "RUT_LOI" || c.loai === "HOAN_UNG") ? a : a + ((Number(c.soTien) || 0) - (Number(c.daTra) || 0)), 0);
       const [cy, cm] = ym.split("-").map(Number);
       const pmo = cm === 1 ? 12 : cm - 1, pyy = cm === 1 ? cy - 1 : cy;
-      const ddPrevM = (await sGet(`mn5:dd:${ymKey(pyy, pmo)}`)) || {};
+      const ddR = await sGetSafe(`mn5:dd:${ymKey(pyy, pmo)}`);
+      if (!ddR.ok) { toast("Không tải được dữ liệu tháng trước (lỗi mạng) — chưa thể chốt. Thử lại."); return; }
+      const ddPrevM = ddR.value || {};
       const snapTK = tinhThangFull(mData, ym, students, meta, ddPrevM, meta?.tyLeLaiA ?? 50);
       await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC, snapTK });
       logAction(`Chốt tháng ${month}/${year}`);
@@ -236,6 +247,11 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
 
   return (
     <>
+      {lkErr && (
+        <div style={{ background: C.amberSoft, border: `1.5px solid ${C.amber}`, borderRadius: 12, padding: "10px 13px", marginBottom: 12, fontSize: 12.5, color: C.amber, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>⚠</span><span style={{ flex: 1 }}>Không tải đủ dữ liệu các tháng (lỗi mạng) — số liệu lũy kế bên dưới có thể chưa chính xác. Kiểm tra mạng rồi mở lại.</span>
+        </div>
+      )}
       <Card style={{ marginBottom: 12, boxShadow: "0 3px 12px -8px rgba(23,107,91,.5)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <Icon name="barChart" size={16} color={C.pine} />
@@ -494,7 +510,12 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.blueA, marginBottom: 2, fontWeight: 600 }}>Lãi A</div><BlurNum value={laiTay.A} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, A: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
               <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.violetB, marginBottom: 2, fontWeight: 600 }}>Lãi B</div><BlurNum value={laiTay.B} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, B: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
             </div>
-            <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>Tỷ lệ % không áp dụng cho tháng này. Tổng nên = LN kế toán ({fmt(lnKeToan)}).</div>
+            {(() => {
+              const tong = (Number(laiTay.A) || 0) + (Number(laiTay.B) || 0);
+              const lech = tong - lnKeToan;
+              if (lech === 0) return <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>Tỷ lệ % không áp dụng cho tháng này. Tổng A+B = LN kế toán ({fmt(lnKeToan)}) ✓</div>;
+              return <div style={{ fontSize: 11, color: C.coral, marginTop: 6, fontWeight: 600, background: C.coralSoft, borderRadius: 8, padding: "6px 9px" }}>⚠ A + B = {fmt(tong)}, {lech > 0 ? "CAO hơn" : "THẤP hơn"} LN kế toán ({fmt(lnKeToan)}) {lech > 0 ? "+" : ""}{fmt(lech)}đ. Kiểm tra lại để chia đúng.</div>;
+            })()}
           </div>
         ) : (
           <button onClick={() => upMData({ ...mData, laiTay: { A: Math.round(lnKeToan * tyLeA / 100), B: lnKeToan - Math.round(lnKeToan * tyLeA / 100) } })} style={{ marginBottom: 10, fontSize: 12, color: C.blueA, background: C.blueASoft, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 600 }}>✎ Nhập tay lãi A/B tháng này</button>
