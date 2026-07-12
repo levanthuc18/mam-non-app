@@ -33,17 +33,17 @@ function EmptyState({ search, onClear }) {
   );
 }
 
-export function NgayAnBar({ onApply, rows }) {
+export function NgayAnBar({ onApply, rows, dangLoc }) {
   const [v, setV] = useState(24);
   return (
     <Card style={{ marginBottom: 10, background: C.pineSoft, borderColor: C.line, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="utensils" size={14} color={C.pine} /> Số ngày ăn trong tháng:</span>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="utensils" size={14} color={C.pine} /> Số ngày ăn:</span>
         <NumInput value={v} onChange={setV} w={62} />
         <span style={{ fontSize: 12.5, color: C.pine }}>ngày</span>
-        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp dụng cho {rows.length} HS đang hiển thị</button>
+        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp {v} ngày cho {rows.length} HS đang lọc</button>
       </div>
-      <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>Tiền ăn = số ngày ăn × đơn giá. Chỉ áp cho HS đang lọc; HS đã sửa tay vẫn giữ riêng.</div>
+      <div style={{ fontSize: 11, color: dangLoc ? C.amber : C.sub, marginTop: 6, fontWeight: dangLoc ? 700 : 400 }}>{dangLoc ? `⚠ Đang lọc — chỉ áp cho ${rows.length} HS hiển thị, KHÔNG phải cả lớp. ` : ""}Tiền ăn = số ngày ăn × đơn giá. HS đã sửa tay vẫn giữ riêng.</div>
     </Card>
   );
 }
@@ -438,7 +438,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
                 {hasDiscount && (
-                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: C.orange, background: C.amberSoft, display:"inline-flex", alignItems:"center", gap:3, border: `1px solid ${C.line}`, padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color="#D97706" /></span>
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: C.orange, background: C.amberSoft, display:"inline-flex", alignItems:"center", gap:3, border: `1px solid ${C.line}`, padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color={C.amber} /></span>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: C.sub, minWidth: 0 }}>
@@ -490,7 +490,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
                 </button>
               )
             ) : (
-              <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? "#FFF7ED" : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
+              <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? C.amberSoft : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
                 <Icon name="cash" size={15} color={paidFull ? C.amber : "#fff"} />
                 <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
               </button>
@@ -527,7 +527,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <span>{fmt(tongPhaiThu)}đ</span>
           </div>
           <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: `1px solid ${C.line}`, background: C.blueASoft, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <Icon name="receipt" size={15} color="#2563EB" /> Xem phiếu thu
+            <Icon name="receipt" size={15} color={C.blueA} /> Xem phiếu thu
           </button>
         </div>
       )}
@@ -545,7 +545,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const [thuTienId, setThuTienId] = useState(null);
   const [expandId, setExpandId] = useState(null);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
-  const [thuSheetOpen, setThuSheetOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [showNgayAn, setShowNgayAn] = useState(false);
   const [fastMode, setFastMode] = useState(false);
@@ -597,7 +596,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const selStyle = { padding: "9px 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
 
   const CHIP_CFG = [
-    { key: "all", label: "Tất cả", count: chipCounts.all, bg: "#1C3530", color: "#fff", border: `${C.line}` },
+    { key: "all", label: "Tất cả", count: chipCounts.all, bg: C.pine, color: "#fff", border: C.pine },
     { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
     { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
     { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
@@ -612,24 +611,12 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         <div style={{ display: "flex", gap: C.sm, marginBottom: C.sm, alignItems: "center" }}>
           <div style={{ flex: 1 }}><SearchBar value={search} onChange={setSearch} /></div>
           {isWide ? (
-            <select value={lopFilter} onChange={(e) => setLopFilter(e.target.value)} style={{ ...selStyle, flex: "0 0 140px" }}>
+            <select value={lopFilter} onChange={(e) => setLopFilter(e.target.value)} style={{ ...selStyle, flex: "0 0 160px" }}>
               {chipsLop.map(([id, ten]) => <option key={id} value={id}>{id === "all" ? "Tất cả lớp" : ten}</option>)}
             </select>
           ) : (
-            <button onClick={() => setLopSheetOpen(true)} style={{ ...selStyle, flex: "0 0 130px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <button onClick={() => setLopSheetOpen(true)} style={{ ...selStyle, flex: "0 0 150px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lopFilter === "all" ? "Tất cả lớp" : getLop(lopFilter)?.ten}</span>
-              <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
-            </button>
-          )}
-          {isWide ? (
-            <select value={thuFilter} onChange={(e) => setThuFilter(e.target.value)} style={{ ...selStyle, flex: "0 0 150px" }}>
-              {[["all", "Mọi tình trạng"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          ) : (
-            <button onClick={() => setThuSheetOpen(true)} style={{ ...selStyle, flex: "0 0 140px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {thuFilter === "all" ? "Mọi tình trạng" : thuFilter === "chuaThu" ? "Chưa thu" : thuFilter === "thieu" ? "Thiếu" : thuFilter === "noCu" ? "Nợ cũ" : thuFilter === "thuThua" ? "Thu thừa" : "Mọi tình trạng"}
-              </span>
               <span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span>
             </button>
           )}
@@ -663,6 +650,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>
+          <span style={{ color: C.ink }}>Phải thu: {fmtK(tk.ps)}</span>
           <span style={{ color: C.green, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.green, flexShrink: 0 }} /> Đã thu: {fmtK(tk.thu)}</span>
           <span style={{ color: C.coral, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.coral, flexShrink: 0 }} /> Còn nợ: {fmtK(tk.no)}</span>
         </div>
@@ -674,14 +662,14 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         </div>
       </StickyBar>
 
-      {showNgayAn && <div style={{ marginBottom: 10 }}><NgayAnBar onApply={(v, ids) => { setNgayAnAll(v, ids); setShowNgayAn(false); }} rows={rows} /></div>}
+      {showNgayAn && <div style={{ marginBottom: 10 }}><NgayAnBar onApply={(v, ids) => { setNgayAnAll(v, ids); setShowNgayAn(false); }} rows={rows} dangLoc={search.trim() !== "" || lopFilter !== "all" || thuFilter !== "all"} /></div>}
 
       {locked && <LockNote />}
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
       {fastMode && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.amberSoft, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, fontWeight: 600 }}>
-          <Icon name="zap" size={16} color="#92702A" />
+          <Icon name="zap" size={16} color={C.amber} />
           <span>Quét thu nhanh — bấm <b>Thu đủ</b> là thu ngay, có thể Hoàn tác.{fastCount > 0 ? ` Đã thu ${fastCount} cháu phiên này.` : ""}</span>
         </div>
       )}
@@ -769,20 +757,6 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       />
 
       <LopFilterSheet open={lopSheetOpen} onClose={() => setLopSheetOpen(false)} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter} allRows={allRows} />
-
-      <BottomSheet open={thuSheetOpen} onClose={() => setThuSheetOpen(false)} title="Tình trạng thu">
-        {[["all", "Mọi tình trạng"], ["chuaThu", "Chưa thu"], ["thieu", "Thiếu"], ["noCu", "Nợ cũ"], ["thuThua", "Thu thừa"]].map(([v, l]) => {
-          const active = thuFilter === v;
-          return (
-            <div key={v} onClick={() => { setThuFilter(v); setThuSheetOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
-              <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${active ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {active && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: active ? C.pine : C.ink }}>{l}</div>
-            </div>
-          );
-        })}
-      </BottomSheet>
 
       {!locked && rows.length > 0 && (
         <>
