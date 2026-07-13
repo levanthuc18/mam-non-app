@@ -195,6 +195,16 @@ export async function sSet(k, v, opts = {}) {
     await window.storage.set(k, JSON.stringify(v)); return true;
   } catch (e) { storageOK = false; return false; }
 }
+// Đẩy 1 thay đổi vào HÀNG ĐỢI BỀN (localStorage) một cách ĐỒNG BỘ — dùng khi
+// app sắp đóng/ẩn để không mất các bản lưu debounce chưa kịp bắn. Lần mở sau tự flush.
+export function queueWrite(k, v) {
+  if (PROTECT_KEYS.has(k) && laRong(k, v) && dangCoDL(k)) return false; // không đẩy ghi rỗng đè dữ liệu
+  if (PROTECT_KEYS.has(k)) markHad(k, v);
+  const emptyObj = v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0;
+  MEM[k] = v;
+  enqueue(k, emptyObj ? { __del: true } : v);
+  return true;
+}
 export async function sList(prefix) {
   const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
   if (SB) {
