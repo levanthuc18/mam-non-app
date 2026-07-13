@@ -128,10 +128,14 @@ export default function App() {
   useEffect(() => { setOpenId(null); }, [tab]);
   useEffect(() => { if (isGV && !["dd", "home", "hs", "more"].includes(tab)) setTab("home"); }, [isGV, tab]);
 
-  const login = (a) => { setAuth(a); sSet("mn5:auth", a); };
-  const logout = () => { setAuth(null); sDel("mn5:auth"); setTab("home"); };
+  // Phiên đăng nhập lưu RIÊNG TỪNG MÁY (localStorage), KHÔNG dùng sSet/sGet
+  // (Supabase dùng chung → sẽ lẫn quyền GV↔admin giữa các thiết bị).
+  const readAuth = () => { try { const s = localStorage.getItem("mn5:auth"); return s ? JSON.parse(s) : null; } catch { return null; } };
+  const writeAuth = (a) => { try { if (a) localStorage.setItem("mn5:auth", JSON.stringify(a)); else localStorage.removeItem("mn5:auth"); } catch {} };
+  const login = (a) => { setAuth(a); writeAuth(a); };
+  const logout = () => { setAuth(null); writeAuth(null); setTab("home"); };
 
-  useEffect(() => { (async () => { const a = await sGet("mn5:auth"); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); })(); }, []);
+  useEffect(() => { const a = readAuth(); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); }, []);
 
   if (!splashDone) return <Splash onDone={() => setSplashDone(true)} />;
   if (loadErr)
