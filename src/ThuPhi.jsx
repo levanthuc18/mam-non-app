@@ -13,6 +13,10 @@ import { ThuNgoai, KhoanThuLop } from "./ThuNgoai.jsx";
 /* ============================================================
    TIỆN ÍCH
    ============================================================ */
+// #8: Tạm ẨN 2 nút Tiền mặt / Chuyển khoản (chưa dùng để đối soát).
+// Giữ nguyên code — cần bật lại chỉ đổi false → true.
+const HIEN_CACH_THU = false;
+
 const fmtK = (n) => {
   if (!n) return "0";
   if (Math.abs(n) >= 1000000) return (n / 1000000).toFixed(1).replace(".0", "") + "tr";
@@ -135,6 +139,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
           style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
         />
 
+        {HIEN_CACH_THU && (
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           <label onClick={() => setPt("tm")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${pt === "tm" ? C.pine : C.line}`, background: pt === "tm" ? C.pineSoft : C.card, cursor: "pointer", fontWeight: 600, fontSize: 13, color: C.ink }}>
             <input type="radio" checked={pt === "tm"} onChange={() => setPt("tm")} style={{ accentColor: C.pine }} /> Tiền mặt
@@ -143,6 +148,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
             <input type="radio" checked={pt === "ck"} onChange={() => setPt("ck")} style={{ accentColor: C.pine }} /> Chuyển khoản
           </label>
         </div>
+        )}
 
         <button onClick={handleConfirm} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>XÁC NHẬN THU</button>
       </div>
