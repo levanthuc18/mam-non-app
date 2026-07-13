@@ -7,7 +7,7 @@ import {
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
   trangThaiThu, ask, toast, logAction
 } from "./lib.js";
-import { tinhTKThang } from "./taichinh.js";
+import { tinhTKThang, tinhNoLuyKe } from "./taichinh.js";
 
 export function useStore() {
   const now = new Date();
@@ -24,6 +24,7 @@ export function useStore() {
   const [loadErr, setLoadErr] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const [prevDebt, setPrevDebt] = useState({});
+  const [prevDebtStale, setPrevDebtStale] = useState(false);
   const saveT = useRef({});
   const ym = ymKey(year, month);
 
@@ -144,41 +145,22 @@ export function useStore() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leData, meta, students, ym]);
 
-  useEffect(() => { if (!metaReady || !students) return; (async () => {
+  useEffect(() => { if (!metaReady || !students) return; let huy = false; (async () => {
     const keys = await sList("mn5:thang:");
     const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m < ym).sort();
-    const datas = await Promise.all(months.map((m) => sGet(`mn5:thang:${m}`)));
-    const dds = await Promise.all(months.map((m) => sGet(`mn5:dd:${m}`)));
+    // Đọc CÓ PHÂN BIỆT LỖI — mạng lỗi thì KHÔNG được coi là "chưa có dữ liệu" (đó là gốc lỗi hiện nợ thiếu).
+    const dRes = await Promise.all(months.map((m) => sGetSafe(`mn5:thang:${m}`)));
+    const ddRes = await Promise.all(months.map((m) => sGetSafe(`mn5:dd:${m}`)));
     const prevKeys = Array.from(new Set(months.map((m) => { const y = Number(m.slice(0, 4)), mo = Number(m.slice(5)); const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y; return ymKey(py, pm); }).filter((k) => !months.includes(k))));
-    const prevVals = await Promise.all(prevKeys.map((k) => sGet(`mn5:dd:${k}`)));
-    const ddPrevExtra = {}; prevKeys.forEach((k, i) => { ddPrevExtra[k] = prevVals[i] || {}; });
-    let snapIdx = -1;
-    for (let i = months.length - 1; i >= 0; i--) { if (datas[i]?.daChot && datas[i]?.noLuyKe) { snapIdx = i; break; } }
-    const debt = {};
-    students.forEach((hs) => { debt[hs.id] = hs.noDauKy || 0; });
-    if (snapIdx >= 0) { const snap = datas[snapIdx].noLuyKe; Object.keys(snap).forEach((sid) => { debt[sid] = snap[sid]; }); }
-    for (let i = snapIdx + 1; i < months.length; i++) {
-      const td = datas[i]; if (!td?.fees) continue;
-      const m = months[i], y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
-      const ddM = dds[i] || td.att || {};
-      if (td.daChot && td.noLuyKe) { Object.keys(td.noLuyKe).forEach((sid) => { debt[sid] = td.noLuyKe[sid]; }); continue; }
-      Object.keys(td.fees).forEach((sid) => {
-        const hs = students.find((s) => s.id === sid); if (!hs) return;
-        if (debt[sid] === undefined) debt[sid] = hs.noDauKy || 0;
-        let rec = td.fees[sid];
-        const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
-        const ppm = mo === 1 ? 12 : mo - 1, ppy = mo === 1 ? y - 1 : y;
-        const ddPrevKey = ymKey(ppy, ppm);
-        const idxPrev = months.indexOf(ddPrevKey);
-        const ddPrevM = (idxPrev >= 0 ? dds[idxPrev] : null) || ddPrevExtra[ddPrevKey] || {};
-        const nghi = Object.keys(ddPrevM[sid] || {}).length;
-        if (hs.pl === "T7" && !rec.buoiT7Manual) rec = { ...rec, buoiT7: soBuoiT7Auto(y, mo, ddM[sid]) };
-        const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
-        debt[sid] += ps - (Number(rec.thucThu) || 0);
-      });
-    }
-    setPrevDebt(debt);
-  })(); }, [ym, metaReady, students, mData, meta]);
+    const pRes = await Promise.all(prevKeys.map((k) => sGetSafe(`mn5:dd:${k}`)));
+    if (huy) return;
+    if (dRes.some((r) => !r.ok) || ddRes.some((r) => !r.ok) || pRes.some((r) => !r.ok)) { setPrevDebtStale(true); return; } // GIỮ số cũ, KHÔNG hiện nợ sai
+    const datas = dRes.map((r) => r.value);
+    const dds = ddRes.map((r) => r.value);
+    const ddPrevExtra = {}; prevKeys.forEach((k, i) => { ddPrevExtra[k] = pRes[i].value || {}; });
+    const { debt } = tinhNoLuyKe({ months, datas, dds, ddExtra: ddPrevExtra, students, meta, boundExcl: ym });
+    setPrevDebt(debt); setPrevDebtStale(false);
+  })(); return () => { huy = true; }; }, [ym, metaReady, students, mData, meta]);
 
   const q = (k, v) => { clearTimeout(saveT.current[k]); saveT.current[k] = setTimeout(() => sSet(k, v), 400); };
   const flush = (k, v) => { clearTimeout(saveT.current[k]); return sSet(k, v); };
@@ -335,6 +317,6 @@ export function useStore() {
     reseedAll, upMeta, upStudents, upMData, upDDData, upLeData,
     taoThang, delThang, setRec, thuDuNhieu, setKhoan, resetKhoan,
     resetAllKhoan, setNgayAnAll, addPhuThuHS, delPhuThuHS,
-    allRows, ddRows, tk, getLop, locked, prevDebt
+    allRows, ddRows, tk, getLop, locked, prevDebt, prevDebtStale
   };
 }
