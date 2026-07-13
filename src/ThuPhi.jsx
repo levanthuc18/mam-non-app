@@ -329,9 +329,7 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
   const hocPhi = r.rec?.khoan?.hocPhi || 0;
   const tienAn = r.rec?.khoan?.tienAn || 0;
 
-  const currentMonth = new Date().getMonth() + 1;
-  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-  const truAnLabel = `Trừ ăn T${prevMonth}`;
+  const truAnLabel = "Trừ ăn tháng trước";
 
   const isTruAn = (d) => (d[0].includes("Trừ") || d[0].includes("trừ")) && d[1] < 0;
   const truAnItems = dong.filter(isTruAn).map(d => [truAnLabel, d[1]]);
