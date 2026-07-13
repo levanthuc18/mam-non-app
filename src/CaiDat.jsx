@@ -51,7 +51,7 @@ export function BackupExport({ meta, students }) {
       const name = kind === "json" ? `sao-luu-mamnon-${new Date().toISOString().slice(0, 10)}.json` : `bao-cao-thu-phi-${new Date().toISOString().slice(0, 10)}.csv`;
       dl(text, name, kind);                 
       setOutText(text); setOutName(name);   
-    } catch (e) { toast("Lỗi xuất: " + e.message); }
+    } catch (e) { toast("Không xuất được — thử lại giúp mình."); }
     setBusy(false);
   };
 
@@ -680,7 +680,7 @@ function DoiPin() {
       logAction("Đổi mã PIN quản lý");
       setCu(""); setM1(""); setM2("");
       toast("Đã đổi PIN. Dùng PIN mới từ lần đăng nhập sau.");
-    } catch { toast("Lỗi khi lưu, thử lại"); }
+    } catch { toast("Không lưu được — kiểm tra mạng rồi thử lại."); }
     setBusy(false);
   };
   return (
