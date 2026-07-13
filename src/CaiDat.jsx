@@ -59,17 +59,25 @@ export function BackupExport({ meta, students }) {
 
   const restore = async (text) => {
     let data; try { data = JSON.parse(text); } catch { toast("Nội dung không hợp lệ."); return; }
+    if (!data || typeof data !== "object" || Array.isArray(data)) { toast("Nội dung không phải bản sao lưu."); return; }
+    // ⛔ CHỐT CHẶN: chỉ phục hồi khi ĐÚNG là bản sao lưu thật (có HS + có lớp).
+    // Tránh dán nhầm 1 đoạn JSON hợp lệ nhưng thiếu → xóa sạch dữ liệu.
+    const st = data["mn5:students"], mt = data["mn5:meta"];
+    const okSt = Array.isArray(st) && st.length > 0;
+    const okMt = mt && Array.isArray(mt.classes) && mt.classes.length > 0;
+    if (!okSt || !okMt) { toast("Không phải bản sao lưu hợp lệ (thiếu học sinh hoặc lớp). Đã hủy để bảo vệ dữ liệu."); return; }
     const n = Object.keys(data).length;
-    if (!n) { toast("Không có dữ liệu."); return; }
-    if (!(await ask(`Phục hồi ${n} mục?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại — không hoàn tác được.`, { danger: true, okText: "Phục hồi" }))) return;
+    if (!(await ask(`Phục hồi ${st.length} học sinh · ${mt.classes.length} lớp (${n} mục)?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại — không hoàn tác được.`, { danger: true, okText: "Phục hồi" }))) return;
     setBusy(true);
     try {
+      // Ghi dữ liệu mới TRƯỚC (lỗi giữa chừng vẫn còn dữ liệu tốt), rồi MỚI xóa key thừa.
+      for (const [k, v] of Object.entries(data)) await sSet(k, v);
       const old = await sList("mn5:");
       for (const k of old) if (!(k in data)) await sDel(k);
-      for (const [k, v] of Object.entries(data)) await sSet(k, v);
+      logAction(`Phục hồi từ sao lưu (${st.length} HS, ${mt.classes.length} lớp)`);
       toast("Đã phục hồi. Đang tải lại…");
       setTimeout(() => location.reload(), 800);
-    } catch (e) { toast("Lỗi: " + e.message); setBusy(false); }
+    } catch (e) { toast("Không phục hồi được — kiểm tra mạng rồi thử lại."); setBusy(false); }
   };
   const importFile = async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; restore(await f.text()); };
 
