@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
-  sGet, sGetSafe, sSet, sList, sDel, MEM, CHOT_MEM, saveChotMem,
+  sGet, sGetSafe, sSet, sList, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
@@ -26,6 +26,7 @@ export function useStore() {
   const [prevDebt, setPrevDebt] = useState({});
   const [prevDebtStale, setPrevDebtStale] = useState(false);
   const saveT = useRef({});
+  const pendingSave = useRef({});
   const ym = ymKey(year, month);
 
   const doSeed = async () => {
@@ -162,8 +163,21 @@ export function useStore() {
     setPrevDebt(debt); setPrevDebtStale(false);
   })(); return () => { huy = true; }; }, [ym, metaReady, students, mData, meta]);
 
-  const q = (k, v) => { clearTimeout(saveT.current[k]); saveT.current[k] = setTimeout(() => sSet(k, v), 400); };
-  const flush = (k, v) => { clearTimeout(saveT.current[k]); return sSet(k, v); };
+  const q = (k, v) => { pendingSave.current[k] = v; clearTimeout(saveT.current[k]); saveT.current[k] = setTimeout(() => { delete pendingSave.current[k]; sSet(k, v); }, 400); };
+  const flush = (k, v) => { delete pendingSave.current[k]; clearTimeout(saveT.current[k]); return sSet(k, v); };
+
+  // Đóng/ẩn app → đẩy ngay các bản lưu debounce chưa kịp bắn vào hàng đợi bền (chống mất sửa lẻ).
+  useEffect(() => {
+    const flushAll = () => {
+      const p = pendingSave.current; pendingSave.current = {};
+      Object.keys(saveT.current).forEach((k) => clearTimeout(saveT.current[k]));
+      Object.keys(p).forEach((k) => { try { queueWrite(k, p[k]); } catch {} });
+    };
+    const onVis = () => { if (document.visibilityState === "hidden") flushAll(); };
+    window.addEventListener("pagehide", flushAll);
+    document.addEventListener("visibilitychange", onVis);
+    return () => { window.removeEventListener("pagehide", flushAll); document.removeEventListener("visibilitychange", onVis); };
+  }, []);
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s, now) => { setStudents(s); return (now ? flush : q)("mn5:students", s); };
   const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; saveChotMem(); const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
