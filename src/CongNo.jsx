@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  sList, sGet, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
+  sList, sGet, sGetSafe, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR, toast, ask, getCurrentActor
 } from "./lib.js";
-import { tinhNoNCCThang, nhomNoNCC } from "./taichinh.js";
+import { tinhNoNCCThang, nhomNoNCC, tinhNoLuyKe } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, Chips, useStickyShrink, StickyBar, BottomSheet } from "./ui.jsx";
 
 export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState(false);
+  const [tryNonce, setTryNonce] = useState(0);
   const [data, setData] = useState([]);
   const [tongNo, setTongNo] = useState(0);
   const [tongDu, setTongDu] = useState(0);
@@ -26,60 +28,67 @@ export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
   const [daCopy, setDaCopy] = useState(false);
   const { sentinelRef, shrunk } = useStickyShrink();
 
-  useEffect(() => { (async () => {
-    setLoading(true);
+  useEffect(() => { let huy = false; (async () => {
+    setLoading(true); setLoadErr(false);
     const keys = await sList("mn5:thang:");
     const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
-    const perHS = {};
-    students.forEach((hs) => { perHS[hs.id] = { hs, phaiThu: 0, daThu: 0, chiTiet: [], noDauKy: hs.noDauKy || 0 }; });
+    // Đọc phân biệt lỗi — mạng lỗi thì KHÔNG hiện số nợ (tránh báo nợ thiếu).
+    const dRes = await Promise.all(months.map((m) => sGetSafe(`mn5:thang:${m}`)));
+    const ddRes = await Promise.all(months.map((m) => sGetSafe(`mn5:dd:${m}`)));
+    const prevKeys = Array.from(new Set(months.map((m) => { const y = Number(m.slice(0, 4)), mo = Number(m.slice(5)); const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y; return ymKey(py, pm); }).filter((k) => !months.includes(k))));
+    const pRes = await Promise.all(prevKeys.map((k) => sGetSafe(`mn5:dd:${k}`)));
+    const nhac = await sGetSafe("mn5:nhacno");
+    if (huy) return;
+    if (dRes.some((r) => !r.ok) || ddRes.some((r) => !r.ok) || pRes.some((r) => !r.ok)) { setLoadErr(true); setLoading(false); return; }
+    const datas = dRes.map((r) => r.value);
+    const dds = ddRes.map((r) => r.value);
+    const ddExtra = {}; prevKeys.forEach((k, i) => { ddExtra[k] = pRes[i].value || {}; });
+
+    // Nợ từng HS — DÙNG CHUNG hàm với Thu phí (tôn trọng snapshot chốt tháng)
+    const { debt, chiTiet, base, baseThang } = tinhNoLuyKe({ months, datas, dds, ddExtra, students, meta });
+
+    // Thu ngoài (KV4) + Nợ NCC — tổng hợp cấp trường (giữ như cũ)
     let tnPhai = 0, tnThu = 0; const tnChiTiet = [];
     let nccCum = 0; const nccChiTiet = []; const chiPhiTheoThang = [];
-    for (const m of months) {
-      const td = await sGet(`mn5:thang:${m}`);
-      if (!td?.fees) continue;
-      const y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
-      const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
-      const ddPrevM = (await sGet(`mn5:dd:${ymKey(py, pm)}`)) || {};
-      Object.keys(td.fees).forEach((sid) => {
-        if (!perHS[sid]) return;
-        const rec = td.fees[sid];
-        const hs = perHS[sid].hs;
-        const lopId = lopOfMonth(hs, m);
-        const lop = meta.classes.find((c) => c.id === lopId);
-        const nghi = Object.keys(ddPrevM[sid] || {}).length;
-        const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
-        const tt = Number(rec.thucThu) || 0;
-        perHS[sid].phaiThu += ps; perHS[sid].daThu += tt;
-        perHS[sid].chiTiet.push({ thang: m, ps, tt, no: ps - tt });
-      });
-      // Thu ngoài (KV4) — cùng chiều thu
+    months.forEach((m, i) => {
+      const td = datas[i]; if (!td) return;
       const tnArr = td.thuNgoai || [];
       if (tnArr.length) {
         let mPhai = 0, mThu = 0;
         tnArr.forEach((k) => { mPhai += Number(k.soTien) || 0; mThu += Number(k.thucThu) || 0; });
         if (mPhai || mThu) { tnPhai += mPhai; tnThu += mThu; tnChiTiet.push({ thang: m, ps: mPhai, tt: mThu, no: mPhai - mThu }); }
       }
-      // Nợ NCC — trường nợ ra (logic tập trung tại taichinh.js)
       const mNcc = tinhNoNCCThang(td.chiPhi);
       if (mNcc !== 0) { nccCum += mNcc; nccChiTiet.push({ thang: m, delta: mNcc, cum: nccCum }); }
       if (td.chiPhi?.length) chiPhiTheoThang.push({ m, chiPhi: td.chiPhi });
-    }
+    });
+
     let tNo = 0, tDu = 0;
-    const arr = Object.values(perHS).map((x) => {
-      const luyKe = x.noDauKy + x.phaiThu - x.daThu; 
+    const arr = students.map((hs) => {
+      const luyKe = debt[hs.id] ?? (hs.noDauKy || 0);
       if (luyKe > 0) tNo += luyKe; else tDu += -luyKe;
-      return { ...x, luyKe };
+      return { hs, luyKe, noDauKy: hs.noDauKy || 0, chiTiet: chiTiet[hs.id] || [], base: base[hs.id] ?? (hs.noDauKy || 0), baseThang: baseThang[hs.id] || null };
     }).sort((a, b) => b.luyKe - a.luyKe);
     const tnLuyKe = tnPhai - tnThu;
     if (tnLuyKe > 0) tNo += tnLuyKe; else tDu += -tnLuyKe;
     setTnData({ luyKe: tnLuyKe, phai: tnPhai, thu: tnThu, chiTiet: tnChiTiet });
     setNccData({ luyKe: nccCum, chiTiet: nccChiTiet });
     setNccVendors(nhomNoNCC(chiPhiTheoThang));
-    setNhacMap((await sGet("mn5:nhacno")) || {});
+    setNhacMap((nhac.ok ? nhac.value : null) || {});
     setData(arr); setTongNo(tNo); setTongDu(tDu); setLoading(false);
-  })(); }, [students, meta, ym, mData]);
+  })(); return () => { huy = true; }; }, [students, meta, ym, mData, tryNonce]);
 
   if (loading) return <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 30 }}>Đang tính công nợ lũy kế…</div>;
+  if (loadErr) return (
+    <div style={{ textAlign: "center", padding: 28 }}>
+      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 10, background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "18px 20px", maxWidth: 360 }}>
+        <Icon name="alertTriangle" size={26} color={C.coral} />
+        <div style={{ fontSize: 13.5, color: C.coral, fontWeight: 700 }}>Không tải được đủ dữ liệu (lỗi mạng)</div>
+        <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.5 }}>Số nợ đang tạm ẩn để tránh hiển thị thiếu. Kiểm tra kết nối rồi thử lại.</div>
+        <button onClick={() => setTryNonce((n) => n + 1)} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>↻ Thử lại</button>
+      </div>
+    </div>
+  );
   const noList = data.filter((x) => x.luyKe > 0);
   const duList = data.filter((x) => x.luyKe < 0);
 
@@ -214,7 +223,9 @@ export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
               </div>
               {open && (
                 <div style={{ borderTop: `1px dashed ${C.line}`, padding: "10px 14px", background: C.graySoft, fontSize: 12.5 }}>
-                  {x.noDauKy > 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: C.sub }}><span>Nợ đầu kỳ</span><b>{fmt(x.noDauKy)}</b></div>}
+                  {x.baseThang
+                    ? (x.base !== 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: x.base > 0 ? C.coral : C.green }}><span>Nợ mang sang (hết T{x.baseThang.slice(5)}/{x.baseThang.slice(0, 4)} đã chốt)</span><b>{x.base > 0 ? fmt(x.base) : "+" + fmt(-x.base)}</b></div>)
+                    : (x.noDauKy > 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: C.sub }}><span>Nợ đầu kỳ</span><b>{fmt(x.noDauKy)}</b></div>)}
                   {x.chiTiet.map((c) => (
                     <div key={c.thang} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: c.no > 0 ? C.coral : c.no < 0 ? C.green : C.sub }}>
                       <span>Th{c.thang.slice(5)}: phải {fmt(c.ps)} · thu {fmt(c.tt)}</span>
