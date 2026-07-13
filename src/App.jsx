@@ -223,6 +223,8 @@ export default function App() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
+        {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600 }}>⚠ Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
+
         {tab === "home" && (
           <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
         )}
