@@ -8,7 +8,7 @@
 //    2. Thêm nhánh xử lý trong duyetChiPhi() bên dưới
 //    → KHÔNG cần sửa useStore / TongQuan / CongNo.
 // =============================================================
-import { lopOfMonth, tinhPSFromRec } from "./lib.js";
+import { lopOfMonth, tinhPSFromRec, soBuoiT7Auto, ymKey } from "./lib.js";
 
 // ---- Metadata từng loại giao dịch (nhãn hiển thị + cờ) ----
 // tinhNCC: khoản này có tham gia tính nợ nhà cung cấp không
@@ -175,4 +175,87 @@ export function nhomNoNCC(monthsChiPhi) {
     .map((g) => ({ ten: g.ten, phaiTra: g.phaiTra, daTra: g.daTra, conNo: g.phaiTra - g.daTra, soThang: g.thangs.size }))
     .filter((g) => g.conNo !== 0)
     .sort((a, b) => b.conNo - a.conNo);
+}
+
+// =============================================================
+// tinhNoLuyKe — NGUỒN DUY NHẤT tính nợ lũy kế theo từng HS.
+// Cả Thu phí (useStore.prevDebt) và Công nợ đều gọi hàm này để
+// tránh mỗi nơi tự tính một kiểu (lỗi Thu phí ≠ Công nợ).
+//
+// TÔN TRỌNG snapshot chốt tháng: bắt đầu từ noLuyKe của tháng đã
+// chốt gần nhất rồi chỉ cộng các tháng sau — giống hệt logic cũ của
+// prevDebt (vốn gắn với kỳ kế toán đã khóa).
+//
+// Hàm THUẦN (không I/O). Nơi gọi phải nạp sẵn dữ liệu bằng sGetSafe
+// và tự xử lý lỗi mạng (KHÔNG được coi lỗi đọc là "chưa có dữ liệu").
+//
+// Tham số:
+//   months   : mảng "YYYY-MM" đã sort tăng dần (mọi tháng có bảng thu)
+//   datas[i] : nội dung mn5:thang:<months[i]> (hoặc null)
+//   dds[i]   : nội dung mn5:dd:<months[i]>    (hoặc null)
+//   ddExtra  : { "YYYY-MM": ddData } cho các tháng-liền-trước nằm NGOÀI `months`
+//   students, meta
+//   boundExcl: nếu có → chỉ tính các tháng m < boundExcl (Thu phí truyền ym
+//              để lấy "nợ cũ" trước tháng hiện tại). null = tính hết mọi tháng.
+//
+// Trả về theo từng sid:
+//   debt[sid]      : nợ lũy kế (âm = đóng dư)
+//   chiTiet[sid]   : [{ thang, ps, tt, no }] cho các tháng SAU snapshot
+//   base[sid]      : mốc bắt đầu (noDauKy hoặc noLuyKe của tháng chốt gần nhất)
+//   baseThang[sid] : "YYYY-MM" của snapshot đang dùng làm mốc (null nếu chưa chốt)
+export function tinhNoLuyKe({ months, datas, dds, ddExtra = {}, students, meta, boundExcl = null }) {
+  const idx = {}; (months || []).forEach((m, i) => { idx[m] = i; });
+  const use = (boundExcl == null ? (months || []).slice() : (months || []).filter((m) => m < boundExcl));
+
+  const debt = {}, chiTiet = {}, base = {}, baseThang = {};
+  const ensure = (sid, hs) => {
+    if (debt[sid] === undefined) {
+      const dk = (hs?.noDauKy) || 0;
+      debt[sid] = dk; base[sid] = dk; baseThang[sid] = null; chiTiet[sid] = [];
+    }
+  };
+  (students || []).forEach((hs) => ensure(hs.id, hs));
+
+  // Mốc: snapshot của tháng đã chốt GẦN NHẤT trong phạm vi đang tính
+  let snapIdx = -1;
+  for (let i = use.length - 1; i >= 0; i--) {
+    const d = datas[idx[use[i]]];
+    if (d && d.daChot && d.noLuyKe) { snapIdx = i; break; }
+  }
+  if (snapIdx >= 0) {
+    const snap = datas[idx[use[snapIdx]]].noLuyKe;
+    Object.keys(snap).forEach((sid) => {
+      const hs = (students || []).find((s) => s.id === sid); ensure(sid, hs);
+      debt[sid] = snap[sid]; base[sid] = snap[sid]; baseThang[sid] = use[snapIdx]; chiTiet[sid] = [];
+    });
+  }
+
+  for (let i = snapIdx + 1; i < use.length; i++) {
+    const m = use[i]; const td = datas[idx[m]]; if (!td || !td.fees) continue;
+    const y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
+    const ddM = dds[idx[m]] || td.att || {};
+    // Tháng đã chốt (nhưng không phải snapshot mốc) → nạp thẳng noLuyKe, coi như mốc mới
+    if (td.daChot && td.noLuyKe) {
+      Object.keys(td.noLuyKe).forEach((sid) => {
+        const hs = (students || []).find((s) => s.id === sid); ensure(sid, hs);
+        debt[sid] = td.noLuyKe[sid]; base[sid] = td.noLuyKe[sid]; baseThang[sid] = m; chiTiet[sid] = [];
+      });
+      continue;
+    }
+    const ddPrevKey = mo === 1 ? ymKey(y - 1, 12) : ymKey(y, mo - 1);
+    const ddPrevM = (idx[ddPrevKey] !== undefined ? dds[idx[ddPrevKey]] : null) || ddExtra[ddPrevKey] || {};
+    Object.keys(td.fees).forEach((sid) => {
+      const hs = (students || []).find((s) => s.id === sid); if (!hs) return;
+      ensure(sid, hs);
+      let rec = td.fees[sid];
+      const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
+      const nghi = Object.keys(ddPrevM[sid] || {}).length;
+      if (hs.pl === "T7" && !rec.buoiT7Manual) rec = { ...rec, buoiT7: soBuoiT7Auto(y, mo, ddM[sid]) };
+      const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
+      const tt = Number(rec.thucThu) || 0;
+      debt[sid] += ps - tt;
+      chiTiet[sid].push({ thang: m, ps, tt, no: ps - tt });
+    });
+  }
+  return { debt, chiTiet, base, baseThang };
 }
