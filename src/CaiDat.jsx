@@ -13,16 +13,27 @@ import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
 } from "./ui.jsx";
 
+const REDACT = "__REDACTED__";
 export function BackupExport({ meta, students }) {
   const [busy, setBusy] = useState(false);
   const [outText, setOutText] = useState("");
   const [outName, setOutName] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [incSecret, setIncSecret] = useState(false);
   const dl = (text, name, type) => { try { const blob = new Blob([type === "csv" ? "\uFEFF" + text : text], { type: type === "csv" ? "text/csv;charset=utf-8;" : "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); const d = new Date(); const hh = String(d.getHours()).padStart(2, "0"), mi = String(d.getMinutes()).padStart(2, "0"); try { localStorage.setItem("mn5:lastBackup", `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hh}:${mi}`); } catch {} } catch (e) {} };
 
-  const buildJSON = async () => {
+  const buildJSON = async (includeSecrets) => {
     const keys = await sList("mn5:"); const data = {};
     for (const k of keys) data[k] = await sGet(k);
+    if (!includeSecrets) {
+      // Ẩn PIN khỏi bản sao lưu (dùng sentinel để lúc phục hồi KHÔNG xóa PIN đang có).
+      if ("mn5:pinhash" in data) data["mn5:pinhash"] = REDACT;
+      if (data["mn5:meta"]) {
+        const m = JSON.parse(JSON.stringify(data["mn5:meta"])); // clone — KHÔNG sửa state đang chạy
+        if (Array.isArray(m.giaoVien)) m.giaoVien = m.giaoVien.map((g) => ({ ...g, pin: REDACT }));
+        data["mn5:meta"] = m;
+      }
+    }
     return JSON.stringify(data);
   };
   const buildCSV = async () => {
@@ -45,9 +56,15 @@ export function BackupExport({ meta, students }) {
   };
 
   const doExport = async (kind) => {
+    if (kind === "json") {
+      const msg = incSecret
+        ? "⚠️ File này chứa MẬT KHẨU (PIN) đăng nhập + số tài khoản ngân hàng + toàn bộ tài chính.\n\nTUYỆT ĐỐI KHÔNG gửi qua Zalo/tin nhắn. Chỉ lưu ở nơi riêng tư (máy của bạn)."
+        : "File chứa danh sách học sinh + học phí + công nợ + số tài khoản (PIN đã được ẩn).\n\nVẫn là dữ liệu nhạy cảm — cẩn thận khi chia sẻ.";
+      if (!(await ask(msg, { danger: incSecret, okText: "Tôi hiểu, tải xuống" }))) return;
+    }
     setBusy(true);
     try {
-      const text = kind === "json" ? await buildJSON() : await buildCSV();
+      const text = kind === "json" ? await buildJSON(incSecret) : await buildCSV();
       const name = kind === "json" ? `sao-luu-mamnon-${new Date().toISOString().slice(0, 10)}.json` : `bao-cao-thu-phi-${new Date().toISOString().slice(0, 10)}.csv`;
       dl(text, name, kind);                 
       setOutText(text); setOutName(name);   
@@ -70,8 +87,21 @@ export function BackupExport({ meta, students }) {
     if (!(await ask(`Phục hồi ${st.length} học sinh · ${mt.classes.length} lớp (${n} mục)?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại — không hoàn tác được.`, { danger: true, okText: "Phục hồi" }))) return;
     setBusy(true);
     try {
+      // Bản sao lưu ẩn PIN: KHÔNG ghi đè PIN đang có bằng giá trị ẩn.
+      // - PIN GV bị ẩn → giữ PIN hiện tại (khớp theo id); máy mới thì để trống.
+      if (data["mn5:meta"] && Array.isArray(data["mn5:meta"].giaoVien)) {
+        const curGV = (meta && meta.giaoVien) || [];
+        data["mn5:meta"] = { ...data["mn5:meta"], giaoVien: data["mn5:meta"].giaoVien.map((g) => {
+          if (g.pin !== REDACT) return g;
+          const old = curGV.find((x) => x.id === g.id);
+          return { ...g, pin: old ? old.pin : "" };
+        }) };
+      }
       // Ghi dữ liệu mới TRƯỚC (lỗi giữa chừng vẫn còn dữ liệu tốt), rồi MỚI xóa key thừa.
-      for (const [k, v] of Object.entries(data)) await sSet(k, v);
+      for (const [k, v] of Object.entries(data)) {
+        if (k === "mn5:pinhash" && v === REDACT) continue; // PIN admin bị ẩn → giữ nguyên bản đang có
+        await sSet(k, v);
+      }
       const old = await sList("mn5:");
       for (const k of old) if (!(k in data)) await sDel(k);
       logAction(`Phục hồi từ sao lưu (${st.length} HS, ${mt.classes.length} lớp)`);
@@ -85,7 +115,11 @@ export function BackupExport({ meta, students }) {
     <>
       <Card style={{ marginBottom: 12 }}>
         <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 4, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="save" size={16} color={C.ink} /> Sao lưu dữ liệu</div>
-        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12 }}>Bấm để xuất. Nếu máy không tự tải file (do trình duyệt/khung xem trước chặn), nội dung sẽ hiện ra ô bên dưới để bạn <b>copy</b> và dán vào ghi chú/Zalo lưu lại.</div>
+        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10 }}>Bấm để xuất. Nếu máy không tự tải file (do trình duyệt/khung xem trước chặn), nội dung sẽ hiện ra ô bên dưới để bạn <b>copy</b> lưu lại. <b style={{ color: C.coral }}>File chứa dữ liệu nhạy cảm — cẩn thận khi chia sẻ.</b></div>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: C.ink, marginBottom: 12, cursor: "pointer" }}>
+          <input type="checkbox" checked={incSecret} onChange={(e) => setIncSecret(e.target.checked)} style={{ accentColor: C.pine, width: 16, height: 16 }} />
+          <span>Bao gồm PIN đăng nhập trong bản sao lưu <span style={{ color: C.sub }}>(mặc định ẩn — chỉ bật nếu lưu riêng tư, đừng chia sẻ)</span></span>
+        </label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => doExport("json")} disabled={busy} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "10px 16px", borderRadius: 10, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Đang xử lý…" : <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="download" size={15} color="#fff" /> Sao lưu toàn bộ (JSON)</span>}</button>
           <button onClick={() => doExport("csv")} disabled={busy} style={{ display:"inline-flex", alignItems:"center", gap:6, padding: "10px 16px", borderRadius: 10, border: `1.5px solid ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: busy ? 0.6 : 1 }}><Icon name="fileText" size={15} color={C.pine} /> Xuất Excel thu phí (CSV)</button>
