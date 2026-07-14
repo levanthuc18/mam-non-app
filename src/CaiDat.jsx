@@ -466,7 +466,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
           })}
         </Card>
       )}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2, scrollbarWidth: "none" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         {[
           ["lop", "Lớp"], ["gv", "Giáo viên"], ["bank", "Tài khoản"], ["thuphi", "Thu học phí"], ["dk", "Số dư đầu kỳ"], ["giaodien", "Giao diện"], ["baomat", "Bảo mật"], ["backup", "Sao lưu"], ["log", "Nhật ký"], ["data", "Dữ liệu"],
         ].map(([k, l]) => (
