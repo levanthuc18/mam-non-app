@@ -195,12 +195,34 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       if (!ddR.ok) { toast("Không tải được dữ liệu tháng trước (lỗi mạng) — chưa thể chốt. Thử lại."); return; }
       const ddPrevM = ddR.value || {};
       const snapTK = tinhThangFull(mData, ym, students, meta, ddPrevM, meta?.tyLeLaiA ?? 50);
-      await upMData({ ...mData, daChot: true, noLuyKe, snapThuNgoai, snapNCC, snapTK });
+      // #9: đóng băng đơn giá (T7 + tiền ăn) vào từng rec → đổi giá sau này KHÔNG làm nhảy hóa đơn tháng đã chốt.
+      const feesFrozen = { ...(mData.fees || {}) };
+      Object.keys(feesFrozen).forEach((sid) => {
+        const hs = students.find((s) => s.id === sid); if (!hs) return;
+        const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, ym));
+        feesFrozen[sid] = { ...feesFrozen[sid], giaT7: lop?.t7 || 0, giaAn: lop?.tienAn || 0 };
+      });
+      await upMData({ ...mData, fees: feesFrozen, daChot: true, noLuyKe, snapThuNgoai, snapNCC, snapTK });
       logAction(`Chốt tháng ${month}/${year}`);
       toast("Đã chốt tháng.");
     }
   };
-  const moChot = async () => { if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?", { okText: "Mở khóa" })) { const { noLuyKe, snapThuNgoai, snapNCC, snapTK, ...rest } = mData; await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa."); } };
+  const moChot = async () => {
+    // #5 (AUD-10): nếu có tháng đã chốt SAU tháng này, sửa ở đây sẽ KHÔNG tự cập nhật nợ các tháng đó.
+    let sauChot = [];
+    try {
+      const keys = await sList("mn5:thang:");
+      const later = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m > ym).sort();
+      for (const m of later) { const d = await sGetSafe(`mn5:thang:${m}`); if (d.ok && d.value?.daChot) sauChot.push(m); }
+    } catch {}
+    const canhBao = sauChot.length
+      ? `\n\n⚠️ Có ${sauChot.length} tháng đã chốt SAU tháng này (${sauChot.map((m) => "T" + m.slice(5) + "/" + m.slice(0, 4)).join(", ")}).\nSửa xong tháng này, các tháng đó sẽ KHÔNG tự cập nhật nợ lũy kế — cần mở khóa & chốt lại từng tháng theo thứ tự.`
+      : "";
+    if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?" + canhBao, { okText: "Mở khóa", danger: sauChot.length > 0 })) {
+      const { noLuyKe, snapThuNgoai, snapNCC, snapTK, ...rest } = mData;
+      await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa.");
+    }
+  };
 
   const giuThangA = tk.A - tk.traA - (tk.rutA || 0), giuThangB = tk.B - tk.traB - (tk.rutB || 0);
 
