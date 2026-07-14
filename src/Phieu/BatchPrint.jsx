@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, font } from "../lib.js";
+import { C, font, capSoBienLai } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
 
@@ -18,25 +18,16 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
     });
   }, [allRows, selectedLop]);
 
-  const handlePrintBatch = () => {
+  const handlePrintBatch = async () => {
     if (rowsToPrint.length === 0) return;
-    
-    const newFees = { ...mData.fees };
-    const newSoBienLai = { ...(meta.soBienLai || {}) };
-    let changed = false;
 
-    rowsToPrint.forEach((r) => {
-      if (!r.rec.bienLai) {
-        const nt = r.hs.nguoiThu;
-        const next = (newSoBienLai[nt] || 0) + 1;
-        newSoBienLai[nt] = next;
-        newFees[r.hs.id] = { ...newFees[r.hs.id], bienLai: `BL-${nt}-${String(next).padStart(4, "0")}` };
-        changed = true;
-      }
-    });
+    const toAssign = rowsToPrint.filter((r) => !r.rec.bienLai).map((r) => ({ id: r.hs.id, nguoiThu: r.hs.nguoiThu }));
 
-    if (changed) {
-      upMeta({ ...meta, soBienLai: newSoBienLai });
+    if (toAssign.length) {
+      const { soBienLai, capFor } = await capSoBienLai(meta, toAssign);
+      const newFees = { ...mData.fees };
+      Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id] }; });
+      upMeta({ ...meta, soBienLai });
       upMData({ ...mData, fees: newFees });
       setTimeout(() => window.print(), 200);
     } else {
