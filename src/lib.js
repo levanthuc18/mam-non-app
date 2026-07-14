@@ -51,8 +51,19 @@ const markErr = (e) => { if (syncErr !== e) { syncErr = e; notifySync(); } };
 const enqueue = (k, v) => { PENDING[k] = { __pw: 1, v, base: VER[k] ?? null }; savePending(); notifySync(); };
 const dequeue = (k) => { if (k in PENDING) { delete PENDING[k]; savePending(); notifySync(); } };
 
+// Cache dữ liệu BẤT BIẾN (tháng đã chốt) — đọc 1 lần dùng lại cả phiên, khỏi gọi
+// mạng lại mỗi lần chuyển tháng/đổi màn. Mọi lần GHI/XOÁ 1 key sẽ tự xoá cache key đó.
+const IMMUT_CACHE = {};
+const invalidate = (k) => { if (k in IMMUT_CACHE) delete IMMUT_CACHE[k]; };
+export function cachePut(k, v) { if (v != null) IMMUT_CACHE[k] = v; }
+export async function sGetSafeCached(k) {
+  if (k in IMMUT_CACHE) return { ok: true, value: IMMUT_CACHE[k], cached: true };
+  return await sGetSafe(k);
+}
+
 // Ghi thẳng lên Supabase (không kiểm xung đột) — dùng cho flush + ghi đè
 async function rawWrite(k, v) {
+  invalidate(k);
   const isDel = (v && v.__del) || (v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0);
   if (isDel) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
@@ -205,6 +216,7 @@ function dangCoDL(k) {
   return hadKey(k);
 }
 export async function sSet(k, v, opts = {}) {
+  invalidate(k);
   // ⛔ CHỐT CHẶN chống mất dữ liệu: từ chối ghi RỖNG đè lên dữ liệu đang có.
   if (!opts.force && PROTECT_KEYS.has(k) && laRong(k, v) && dangCoDL(k)) {
     try { logAction(`⛔ Đã chặn ghi rỗng đè ${k} (bản đang có còn dữ liệu)`); } catch {}
@@ -289,7 +301,7 @@ export async function sList(prefix) {
   catch { return memKeys; }
 }
 export async function sDel(k) {
-  delete MEM[k];
+  delete MEM[k]; invalidate(k);
   if (SB) { try { await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H }); } catch {} return; }
   try { await window.storage.delete(k); } catch (e) {}
 }
