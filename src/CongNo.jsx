@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  sList, sGet, sGetSafe, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
+  sList, sGet, sGetSafe, sGetSafeCached, cachePut, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR, toast, ask, getCurrentActor
 } from "./lib.js";
 import { tinhNoNCCThang, nhomNoNCC, tinhNoLuyKe } from "./taichinh.js";
@@ -32,14 +32,16 @@ export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
     setLoading(true); setLoadErr(false);
     const keys = await sList("mn5:thang:");
     const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
-    // Đọc phân biệt lỗi — mạng lỗi thì KHÔNG hiện số nợ (tránh báo nợ thiếu).
-    const dRes = await Promise.all(months.map((m) => sGetSafe(`mn5:thang:${m}`)));
-    const ddRes = await Promise.all(months.map((m) => sGetSafe(`mn5:dd:${m}`)));
+    // Đọc phân biệt lỗi + CACHE tháng đã chốt (bất biến) → chuyển tháng/mở lại nhanh.
+    const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
+    const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));
     const prevKeys = Array.from(new Set(months.map((m) => { const y = Number(m.slice(0, 4)), mo = Number(m.slice(5)); const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y; return ymKey(py, pm); }).filter((k) => !months.includes(k))));
-    const pRes = await Promise.all(prevKeys.map((k) => sGetSafe(`mn5:dd:${k}`)));
+    const pRes = await Promise.all(prevKeys.map((k) => sGetSafeCached(`mn5:dd:${k}`)));
     const nhac = await sGetSafe("mn5:nhacno");
     if (huy) return;
     if (dRes.some((r) => !r.ok) || ddRes.some((r) => !r.ok) || pRes.some((r) => !r.ok)) { setLoadErr(true); setLoading(false); return; }
+    // Tháng đã chốt → cache cả bảng thu + điểm danh (không đổi nữa)
+    months.forEach((m, i) => { if (dRes[i].value?.daChot) { cachePut(`mn5:thang:${m}`, dRes[i].value); cachePut(`mn5:dd:${m}`, ddRes[i].value); } });
     const datas = dRes.map((r) => r.value);
     const dds = ddRes.map((r) => r.value);
     const ddExtra = {}; prevKeys.forEach((k, i) => { ddExtra[k] = pRes[i].value || {}; });
