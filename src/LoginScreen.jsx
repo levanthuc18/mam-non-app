@@ -1,6 +1,6 @@
 // LoginScreen.jsx — màn chọn vai trò + nhập PIN (phong cách mầm non)
 import { useState } from "react";
-import { C, font, sha256Hex, getPinHash } from "./lib.js";
+import { C, font, sha256Hex, getPinHashSafe } from "./lib.js";
 import { Icon } from "./Icon.jsx";
 import { Logo } from "./Brand.jsx";
 import { Cloud, Sun, Grass, School } from "./Decor.jsx";
@@ -14,8 +14,9 @@ export function LoginScreen({ meta, onLogin }) {
     if (checking) return;
     setChecking(true);
     try {
-      const [nhap, luu] = await Promise.all([sha256Hex(pin.trim()), getPinHash()]);
-      if (nhap === luu) onLogin({ role: "admin" }); else setErr("Mã quản lý không đúng");
+      const [nhap, luu] = await Promise.all([sha256Hex(pin.trim()), getPinHashSafe()]);
+      if (!luu.ok) { setErr("Máy mới cần kết nối mạng để đăng nhập lần đầu."); }
+      else if (nhap === luu.hash) onLogin({ role: "admin" }); else setErr("Mã quản lý không đúng");
     } catch { setErr("Không kiểm tra được mã, thử lại"); }
     setChecking(false);
   };
