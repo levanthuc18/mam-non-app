@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
-  sGet, sGetSafe, sSet, sList, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
+  sGet, sGetSafe, sGetSafeCached, cachePut, sSet, sList, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
@@ -149,13 +149,14 @@ export function useStore() {
   useEffect(() => { if (!metaReady || !students) return; let huy = false; (async () => {
     const keys = await sList("mn5:thang:");
     const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m < ym).sort();
-    // Đọc CÓ PHÂN BIỆT LỖI — mạng lỗi thì KHÔNG được coi là "chưa có dữ liệu" (đó là gốc lỗi hiện nợ thiếu).
-    const dRes = await Promise.all(months.map((m) => sGetSafe(`mn5:thang:${m}`)));
-    const ddRes = await Promise.all(months.map((m) => sGetSafe(`mn5:dd:${m}`)));
+    // Đọc CÓ PHÂN BIỆT LỖI + cache tháng đã chốt (bất biến) — chuyển tháng nhanh hơn.
+    const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
+    const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));
     const prevKeys = Array.from(new Set(months.map((m) => { const y = Number(m.slice(0, 4)), mo = Number(m.slice(5)); const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y; return ymKey(py, pm); }).filter((k) => !months.includes(k))));
-    const pRes = await Promise.all(prevKeys.map((k) => sGetSafe(`mn5:dd:${k}`)));
+    const pRes = await Promise.all(prevKeys.map((k) => sGetSafeCached(`mn5:dd:${k}`)));
     if (huy) return;
     if (dRes.some((r) => !r.ok) || ddRes.some((r) => !r.ok) || pRes.some((r) => !r.ok)) { setPrevDebtStale(true); return; } // GIỮ số cũ, KHÔNG hiện nợ sai
+    months.forEach((m, i) => { if (dRes[i].value?.daChot) { cachePut(`mn5:thang:${m}`, dRes[i].value); cachePut(`mn5:dd:${m}`, ddRes[i].value); } });
     const datas = dRes.map((r) => r.value);
     const dds = ddRes.map((r) => r.value);
     const ddPrevExtra = {}; prevKeys.forEach((k, i) => { ddPrevExtra[k] = pRes[i].value || {}; });
