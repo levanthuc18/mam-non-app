@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, font, PL_COLOR } from "./lib.js";
+import { registerDismiss } from "./nav.js";
 import { Icon } from "./Icon.jsx";
 
 // Emo — bọc emoji cho căn giữa, kích cỡ đều nhau (giữ emoji ở list, không thay icon)
@@ -105,6 +106,15 @@ export function BottomSheet({ open, onClose, title, children }) {
     el.style.transform = `translateY(${y}px)`;
   };
   useEffect(() => { if (open) { dyRef.current = 0; draggingRef.current = false; requestAnimationFrame(() => setT(0, false)); } }, [open]);
+
+  // Nút Back (Android) đóng sheet đang mở thay vì thoát app.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    return registerDismiss(() => { if (onCloseRef.current) onCloseRef.current(); });
+  }, [open]);
+
   if (!open) return null;
 
   const onStart = (y) => { startYRef.current = y; startTimeRef.current = Date.now(); dyRef.current = 0; draggingRef.current = true; setT(0, false); };
