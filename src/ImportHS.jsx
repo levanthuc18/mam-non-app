@@ -21,6 +21,21 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
     setTplText(csv);
   };
   const splitLine = (line, delim) => { const out = []; let cur = "", q = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; } else if (ch === delim && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map((s) => s.trim()); };
+  const FIELD_ORDER = ["ten", "lop", "pl", "nguoiThu", "sdt", "noDauKy", "gt"];
+  const FIELD_SYN = {
+    ten: ["ho ten", "hoten", "ten", "name"], lop: ["lop", "class"],
+    pl: ["phan loai", "phanloai", "pl"], nguoiThu: ["nguoi thu", "nguoithu", "thu"],
+    sdt: ["sdt", "sdt phu huynh", "so dien thoai", "dien thoai", "phone"],
+    noDauKy: ["no dau ky", "nodauky", "no dau", "no"], gt: ["gioi tinh", "gt", "sex", "gender"],
+    tt: ["trang thai"], ngayNhap: ["ngay nhap hoc", "ngay nhap"], ngaySinh: ["ngay sinh", "dob"],
+  };
+  const matchField = (hcell) => {
+    const s = noDau(String(hcell || "").toLowerCase()).replace(/\(.*?\)/g, "").trim();
+    if (!s) return null;
+    for (const f in FIELD_SYN) if (FIELD_SYN[f].some((syn) => s === syn || s.startsWith(syn))) return f;
+    return null;
+  };
+  const normGt = (v) => { const s = noDau(String(v || "").toLowerCase().trim()); if (!s) return ""; if (["nam", "m", "male", "trai", "boy"].includes(s)) return "Nam"; if (["nu", "f", "female", "gai", "girl"].includes(s)) return "Nữ"; return ""; };
   const parse = (text) => {
     let lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
     if (lines[0] && /^sep=/i.test(lines[0].trim())) lines = lines.slice(1);
@@ -29,34 +44,47 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
     const cSemi = (h0.match(/;/g) || []).length, cTab = (h0.match(/\t/g) || []).length, cComma = (h0.match(/,/g) || []).length;
     const delim = (cSemi >= cComma && cSemi >= cTab && cSemi > 0) ? ";" : (cTab >= cComma && cTab > 0) ? "\t" : ",";
     const hd = splitLine(lines[0], delim);
+    // Ánh xạ cột → field theo TÊN tiêu đề; nếu tiêu đề hỏng font/không khớp → dùng theo VỊ TRÍ.
+    const byName = hd.map(matchField);
+    const colField = (byName.filter(Boolean).length >= 2) ? byName : hd.map((_, i) => FIELD_ORDER[i] || null);
     const rows = [];
-    for (let i = 1; i < lines.length; i++) { if (!lines[i].trim()) continue; const cells = splitLine(lines[i], delim); const o = {}; hd.forEach((h, idx) => (o[h.replace(/^\uFEFF/, "")] = cells[idx] || "")); rows.push(o); }
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const cells = splitLine(lines[i], delim);
+      const o = {};
+      colField.forEach((f, idx) => { if (f) o[f] = cells[idx] || ""; });
+      rows.push(o);
+    }
     return rows;
   };
-  const get = (o, keys) => { for (const k of keys) if (o[k] != null && o[k] !== "") return o[k]; return ""; };
   const doImport = async (text) => {
-    const rows = parse(text);
-    if (!rows.length) { toast("Không đọc được dòng nào."); return; }
+    let rows;
+    try { rows = parse(text); } catch { rows = []; }
+    if (!rows.length) { toast("Không đọc được dòng nào. Kiểm tra lại định dạng file."); return; }
     setBusy(true);
-    let added = 0, skip = 0; const ns = [...students];
-    rows.forEach((r) => {
-      const ten = get(r, ["Họ tên", "Ho ten", "Ten"]); if (!ten) { skip++; return; }
-      const lopTen = get(r, ["Lớp", "Lop"]);
-      const lop = meta.classes.find((c) => c.ten === lopTen || noDau(c.ten) === noDau(lopTen)); if (!lop) { skip++; return; }
-      const pl = get(r, ["Phân loại (Bthg/AE/GV/T7)", "Phân loại", "Phan loai"]) || "Bthg";
-      const nguoiThu = get(r, ["Người thu (A/B)", "Người thu", "Nguoi thu"]) || "A";
-      const tt = get(r, ["Trạng thái", "Trang thai"]) || "Đang học";
-      const ngayNhap = get(r, ["Ngày nhập học (YYYY-MM-DD)", "Ngày nhập học", "Ngay nhap hoc"]) || ym;
-      const ngaySinh = get(r, ["Ngày sinh (YYYY-MM-DD)", "Ngày sinh", "Ngay sinh"]);
-      const sdt = get(r, ["SĐT phụ huynh", "SDT phu huynh", "SĐT"]);
-      const noDauKy = Number(get(r, ["Nợ đầu kỳ", "No dau ky"]) || 0) || 0;
-      const gt = normGt(get(r, ["Giới tính", "Gioi tinh", "GT", "Sex"]));
-      ns.push({ id: "hs" + uid(), ten, gt, ngaySinh, lopHistory: [{ tuThang: ngayNhap || ym, lop: lop.id }], pl: PHAN_LOAI.includes(pl) ? pl : "Bthg", nguoiThu: nguoiThu === "B" ? "B" : "A", trangThai: TRANG_THAI.includes(tt) ? tt : "Đang học", ngayNhapHoc: ngayNhap || ym, ngayNghiHoc: "", noDauKy, phuHuynh: { ten: "", sdt } });
-      added++;
-    });
-    upStudents(ns, true);
-    toast(`Đã thêm ${added} HS${skip ? `, bỏ qua ${skip} dòng (thiếu tên/sai lớp)` : ""}.`);
-    setPaste(""); setBusy(false);
+    try {
+      let added = 0, skip = 0; const ns = [...students];
+      rows.forEach((r) => {
+        const ten = (r.ten || "").trim(); if (!ten) { skip++; return; }
+        const lopTen = (r.lop || "").trim();
+        const lop = meta.classes.find((c) => c.ten === lopTen || noDau(c.ten) === noDau(lopTen)); if (!lop) { skip++; return; }
+        const pl = (r.pl || "").trim() || "Bthg";
+        const nguoiThu = (r.nguoiThu || "").trim().toUpperCase() === "B" ? "B" : "A";
+        const tt = (r.tt || "").trim() || "Đang học";
+        const ngayNhap = (r.ngayNhap || "").trim() || ym;
+        const ngaySinh = (r.ngaySinh || "").trim();
+        const sdt = (r.sdt || "").trim();
+        const noDauKy = Number(String(r.noDauKy || "").replace(/[^\d-]/g, "")) || 0;
+        ns.push({ id: "hs" + uid(), ten, gt: normGt(r.gt), ngaySinh, lopHistory: [{ tuThang: ngayNhap, lop: lop.id }], pl: PHAN_LOAI.includes(pl) ? pl : "Bthg", nguoiThu, trangThai: TRANG_THAI.includes(tt) ? tt : "Đang học", ngayNhapHoc: ngayNhap, ngayNghiHoc: "", noDauKy, phuHuynh: { ten: "", sdt } });
+        added++;
+      });
+      if (!added) { toast(`Chưa thêm được HS nào — bỏ qua ${skip} dòng (thiếu tên hoặc tên lớp không khớp).`); return; }
+      upStudents(ns, true);
+      toast(`Đã thêm ${added} HS${skip ? `, bỏ qua ${skip} dòng (thiếu tên/sai lớp)` : ""}.`);
+      setPaste("");
+    } catch (e) {
+      toast("Không nhập được — kiểm tra lại file rồi thử lại.");
+    } finally { setBusy(false); }
   };
   const importFile = async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; doImport(await f.text()); };
 
@@ -80,4 +108,3 @@ export function ImportHSExcel({ meta, students, upStudents, ym }) {
     </Card>
   );
 }
-
