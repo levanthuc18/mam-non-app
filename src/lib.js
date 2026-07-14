@@ -197,6 +197,24 @@ export async function sSet(k, v, opts = {}) {
 }
 // Đẩy 1 thay đổi vào HÀNG ĐỢI BỀN (localStorage) một cách ĐỒNG BỘ — dùng khi
 // app sắp đóng/ẩn để không mất các bản lưu debounce chưa kịp bắn. Lần mở sau tự flush.
+// Cấp số biên lai — GỘP CHUNG cho cả in lẻ & in loạt (trước đây lặp ở 3 nơi).
+// Đọc meta MỚI NHẤT từ server + lấy MAX với bản trong máy → chống trùng số cả
+// khi 2 máy cùng in lẫn khi in nhiều lần liên tiếp trên 1 máy.
+// rows: [{ id, nguoiThu }]. Trả { soBienLai (bản mới để lưu vào meta), capFor:{id:"BL-..."} }.
+export async function capSoBienLai(meta, rows) {
+  const fresh = await sGetSafe("mn5:meta");
+  const serverS = (fresh.ok && fresh.value && fresh.value.soBienLai) ? fresh.value.soBienLai : {};
+  const propS = (meta && meta.soBienLai) ? meta.soBienLai : {};
+  const soBienLai = {};
+  new Set([...Object.keys(serverS), ...Object.keys(propS)]).forEach((k) => { soBienLai[k] = Math.max(serverS[k] || 0, propS[k] || 0); });
+  const capFor = {};
+  (rows || []).forEach(({ id, nguoiThu }) => {
+    const next = (soBienLai[nguoiThu] || 0) + 1;
+    soBienLai[nguoiThu] = next;
+    capFor[id] = `BL-${nguoiThu}-${String(next).padStart(4, "0")}`;
+  });
+  return { soBienLai, capFor };
+}
 export function queueWrite(k, v) {
   if (PROTECT_KEYS.has(k) && laRong(k, v) && dangCoDL(k)) return false; // không đẩy ghi rỗng đè dữ liệu
   if (PROTECT_KEYS.has(k)) markHad(k, v);
