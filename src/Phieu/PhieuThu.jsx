@@ -1,4 +1,4 @@
-import { C, font, fmt, printWithName, fileName, LIGHT_VARS } from "../lib.js";
+import { C, font, fmt, printWithName, fileName, LIGHT_VARS, capSoBienLai } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { Icon } from "../Icon.jsx";
 import { QRBox } from "./QRBox.jsx";
@@ -27,12 +27,12 @@ export function PhieuThu({
   const rowPad = nKhoan >= 12 ? 2 : dense === 2 ? 2.5 : dense === 1 ? 4 : 5.5;
   const rowFont = nKhoan >= 12 ? 11 : dense === 2 ? 11.5 : dense === 1 ? 12 : 13;
 
-  const inPhieu = () => {
+  const inPhieu = async () => {
     const printTitle = fileName(`${phieuRow.lop?.ten ? phieuRow.lop.ten + " - " : ""}${phieuRow.hs.ten} - T${month}.${year}`);
     if (!bienLai && upMeta && upMData) {
-      const next = (meta.soBienLai?.[nguoiThu] || 0) + 1;
-      const bl = `BL-${nguoiThu}-${String(next).padStart(4, "0")}`;
-      upMeta({ ...meta, soBienLai: { ...(meta.soBienLai || {}), [nguoiThu]: next } });
+      const { soBienLai, capFor } = await capSoBienLai(meta, [{ id: phieuRow.hs.id, nguoiThu }]);
+      const bl = capFor[phieuRow.hs.id];
+      upMeta({ ...meta, soBienLai });
       upMData({ ...mData, fees: { ...mData.fees, [phieuRow.hs.id]: { ...mData.fees[phieuRow.hs.id], bienLai: bl } } });
       printWithName(printTitle, 100);
     } else {
