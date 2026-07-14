@@ -355,7 +355,7 @@ export function tinhPSFromRec(hs, rec, lop, soNghi) {
   if (hs.pl === "GV") return { tong: 0, dong: [["Miễn phí (con GV)", 0, false]], suaCount: 0 };
 
   if (hs.pl === "T7") {
-    const tienT7 = (rec.buoiT7 || 0) * (lop?.t7 || 0);
+    const tienT7 = (rec.buoiT7 || 0) * (rec.giaT7 ?? lop?.t7 ?? 0);
     if (tienT7) { dong.push([`T7 (${rec.buoiT7} buổi)`, tienT7, false]); tong += tienT7; }
     (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
     return { tong, dong, suaCount: 0 };
@@ -368,7 +368,7 @@ export function tinhPSFromRec(hs, rec, lop, soNghi) {
       const sua = val !== def;
       if (val !== 0 || def !== 0) { dong.push([`Ăn (${rec.ngayAn || 0} ngày)`, val, sua]); tong += val; if (sua) suaCount++; }
       if (soNghi > 0) {
-        const tru = -soNghi * (lop?.tienAn || 0);
+        const tru = -soNghi * (rec.giaAn ?? lop?.tienAn ?? 0);
         dong.push([`Trừ nghỉ tháng trước (${soNghi})`, tru, false]);
         tong += tru;
       }
@@ -379,7 +379,7 @@ export function tinhPSFromRec(hs, rec, lop, soNghi) {
     dong.push([k.label, val, sua]);
     tong += val; if (sua) suaCount++;
   });
-  if (rec.buoiT7 > 0) { const t = rec.buoiT7 * (lop?.t7 || 0); dong.push([`T7 (${rec.buoiT7} buổi)`, t, false]); tong += t; }
+  if (rec.buoiT7 > 0) { const t = rec.buoiT7 * (rec.giaT7 ?? lop?.t7 ?? 0); dong.push([`T7 (${rec.buoiT7} buổi)`, t, false]); tong += t; }
   (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
   return { tong, dong, suaCount };
 }
@@ -449,6 +449,18 @@ export async function getPinHash() {
   try { const h = await sGet("mn5:pinhash"); if (h && typeof h === "string") { try { localStorage.setItem("mn5:pinhash", h); } catch {} return h; } } catch {}
   try { const lc = localStorage.getItem("mn5:pinhash"); if (lc) return lc; } catch {}
   return PIN_MAC_DINH;
+}
+// Bản AN TOÀN: phân biệt "đọc được nhưng chưa đặt PIN" (mặc định hợp lệ) với
+// "lỗi mạng + máy chưa từng lưu" (KHÔNG xác thực được → chặn, tránh PIN mặc định
+// thành cửa sau trên máy lạ khi mất mạng). Trả { ok, hash }.
+export async function getPinHashSafe() {
+  const r = await sGetSafe("mn5:pinhash");
+  if (r.ok) {
+    if (r.value && typeof r.value === "string") { try { localStorage.setItem("mn5:pinhash", r.value); } catch {} return { ok: true, hash: r.value }; }
+    return { ok: true, hash: PIN_MAC_DINH }; // server chưa đặt PIN → mặc định hợp lệ
+  }
+  try { const lc = localStorage.getItem("mn5:pinhash"); if (lc) return { ok: true, hash: lc }; } catch {}
+  return { ok: false, hash: null }; // máy mới + mất mạng → không thể xác thực
 }
 export async function setPinHash(h) {
   try { localStorage.setItem("mn5:pinhash", h); } catch {}
