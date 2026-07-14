@@ -48,7 +48,7 @@ export function getSyncState() { return { pending: Object.keys(PENDING).length, 
 export function subSync(cb) { syncSubs.add(cb); cb(getSyncState()); return () => syncSubs.delete(cb); }
 const notifySync = () => { const s = getSyncState(); syncSubs.forEach((cb) => { try { cb(s); } catch {} }); };
 const markErr = (e) => { if (syncErr !== e) { syncErr = e; notifySync(); } };
-const enqueue = (k, v) => { PENDING[k] = v; savePending(); notifySync(); };
+const enqueue = (k, v) => { PENDING[k] = { __pw: 1, v, base: VER[k] ?? null }; savePending(); notifySync(); };
 const dequeue = (k) => { if (k in PENDING) { delete PENDING[k]; savePending(); notifySync(); } };
 
 // Ghi thẳng lên Supabase (không kiểm xung đột) — dùng cho flush + ghi đè
@@ -67,6 +67,24 @@ async function rawWrite(k, v) {
   return r.ok;
 }
 
+// Chuẩn hóa 1 mục PENDING (tương thích cả bản cũ chưa gói lẫn bản mới {__pw,v,base})
+function pendVal(ent) { return (ent && ent.__pw) ? ent.v : ent; }
+function pendBase(ent) { return (ent && ent.__pw) ? ent.base : undefined; }
+function tenKey(k) {
+  if (k === "mn5:students") return "Danh sách học sinh";
+  if (k === "mn5:meta") return "Cấu hình (lớp, đơn giá…)";
+  let m = k.match(/^mn5:thang:(\d{4})-(\d{2})$/); if (m) return `Bảng thu T${Number(m[2])}/${m[1]}`;
+  m = k.match(/^mn5:dd:(\d{4})-(\d{2})$/); if (m) return `Điểm danh T${Number(m[2])}/${m[1]}`;
+  return k;
+}
+async function srvVersion(k) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+    if (r.ok) { const d = await r.json(); return { ok: true, ver: d?.[0]?.updated_at ?? null }; }
+  } catch {}
+  return { ok: false, ver: null };
+}
+
 // Đẩy hàng đợi lên server (khi có mạng lại / bấm Thử lại / định kỳ)
 let flushing = false;
 export async function flushPending() {
@@ -74,14 +92,49 @@ export async function flushPending() {
   const keys = Object.keys(PENDING);
   if (!keys.length) { markErr(false); return; }
   flushing = true;
-  let allOk = true;
+  let allOk = true, sent = 0;
+  const conflicts = [];
   for (const k of keys) {
-    try { if (await rawWrite(k, PENDING[k])) dequeue(k); else allOk = false; }
-    catch { allOk = false; }
+    const ent = PENDING[k];
+    const val = pendVal(ent), base = pendBase(ent);
+    const isDel = val && val.__del;
+    try {
+      // Kiểm xung đột: nếu biết base version và không phải key ghi-dày → so với server.
+      if (base !== undefined && base !== null && !isDel && !NO_CONFLICT.has(k)) {
+        const sv = await srvVersion(k);
+        if (!sv.ok) { allOk = false; continue; }          // đọc lỗi → để lần sau
+        if (sv.ver && sv.ver !== base) { conflicts.push(k); allOk = false; continue; } // máy khác đã sửa → KHÔNG đè mù
+      }
+      if (await rawWrite(k, val)) { dequeue(k); sent++; } else allOk = false;
+    } catch { allOk = false; }
   }
-  flushing = false;
   markErr(!allOk);
-  if (allOk && keys.length) { try { toast(`Đã đồng bộ ${keys.length} thay đổi chờ`); } catch {} }
+  try {
+    if (conflicts.length) { await resolveConflicts(conflicts); }
+    else if (allOk && sent) { try { toast(`Đã đồng bộ ${sent} thay đổi chờ`); } catch {} }
+  } finally { flushing = false; }
+}
+
+// Xử lý xung đột khi flush: hỏi người dùng ghi đè hay lấy bản máy kia (không tự đè mù).
+async function resolveConflicts(keys) {
+  let daLayMayKia = false;
+  for (const k of keys) {
+    const val = pendVal(PENDING[k]);
+    let ghiDe = false;
+    try {
+      ghiDe = await ask(`⚠ "${tenKey(k)}" đã bị máy khác sửa trong lúc máy này offline.\n\nGhi đè bằng bản của máy này? (Hủy = giữ bản máy kia, bỏ thay đổi offline)`, { okText: "Ghi đè bản của tôi", danger: true });
+    } catch { ghiDe = false; } // không hỏi được → an toàn: giữ bản máy kia
+    if (ghiDe) {
+      try { if (await rawWrite(k, val)) { dequeue(k); logAction(`Ghi đè xung đột khi đồng bộ (${k})`); } } catch {}
+    } else {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+        if (r.ok) { const d = await r.json(); if (d?.[0]) { MEM[k] = d[0].value; VER[k] = d[0].updated_at; } }
+      } catch {}
+      dequeue(k); daLayMayKia = true;
+    }
+  }
+  if (daLayMayKia) { try { toast("Đã giữ bản máy kia — đang tải lại…"); } catch {} setTimeout(() => { try { window.location.reload(); } catch {} }, 900); }
 }
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => { flushPending(); });
