@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   C, font, fmt, ask, toast, logAction, uid,
   LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec,
-  sGet, sGetSafe, sList
+  sGet, sGetSafe, sGetSafeCached, cachePut, sList
 } from "./lib.js";
 import {
   Card, BottomSheet, NumInput, ABBtn, Badge
@@ -73,19 +73,31 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort();
       const ls = [];
       let docLoi = false;
-      for (const m of keys) {
-        const tdR = await sGetSafe(`mn5:thang:${m}`);
-        if (!tdR.ok) { docLoi = true; break; }  // mạng lỗi → DỪNG, không tính thiếu tháng
-        const td = tdR.value; if (!td) continue;
+      // Đọc SONG SONG + cache tháng đã chốt (bất biến) — thay vì đọc tuần tự từng tháng.
+      const tdRs = await Promise.all(keys.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
+      if (tdRs.some((r) => !r.ok)) docLoi = true;
+      const ddMap = {};
+      if (!docLoi) {
+        const needDd = new Set();
+        keys.forEach((m, i) => {
+          const td = tdRs[i].value;
+          if (td && td.daChot && td.snapTK) cachePut(`mn5:thang:${m}`, td); // chốt rồi → cache, khỏi đọc lại
+          else if (td) { const my = Number(m.slice(0, 4)), mmo = Number(m.slice(5)); const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my; needDd.add(ymKey(pyy, pmo)); }
+        });
+        const ddKeys = Array.from(needDd);
+        const ddRs = await Promise.all(ddKeys.map((k) => sGetSafeCached(`mn5:dd:${k}`)));
+        if (ddRs.some((r) => !r.ok)) docLoi = true;
+        else ddKeys.forEach((k, i) => { ddMap[k] = ddRs[i].value || {}; });
+      }
+      // Cộng dồn TUẦN TỰ trên dữ liệu đã nạp (chỉ CPU, không gọi mạng) — giữ nguyên phép tính.
+      if (!docLoi) for (let i = 0; i < keys.length; i++) {
+        const m = keys[i]; const td = tdRs[i].value; if (!td) continue;
         let t;
         if (td.daChot && td.snapTK) { t = td.snapTK; }
         else {
           const my = Number(m.slice(0, 4)), mmo = Number(m.slice(5));
           const pmo = mmo === 1 ? 12 : mmo - 1, pyy = mmo === 1 ? my - 1 : my;
-          const ddR = await sGetSafe(`mn5:dd:${ymKey(pyy, pmo)}`);
-          if (!ddR.ok) { docLoi = true; break; }
-          const ddPrevM = ddR.value || {};
-          t = tinhThangFull(td, m, students, meta, ddPrevM, tyA0);
+          t = tinhThangFull(td, m, students, meta, ddMap[ymKey(pyy, pmo)] || {}, tyA0);
         }
         rutNhanA += t.rutNhanA; rutNhanB += t.rutNhanB;
         noNCC += t.noNCCThang;
