@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { C, font, PL_COLOR } from "./lib.js";
-import { registerDismiss } from "./nav.js";
 import { Icon } from "./Icon.jsx";
 
 // Emo — bọc emoji cho căn giữa, kích cỡ đều nhau (giữ emoji ở list, không thay icon)
@@ -106,15 +105,6 @@ export function BottomSheet({ open, onClose, title, children }) {
     el.style.transform = `translateY(${y}px)`;
   };
   useEffect(() => { if (open) { dyRef.current = 0; draggingRef.current = false; requestAnimationFrame(() => setT(0, false)); } }, [open]);
-
-  // Nút Back (Android) đóng sheet đang mở thay vì thoát app.
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  useEffect(() => {
-    if (!open) return;
-    return registerDismiss(() => { if (onCloseRef.current) onCloseRef.current(); });
-  }, [open]);
-
   if (!open) return null;
 
   const onStart = (y) => { startYRef.current = y; startTimeRef.current = Date.now(); dyRef.current = 0; draggingRef.current = true; setT(0, false); };
@@ -147,7 +137,7 @@ export function BottomSheet({ open, onClose, title, children }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
       <div onClick={onClose} style={{ flex: 1, background: "rgba(0,0,0,.45)" }} />
-      <div ref={sheetRef} style={{ background: C.card, borderRadius: "20px 20px 0 0", padding: "0 16px 24px", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", willChange: "transform" }}>
+      <div ref={sheetRef} style={{ background: C.card, borderRadius: "20px 20px 0 0", padding: "0 16px calc(24px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,.18)", willChange: "transform" }}>
         <div {...dragProps} style={{ touchAction: "none", cursor: "grab", margin: "0 -16px", padding: "10px 16px 2px", position: "sticky", top: 0, background: C.card, zIndex: 2 }}>
           <div style={{ width: 44, height: 5, borderRadius: 99, background: C.line, margin: "0 auto 12px" }} />
           {title && <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 17, color: C.ink, marginBottom: 8 }}>{title}</div>}
