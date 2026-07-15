@@ -54,7 +54,7 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
     setTen(""); setGt(""); setNgaySinh(""); setPhSdt(""); logAction(`Thêm HS "${t}"`); toast("Đã thêm học sinh.");
   };
 
-  const setHS = (id, p) => upStudents(students.map((s) => (s.id === id ? { ...s, ...p } : s)));
+  const setHS = (id, p) => upStudents(students.map((s) => (s.id === id ? { ...s, ...p } : s)), true);
 
   const filteredHS = useMemo(() => students.filter((s) => 
     (hsFilter === "all" || lopHienTai(s) === hsFilter) && 
