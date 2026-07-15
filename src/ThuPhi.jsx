@@ -131,7 +131,7 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
         type="number" inputMode="numeric"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        onFocus={(e) => e.target.select()}
+        onFocus={(e) => { e.target.select(); setTimeout(() => { try { e.target.scrollIntoView({ block: "center", behavior: "smooth" }); } catch {} }, 250); }}
         placeholder="0"
         style={{ width: "100%", padding: "14px 12px", borderRadius: 12, border: `1.5px solid ${C.pine}`, fontSize: 18, fontFamily: font.display, fontWeight: 700, color: C.ink, textAlign: "right", marginBottom: 16, outline: "none" }}
       />
