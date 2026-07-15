@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C, font, fmt, sList, sGet, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { tinhNoLuyKe } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
-import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
+import { Card, NumInput, ABBtn, PLBadge, BottomSheet } from "./ui.jsx";
 import { AvatarEditor } from "./Avatar.jsx";
 
 export function StudentProfile({ studentId, store, onBack, embedded = false }) {
@@ -92,9 +92,13 @@ export function StudentProfile({ studentId, store, onBack, embedded = false }) {
 
 // 1. TAB THÔNG TIN
 function InfoTab({ student, meta, ym, students, upStudents }) {
+  const [saved, setSaved] = useState(false);
+  const savedT = useRef(null);
+  const flashSaved = () => { setSaved(true); clearTimeout(savedT.current); savedT.current = setTimeout(() => setSaved(false), 1800); };
   const setHS = (p) => {
     const newStudents = students.map(s => s.id === student.id ? { ...s, ...p } : s);
     upStudents(newStudents, true);
+    flashSaved();
   };
   
   const chuyenLop = (lopMoi) => {
@@ -107,46 +111,48 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
     });
     upStudents(newStudents, true);
     logAction(`Chuyển lớp HS "${student.ten}" (T${ym})`);
+    flashSaved();
   };
 
   const inp = { padding: "9px 10px", borderRadius: 9, border: "1.5px solid " + C.line, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.graySoft, outline: "none", width: "100%" };
   const lab = { fontSize: 11.5, color: C.sub, display: "block", marginBottom: 2 };
-  
+
+  // Các ô chọn mở BottomSheet trượt từ dưới (đồng bộ với popup khác trong app)
+  const [pick, setPick] = useState(null); // "lop" | "pl" | "gt" | "tt"
+  const fieldBtn = (label, valueText, key) => (
+    <div style={{ flex: "1 1 140px" }}>
+      <label style={lab}>{label}</label>
+      <button onClick={() => setPick(key)} style={{ ...inp, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", textAlign: "left", gap: 8 }}>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{valueText}</span>
+        <span style={{ color: C.sub, flexShrink: 0 }}>▾</span>
+      </button>
+    </div>
+  );
+  const PICKERS = {
+    lop: { title: `Chọn lớp (từ tháng ${ym})`, options: meta.classes.map(c => [c.id, c.ten]), current: lopOfMonth(student, ym) || "", onSelect: (v) => chuyenLop(v) },
+    pl: { title: "Chọn phân loại", options: PHAN_LOAI.map(p => [p, PL_LABEL[p]]), current: student.pl, onSelect: (v) => setHS({ pl: v }) },
+    gt: { title: "Chọn giới tính", options: [["", "— Chưa rõ"], ...GIOI_TINH], current: student.gt || "", onSelect: (v) => { setHS({ gt: v }); logAction(`Đổi giới tính HS "${student.ten}" → ${GT_LABEL[v] || "—"}`); } },
+    tt: { title: "Chọn trạng thái", options: TRANG_THAI.map(t => [t, t]), current: student.trangThai, onSelect: (v) => { if (v === "Ra trường") setHS({ trangThai: v, ngayNghiHoc: student.ngayNghiHoc || new Date().toISOString().slice(0, 10) }); else setHS({ trangThai: v, ngayNghiHoc: "" }); } },
+  };
+  const curPick = pick ? PICKERS[pick] : null;
+
   return (
     <div>
       <Card style={{ marginBottom: 12 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, color: C.ink }}>Thông tin cá nhân</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>Thông tin cá nhân</div>
+          <span style={{ fontSize: 11.5, color: C.green, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4, opacity: saved ? 1 : 0, transition: "opacity .2s" }}>✓ Đã lưu</span>
+        </div>
         <AvatarEditor hs={student} setHS={setHS} />
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 100%" }}>
             <label style={lab}>Họ tên</label>
             <input defaultValue={student.ten} onBlur={(e) => setHS({ ten: e.target.value })} style={inp} />
           </div>
-          <div style={{ flex: "1 1 140px" }}>
-            <label style={lab}>Lớp (từ tháng {ym})</label>
-            <select value={lopOfMonth(student, ym) || ""} onChange={(e) => chuyenLop(e.target.value)} style={inp}>
-              {meta.classes.map(c => <option key={c.id} value={c.id}>{c.ten}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: "1 1 140px" }}>
-            <label style={lab}>Phân loại</label>
-            <select value={student.pl} onChange={(e) => setHS({ pl: e.target.value })} style={inp}>
-              {PHAN_LOAI.map(p => <option key={p} value={p}>{PL_LABEL[p]}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: "1 1 140px" }}>
-            <label style={lab}>Giới tính</label>
-            <select value={student.gt || ""} onChange={(e) => { setHS({ gt: e.target.value }); logAction(`Đổi giới tính HS "${student.ten}" → ${GT_LABEL[e.target.value] || "—"}`); }} style={inp}>
-              <option value="">—</option>
-              {GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: "1 1 140px" }}>
-            <label style={lab}>Trạng thái</label>
-            <select value={student.trangThai} onChange={(e) => { const t = e.target.value; if (t === "Ra trường") setHS({ trangThai: t, ngayNghiHoc: student.ngayNghiHoc || new Date().toISOString().slice(0, 10) }); else setHS({ trangThai: t, ngayNghiHoc: "" }); }} style={inp}>
-              {TRANG_THAI.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
+          {fieldBtn(`Lớp (từ tháng ${ym})`, meta.classes.find(c => c.id === (lopOfMonth(student, ym) || ""))?.ten || "—", "lop")}
+          {fieldBtn("Phân loại", PL_LABEL[student.pl] || student.pl, "pl")}
+          {fieldBtn("Giới tính", GT_LABEL[student.gt] || "—", "gt")}
+          {fieldBtn("Trạng thái", student.trangThai, "tt")}
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Người thu</label>
             <div style={{ marginTop: 2 }}><ABBtn val={student.nguoiThu} set={(p) => setHS({ nguoiThu: p })} small /></div>
@@ -184,11 +190,18 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
           </div>
         ))}
       </Card>
+
+      <BottomSheet open={!!pick} onClose={() => setPick(null)} title={curPick?.title || ""}>
+        {curPick && curPick.options.map(([v, l]) => {
+          const active = v === curPick.current;
+          return (
+            <button key={v || "none"} onClick={() => { curPick.onSelect(v); setPick(null); }} style={{ display: "block", width: "100%", padding: "13px 14px", borderRadius: 10, border: `1.5px solid ${active ? C.pine : C.line}`, background: active ? C.pineSoft : C.card, color: active ? C.pine : C.ink, fontWeight: active ? 700 : 600, fontSize: 15, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{active ? "● " : "○ "}{l}</button>
+          );
+        })}
+      </BottomSheet>
     </div>
   );
 }
-
-// 2. TAB THU PHÍ
 function ThuPhiTab({ student, meta }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
