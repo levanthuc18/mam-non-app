@@ -189,6 +189,11 @@ export function useStore() {
   const locked = mData?.daChot;
 
   const taoThang = async () => {
+    // Chống 2 admin cùng tạo tháng: kiểm server NGAY TRƯỚC khi seed.
+    const existed = await sGetSafe(`mn5:thang:${ym}`);
+    if (existed.ok && existed.value?.fees && Object.keys(existed.value.fees).length) {
+      if (!(await ask(`Tháng ${month}/${year} ĐÃ CÓ bảng thu trên máy chủ (có thể máy khác vừa tạo).\n\nTạo lại sẽ GHI ĐÈ bảng đang có. Tiếp tục?`, { danger: true, okText: "Ghi đè, tạo lại" }))) { setMData(existed.value); return; }
+    }
     const py = month === 1 ? year - 1 : year;
     const pm = month === 1 ? 12 : month - 1;
     const prev = await sGet(`mn5:thang:${ymKey(py, pm)}`);
@@ -268,8 +273,10 @@ export function useStore() {
     if (locked) return;
     const cur = mData.fees[sid];
     upMData({ ...mData, fees: { ...mData.fees, [sid]: { ...cur, khoan: { ...cur.khoanDefault } } } });
+    logAction(`Reset các khoản về mặc định cho HS "${hsTen(sid)}" (T${ym})`);
   };
   
+  const hsTen = (sid) => students.find((x) => x.id === sid)?.ten || sid;
   const setNgayAnAll = (val, onlyIds) => {
     if (locked) return;
     const fees = { ...mData.fees };
@@ -282,6 +289,7 @@ export function useStore() {
       fees[sid] = { ...cur, ngayAn: val, ngayAnManual: true, khoanDefault: { ...cur.khoanDefault, tienAn: newDef }, khoan: { ...cur.khoan, tienAn: giuSuaTay ? cur.khoan.tienAn : newDef } };
     });
     upMData({ ...mData, fees });
+    logAction(`Đặt ${val} ngày ăn cho ${ids.length} HS (T${ym})`);
     toast(`Đã đặt ${val} ngày ăn cho ${ids.length} HS đang hiển thị.`);
   };
   
@@ -289,12 +297,15 @@ export function useStore() {
     if (locked) return;
     const cur = mData.fees[sid];
     upMData({ ...mData, fees: { ...mData.fees, [sid]: { ...cur, phuThu: [...(cur.phuThu || []), { id: uid(), ten, soTien: Number(soTien) || 0 }] } } });
+    logAction(`Thêm khoản riêng "${ten}" ${Number(soTien) || 0}đ cho HS "${hsTen(sid)}" (T${ym})`);
   };
   
   const delPhuThuHS = (sid, pid) => {
     if (locked) return;
     const cur = mData.fees[sid];
+    const pt = (cur.phuThu || []).find((p) => p.id === pid);
     upMData({ ...mData, fees: { ...mData.fees, [sid]: { ...cur, phuThu: (cur.phuThu || []).filter((p) => p.id !== pid) } } });
+    logAction(`Xóa khoản riêng "${pt?.ten || "?"}" của HS "${hsTen(sid)}" (T${ym})`);
   };
 
   const allRows = useMemo(() => {
