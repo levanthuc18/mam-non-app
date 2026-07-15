@@ -14,6 +14,63 @@ export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 export const SB = !!(SUPABASE_URL && SUPABASE_KEY);
 export const SB_H = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" };
 
+// ===== Supabase Auth (đăng nhập tài khoản → dùng access_token thay anon key cho RLS) =====
+// Mật khẩu KHÔNG nằm trong code — người dùng nhập, lưu session vào localStorage RIÊNG máy.
+let ACCESS_TOKEN = null, REFRESH_TOKEN = null, EXP_AT = 0;
+export function setAuthToken(tok) { ACCESS_TOKEN = tok || null; SB_H.Authorization = `Bearer ${tok || SUPABASE_KEY}`; } // đổi header dùng chung → 13 chỗ fetch tự dùng token
+function saveSbSession(s) { try { if (s) localStorage.setItem("mn5:sbsession", JSON.stringify(s)); else localStorage.removeItem("mn5:sbsession"); } catch {} }
+export function hasSbSession() { try { return !!localStorage.getItem("mn5:sbsession"); } catch { return false; } }
+export function getSbEmail() { try { return JSON.parse(localStorage.getItem("mn5:sbsession") || "{}").email || ""; } catch { return ""; } }
+function storeTokens(d, email) {
+  ACCESS_TOKEN = d.access_token; REFRESH_TOKEN = d.refresh_token;
+  EXP_AT = Date.now() + ((d.expires_in || 3600) - 60) * 1000; // trừ 60s an toàn
+  setAuthToken(ACCESS_TOKEN);
+  saveSbSession({ access_token: ACCESS_TOKEN, refresh_token: REFRESH_TOKEN, expires_at: EXP_AT, email: email || getSbEmail() });
+}
+export function sbLoadSession() {
+  try {
+    const s = JSON.parse(localStorage.getItem("mn5:sbsession") || "null");
+    if (!s || !s.access_token) return false;
+    ACCESS_TOKEN = s.access_token; REFRESH_TOKEN = s.refresh_token; EXP_AT = s.expires_at || 0;
+    setAuthToken(ACCESS_TOKEN);
+    return true;
+  } catch { return false; }
+}
+export async function sbLogin(email, password) {
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST", headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: (email || "").trim(), password: password || "" }),
+  });
+  if (!r.ok) { let msg = "Sai email hoặc mật khẩu."; try { const e = await r.json(); if (e.error_description || e.msg) msg = e.error_description || e.msg; } catch {} throw new Error(msg); }
+  storeTokens(await r.json(), email);
+  return true;
+}
+let refreshing = null;
+export async function sbRefresh() {
+  if (!REFRESH_TOKEN) return false;
+  if (refreshing) return refreshing;
+  refreshing = (async () => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST", headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: REFRESH_TOKEN }),
+      });
+      if (!r.ok) return false;
+      storeTokens(await r.json());
+      return true;
+    } catch { return false; } finally { refreshing = null; }
+  })();
+  return refreshing;
+}
+// Gọi trước mỗi request: refresh nếu token sắp/đã hết hạn VÀ đang online. Offline thì dùng token cũ (request fail → cache/queue).
+export async function sbEnsureFresh() {
+  if (!ACCESS_TOKEN || Date.now() < EXP_AT) return;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+  await sbRefresh();
+}
+export function sbLogout() { ACCESS_TOKEN = null; REFRESH_TOKEN = null; EXP_AT = 0; setAuthToken(null); saveSbSession(null); }
+sbLoadSession(); // nạp session đã lưu ngay khi tải module
+
 export const MEM = {};
 export const CHOT_MEM = {};
 try { const _cm = (typeof localStorage !== "undefined") && localStorage.getItem("mn5:chotmem"); if (_cm) Object.assign(CHOT_MEM, JSON.parse(_cm)); } catch {}
@@ -64,6 +121,7 @@ export async function sGetSafeCached(k) {
 // Ghi thẳng lên Supabase (không kiểm xung đột) — dùng cho flush + ghi đè
 async function rawWrite(k, v) {
   invalidate(k);
+  if (SB) await sbEnsureFresh();
   const isDel = (v && v.__del) || (v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length === 0);
   if (isDel) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H });
@@ -155,6 +213,7 @@ if (typeof window !== "undefined") {
 
 export async function sGet(k) {
   if (SB) {
+    await sbEnsureFresh();
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); const row = d?.[0]; if (row) { MEM[k] = row.value; VER[k] = row.updated_at; } return row?.value ?? MEM[k] ?? null; }
@@ -170,6 +229,7 @@ export async function sGet(k) {
 // ok=true + value=null nghĩa là server trả lời thành công và thật sự chưa có key đó.
 export async function sGetSafe(k) {
   if (SB) {
+    await sbEnsureFresh();
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); const row = d?.[0]; if (row) { MEM[k] = row.value; VER[k] = row.updated_at; markHad(k, row.value); return { ok: true, value: row.value }; } return { ok: true, value: null }; }
@@ -291,6 +351,7 @@ export function queueWrite(k, v) {
 export async function sList(prefix) {
   const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
   if (SB) {
+    await sbEnsureFresh();
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
       if (r.ok) { const d = await r.json(); return Array.from(new Set([...memKeys, ...d.map((x) => x.key)])); }
