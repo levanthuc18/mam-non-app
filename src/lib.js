@@ -601,7 +601,9 @@ export async function getPinHashSafe() {
   const r = await sGetSafe("mn5:pinhash");
   if (r.ok) {
     if (r.value && typeof r.value === "string") { try { localStorage.setItem("mn5:pinhash", r.value); } catch {} return { ok: true, hash: r.value }; }
-    return { ok: true, hash: PIN_MAC_DINH }; // server chưa đặt PIN → mặc định hợp lệ
+    // Server chưa có PIN → THỬ localStorage (PIN đã đặt cục bộ từ trước) rồi mới về mặc định.
+    try { const lc = localStorage.getItem("mn5:pinhash"); if (lc) { sSet("mn5:pinhash", lc).catch(() => {}); return { ok: true, hash: lc }; } } catch {}
+    return { ok: true, hash: PIN_MAC_DINH };
   }
   try { const lc = localStorage.getItem("mn5:pinhash"); if (lc) return { ok: true, hash: lc }; } catch {}
   return { ok: false, hash: null }; // máy mới + mất mạng → không thể xác thực
