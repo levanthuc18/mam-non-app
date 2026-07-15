@@ -7,7 +7,7 @@ import {
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
   KHOAN, isKhongThu, defaultKhoan, khoanMode, SEED_META,
   THEMES, setTheme, getTheme, applyTheme, EDITABLE_COLORS, currentColor, setCustomColor, resetCustom, getCustom,
-  sha256Hex, getPinHash, setPinHash
+  sha256Hex, getPinHash, setPinHash, sbSignOut, getSbEmail
 } from "./lib.js";
 import {
   Card, NumInput, ABBtn, SearchBar, BottomSheet, useStickyShrink, StickyBar, PLBadge
@@ -677,7 +677,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
           )}
         </Card>
       )}
-      {sec === "baomat" && <DoiPin />}
+      {sec === "baomat" && <><DoiPin /><PhienThietBi /></>}
 
       {sec === "thuphi" && <ThuPhiCaiDat meta={meta} upMeta={upMeta} />}
 
@@ -731,7 +731,31 @@ function DoiPin() {
   );
 }
 
-// ===== Cài đặt Thu học phí (hạn đóng, sau này: mẫu tin, ngày tạo tháng...) =====
+// ===== Phiên đăng nhập thiết bị (Supabase Auth) =====
+function PhienThietBi() {
+  const email = getSbEmail();
+  const logoutThis = async () => {
+    if (!(await ask("Đăng xuất khỏi thiết bị này?\nLần mở sau sẽ phải nhập lại email + mật khẩu tài khoản của trường.", { okText: "Đăng xuất" }))) return;
+    await sbSignOut("local");
+    location.reload();
+  };
+  const logoutOthers = async () => {
+    if (!(await ask("Đăng xuất TẤT CẢ máy khác đang dùng tài khoản này?\n\nMáy này vẫn đăng nhập bình thường. Các máy khác sẽ bị đẩy ra đăng nhập lại trong vòng ~1 giờ (không tức thì).", { okText: "Đăng xuất máy khác", danger: true }))) return;
+    await sbSignOut("others");
+    toast("Đã yêu cầu đăng xuất các máy khác.");
+  };
+  return (
+    <Card>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, marginBottom: 4, display: "inline-flex", alignItems: "center", gap: 7 }}><Icon name="lock" size={16} color={C.pine} /> Phiên đăng nhập thiết bị</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 12 }}>Đang đăng nhập bằng: <b style={{ color: C.ink }}>{email || "—"}</b>. Mỗi máy nhập tài khoản 1 lần rồi được nhớ.</div>
+      <div style={{ display: "grid", gap: 10, maxWidth: 340 }}>
+        <button onClick={logoutThis} style={{ padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Đăng xuất khỏi thiết bị này</button>
+        <button onClick={logoutOthers} style={{ padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.coral}`, background: C.coralSoft, color: C.coral, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Đăng xuất tất cả máy khác</button>
+        <div style={{ fontSize: 11.5, color: C.sub, lineHeight: 1.5 }}>⚠️ "Máy khác" bị đẩy ra trong khoảng ~1 giờ (khi token hết hạn), không tức thì.</div>
+      </div>
+    </Card>
+  );
+}
 function ThuPhiCaiDat({ meta, upMeta }) {
   const [hd, setHd] = useState(meta?.hanDong || "");
   useEffect(() => { setHd(meta?.hanDong || ""); }, [meta?.hanDong]);
