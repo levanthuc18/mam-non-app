@@ -1,45 +1,49 @@
-// Splash.jsx — màn chờ 2 giây khi mở app
-import { useEffect } from "react";
-import { C, font } from "./lib.js";
+// SbAuth.jsx — Đăng nhập tài khoản Supabase (1 lần / máy). Không lưu mật khẩu vào code.
+import { useState } from "react";
+import { C, font, sbLogin } from "./lib.js";
 import { Logo } from "./Brand.jsx";
-import { Cloud } from "./Decor.jsx";
 
-export function Splash({ onDone, ms = 2000, tenTruong = "Mầm Non Tuổi Thần Tiên" }) {
-  useEffect(() => {
-    const t = setTimeout(() => onDone && onDone(), ms);
-    return () => clearTimeout(t);
-  }, [onDone, ms]);
+export function SbAuth({ onDone }) {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const login = async () => {
+    if (!email.trim() || !pw) { setErr("Nhập email và mật khẩu."); return; }
+    setBusy(true); setErr("");
+    try {
+      await sbLogin(email, pw);
+      onDone();
+    } catch (e) {
+      setErr(e.message || "Không đăng nhập được. Kiểm tra mạng và thử lại.");
+      setBusy(false);
+    }
+  };
+
+  const inp = { width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, fontSize: 15, fontFamily: font.body, outline: "none", boxSizing: "border-box", background: C.card, color: C.ink };
 
   return (
-    <div style={{
-      position: "relative", overflow: "hidden",
-      height: "100dvh", minHeight: "100dvh", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 14,
-      background: `linear-gradient(165deg, ${C.bg} 0%, ${C.pineSoft} 100%)`,
-      fontFamily: font.body, padding: 24,
-    }}>
-      <style>{`
-        @keyframes ttFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes ttDot{0%,80%,100%{opacity:.25}40%{opacity:1}}
-        @keyframes ttFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-      `}</style>
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 360 }}>
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <Logo w={130} />
+          <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.pine, marginTop: 10 }}>Đăng nhập thiết bị</div>
+          <div style={{ fontSize: 13, color: C.sub, marginTop: 4, lineHeight: 1.5 }}>Nhập tài khoản của trường để máy này được phép truy cập dữ liệu. Chỉ cần nhập 1 lần.</div>
+        </div>
 
-      {/* mây trang trí */}
-      <Cloud w={120} style={{ position: "absolute", top: 70, left: -18, opacity: 0.85, animation: "ttFloat 6s ease-in-out infinite" }} />
-      <Cloud w={84} style={{ position: "absolute", top: 130, right: 24, opacity: 0.7, animation: "ttFloat 7s ease-in-out infinite" }} />
-      <Cloud w={150} style={{ position: "absolute", bottom: 64, left: -30, opacity: 0.75, animation: "ttFloat 8s ease-in-out infinite" }} />
-      <Cloud w={96} style={{ position: "absolute", bottom: 120, right: -16, opacity: 0.6, animation: "ttFloat 6.5s ease-in-out infinite" }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (vd: mamnon@gmail.com)" style={inp} />
+          <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && login()} placeholder="Mật khẩu" style={inp} />
+          {err && <div style={{ fontSize: 12.5, color: C.coral, fontWeight: 600, padding: "2px 2px" }}>{err}</div>}
+          <button onClick={login} disabled={busy} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: busy ? C.gray : C.pine, color: "#fff", fontWeight: 800, fontSize: 15.5, fontFamily: font.display, cursor: busy ? "default" : "pointer", marginTop: 4, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>
+            {busy ? "Đang đăng nhập…" : "Đăng nhập"}
+          </button>
+        </div>
 
-      <div style={{ position: "relative", textAlign: "center", animation: "ttFade .6s ease both" }}>
-        <Logo w={216} style={{ width: "min(216px, 48vw)" }} />
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: "clamp(16px,4.6vw,20px)", color: C.ink, marginTop: 14 }}>{tenTruong}</div>
-      </div>
-
-      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 7, marginTop: 6, animation: "ttFade .7s .2s ease both" }}>
-        <span style={{ fontSize: 13, color: C.sub }}>Đang tải dữ liệu</span>
-        {[0, 1, 2].map((i) => (
-          <span key={i} style={{ width: 5, height: 5, borderRadius: 99, background: C.pine, display: "inline-block", animation: `ttDot 1.2s ${i * 0.18}s infinite` }} />
-        ))}
+        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 16, textAlign: "center", lineHeight: 1.5 }}>
+          Mật khẩu chỉ lưu trên máy này, không gửi đi đâu khác. Quên mật khẩu? Vào Supabase → Authentication để đặt lại.
+        </div>
       </div>
     </div>
   );
