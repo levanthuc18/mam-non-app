@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { C, font, fmt, sList, sGet, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
+import { C, font, fmt, sList, sGet, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
+import { tinhNoLuyKe } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, NumInput, ABBtn, PLBadge } from "./ui.jsx";
 import { AvatarEditor } from "./Avatar.jsx";
@@ -142,7 +143,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
           </div>
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Trạng thái</label>
-            <select value={student.trangThai} onChange={(e) => setHS({ trangThai: e.target.value })} style={inp}>
+            <select value={student.trangThai} onChange={(e) => { const t = e.target.value; if (t === "Ra trường") setHS({ trangThai: t, ngayNghiHoc: student.ngayNghiHoc || new Date().toISOString().slice(0, 10) }); else setHS({ trangThai: t, ngayNghiHoc: "" }); }} style={inp}>
               {TRANG_THAI.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -160,7 +161,7 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
           </div>
           <div style={{ flex: "1 1 140px" }}>
             <label style={lab}>Ngày ra trường</label>
-            <input type="date" value={student.ngayNghiHoc || ""} onChange={(e) => setHS(e.target.value ? { ngayNghiHoc: e.target.value, trangThai: "Ra trường" } : { ngayNghiHoc: "" })} style={inp} />
+            <input type="date" value={student.ngayNghiHoc || ""} onChange={(e) => setHS(e.target.value ? { ngayNghiHoc: e.target.value, trangThai: "Ra trường" } : { ngayNghiHoc: "", trangThai: student.trangThai === "Ra trường" ? "Đang học" : student.trangThai })} style={inp} />
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
@@ -299,31 +300,29 @@ function DiemDanhTab({ student }) {
 // 4. TAB CÔNG NỢ
 function CongNoTab({ student, meta }) {
   const [debt, setDebt] = useState(null);
+  const [err, setErr] = useState(false);
+  const [tryN, setTryN] = useState(0);
 
-  useEffect(() => {
-    (async () => {
-      let luyKe = student.noDauKy || 0;
-      const keys = await sList("mn5:thang:");
-      const months = keys.map(k => k.replace("mn5:thang:", "")).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
-      const chiTiet = [];
-      for (const m of months) {
-        const td = await sGet(`mn5:thang:${m}`);
-        if (!td?.fees?.[student.id]) continue;
-        const rec = td.fees[student.id];
-        const y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
-        const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
-        const ddPrevM = (await sGet(`mn5:dd:${ymKey(py, pm)}`)) || {};
-        const nghi = Object.keys(ddPrevM[student.id] || {}).length;
-        const lop = meta.classes.find(c => c.id === lopOfMonth(student, m));
-        const ps = tinhPSFromRec(student, rec, lop, nghi).tong;
-        const tt = Number(rec.thucThu) || 0;
-        luyKe += ps - tt;
-        chiTiet.push({ thang: m, ps, tt, no: ps - tt });
-      }
-      setDebt({ luyKe, chiTiet });
-    })();
-  }, [student.id]);
+  useEffect(() => { let huy = false; (async () => {
+    setDebt(null); setErr(false);
+    const keys = await sList("mn5:thang:");
+    const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
+    // Đọc song song + cache tháng đã chốt; lỗi mạng → KHÔNG hiện số nợ sai.
+    const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
+    const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));
+    const prevKeys = Array.from(new Set(months.map((m) => { const y = Number(m.slice(0, 4)), mo = Number(m.slice(5)); const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y; return ymKey(py, pm); }).filter((k) => !months.includes(k))));
+    const pRes = await Promise.all(prevKeys.map((k) => sGetSafeCached(`mn5:dd:${k}`)));
+    if (huy) return;
+    if (dRes.some((r) => !r.ok) || ddRes.some((r) => !r.ok) || pRes.some((r) => !r.ok)) { setErr(true); return; }
+    months.forEach((m, i) => { if (dRes[i].value?.daChot) { cachePut(`mn5:thang:${m}`, dRes[i].value); cachePut(`mn5:dd:${m}`, ddRes[i].value); } });
+    const datas = dRes.map((r) => r.value), dds = ddRes.map((r) => r.value);
+    const ddExtra = {}; prevKeys.forEach((k, i) => { ddExtra[k] = pRes[i].value || {}; });
+    // DÙNG CHUNG hàm với Thu phí + Công nợ (tôn trọng snapshot chốt tháng) → 4 màn khớp số.
+    const { debt: dmap, chiTiet, base, baseThang } = tinhNoLuyKe({ months, datas, dds, ddExtra, students: [student], meta });
+    setDebt({ luyKe: dmap[student.id] ?? (student.noDauKy || 0), chiTiet: chiTiet[student.id] || [], base: base[student.id] ?? (student.noDauKy || 0), baseThang: baseThang[student.id] || null });
+  })(); return () => { huy = true; }; }, [student.id, tryN]);
 
+  if (err) return <div style={{ textAlign: "center", padding: 20, color: C.coral, fontSize: 13 }}>Không tải được (lỗi mạng). <button onClick={() => setTryN((n) => n + 1)} style={{ marginLeft: 6, border: "none", background: C.pine, color: "#fff", borderRadius: 8, padding: "5px 12px", fontWeight: 700, cursor: "pointer" }}>Thử lại</button></div>;
   if (!debt) return <div style={{ textAlign: "center", padding: 20, color: C.sub }}>Đang tính...</div>;
 
   return (
@@ -335,7 +334,9 @@ function CongNoTab({ student, meta }) {
         <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 24, color: debt.luyKe > 0 ? C.coral : debt.luyKe < 0 ? C.green : C.ink }}>
           {fmt(Math.abs(debt.luyKe))} đ
         </div>
-        {student.noDauKy > 0 && <div style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>Nợ đầu kỳ: {fmt(student.noDauKy)}</div>}
+        {debt.baseThang
+          ? (debt.base !== 0 && <div style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>Nợ mang sang (hết T{debt.baseThang.slice(5)}/{debt.baseThang.slice(0, 4)} đã chốt): {fmt(debt.base)}</div>)
+          : (student.noDauKy > 0 && <div style={{ fontSize: 12, color: C.sub, marginTop: 4 }}>Nợ đầu kỳ: {fmt(student.noDauKy)}</div>)}
       </Card>
 
       {debt.chiTiet.map(c => (
