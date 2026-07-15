@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { C, font, fmt, printWithName, fileName, capSoBienLai } from "../lib.js";
-import { registerDismiss } from "../nav.js";
 import { BottomSheet } from "../ui.jsx";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
@@ -38,12 +37,6 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
       if (clearPhieuId) clearPhieuId();
     }
   }, [phieuId]);
-
-  // Đang xem 1 phiếu chi tiết → nút Back lùi về danh sách phiếu (chưa rời tab Phiếu).
-  useEffect(() => {
-    if (mode !== "single") return;
-    return registerDismiss(() => { setMode("manager"); setSingleId(null); });
-  }, [mode]);
   const isWide = typeof window !== "undefined" && window.innerWidth >= 820;
   const activeFilterCount = FILTER_DEFS.filter((f) => filters[f.key]).length;
   const chipBtn = { flex: 1, padding: "11px 12px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", minWidth: 0 };
@@ -74,7 +67,8 @@ export function PhieuThuManager({ allRows, meta, month, year, mData, upMData, up
     if (toAssign.length) {
       const { soBienLai, capFor } = await capSoBienLai(meta, toAssign);
       const newFees = { ...mData.fees };
-      Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id] }; });
+      const nlToday = new Date().toISOString().slice(0, 10);
+      Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id], ngayLap: nlToday }; });
       upMeta({ ...meta, soBienLai });
       upMData({ ...mData, fees: newFees });
       printWithName(printTitle, 300);
