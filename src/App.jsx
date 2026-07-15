@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending } from "./lib.js";
-import { useBackHandler, dismissTop, registerDismiss } from "./nav.js";
+import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending, hasSbSession, sbLogout } from "./lib.js";
+import { SbAuth } from "./SbAuth.jsx";
 import { BottomSheet } from "./ui.jsx";
 import { useStore } from "./useStore.js";
 import { HomeTab } from "./Home.jsx";
@@ -22,15 +22,8 @@ import { Logo } from "./Brand.jsx";
 function ConfirmHost() {
   const [state, setState] = useState(null);
   useEffect(() => { setAskRef((s) => setState(s)); return () => setAskRef(null); }, []);
-  const close = (v) => { state.res(v); setState(null); };
-  // Nút Back đóng dialog (mặc định = Hủy) thay vì lùi màn.
-  const closeRef = useState({})[0];
-  closeRef.current = close;
-  useEffect(() => {
-    if (!state) return;
-    return registerDismiss(() => { if (closeRef.current) closeRef.current(false); });
-  }, [state]);
   if (!state) return null;
+  const close = (v) => { state.res(v); setState(null); };
   const danger = state.opts.danger;
   return (
     <div onClick={() => close(false)} style={{ position: "fixed", inset: 0, background: "rgba(20,40,30,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -98,10 +91,10 @@ function SyncBanner() {
 }
 
 export default function App() {
-  const [tab, setTabRaw] = useState("home");
-  const [navStack, setNavStack] = useState([]); // ngăn xếp màn con (drill-in)
+  const [tab, setTab] = useState("home"); 
   const [auth, setAuth] = useState(null);
   const [splashDone, setSplashDone] = useState(false);
+  const [sbOk] = useState(() => hasSbSession());
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [phieuId, setPhieuId] = useState(null);
@@ -112,42 +105,6 @@ export default function App() {
   const [viewStudentId, setViewStudentId] = useState(null); 
   const [notifOpen, setNotifOpen] = useState(false);
   const [baoPendingCount, setBaoPendingCount] = useState(0);
-
-  // ── Điều hướng root-vs-drill-in ─────────────────────────────────────────
-  // Tab gốc (thanh dưới): chuyển ngang, KHÔNG chồng stack.
-  const ROOT_TABS = ["home", "thu", "dd", "hs", "more"];
-  // Màn con: có nút ← / 🏠, được đẩy vào stack.
-  const DRILL_TITLES = { caidat: "Cài đặt", phieu: "In học phí", dash: "Tổng quan", no: "Công nợ" };
-
-  const navigateTo = (target) => {
-    if (!target || target === tab) return;
-    if (ROOT_TABS.includes(target)) { setNavStack([]); setTabRaw(target); }      // đổi khu vực → reset stack
-    else { setNavStack((s) => [...s, tab]); setTabRaw(target); }                 // vào màn con → đẩy màn hiện tại
-  };
-  const setTab = navigateTo; // giữ nguyên API cho mọi component con
-
-  const goHome = () => { setNavStack([]); setViewStudentId(null); setPhieuId(null); setTabRaw("home"); };
-
-  // Thứ tự Back: overlay (Dialog→Sheet→Profile→phiếu) → màn con → tab gốc≠Home → Home → thoát.
-  const resolveBack = () => {
-    if (dismissTop()) return true;                          // còn overlay → đóng cái trên cùng
-    if (navStack.length > 0) {                              // đang ở màn con → pop về màn trước
-      const prev = navStack[navStack.length - 1];
-      setNavStack((s) => s.slice(0, -1));
-      setTabRaw(prev);
-      return true;
-    }
-    if (tab !== "home") { setTabRaw("home"); return true; } // tab gốc ≠ Home → về Home
-    return false;                                           // đã ở Home → cho thoát app
-  };
-  useBackHandler(resolveBack);
-
-  // StudentProfile đang mở → Back đóng nó (đóng sheet con bên trong trước nếu có).
-  useEffect(() => {
-    if (!viewStudentId) return;
-    return registerDismiss(() => setViewStudentId(null));
-  }, [viewStudentId]);
-
   useEffect(() => {
     let alive = true;
     const load = async () => { try { const l = (await sGet("mn5:bao")) || []; if (alive) setBaoPendingCount(l.filter((b) => !b.done).length); } catch {} };
@@ -170,6 +127,7 @@ export default function App() {
     window.addEventListener("resize", h); return () => window.removeEventListener("resize", h);
   }, []);
 
+  useEffect(() => { setOpenId(null); }, [tab]);
   useEffect(() => { if (isGV && !["dd", "home", "hs", "more"].includes(tab)) setTab("home"); }, [isGV, tab]);
 
   // Phiên đăng nhập lưu RIÊNG TỪNG MÁY (localStorage), KHÔNG dùng sSet/sGet
@@ -182,6 +140,7 @@ export default function App() {
   useEffect(() => { const a = readAuth(); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); }, []);
 
   if (!splashDone) return <Splash onDone={() => setSplashDone(true)} />;
+  if (!sbOk) return <SbAuth onDone={() => window.location.reload()} />;
   if (loadErr)
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, padding: 24, fontFamily: font.body }}>
       <div style={{ textAlign: "center", maxWidth: 340 }}>
@@ -189,6 +148,7 @@ export default function App() {
         <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>Không kết nối được máy chủ</div>
         <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6, marginBottom: 18 }}>App tạm thời không tải được dữ liệu (mạng hoặc máy chủ đang trục trặc). <b style={{ color: C.ink }}>Dữ liệu của bạn vẫn an toàn</b> — app sẽ không khởi tạo lại khi chưa đọc được. Vui lòng kiểm tra mạng và thử lại.</div>
         <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>
+        <div><button onClick={() => { sbLogout(); window.location.reload(); }} style={{ marginTop: 12, padding: "8px 18px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontSize: 12.5, cursor: "pointer" }}>Đăng nhập lại tài khoản</button></div>
       </div>
     </div>;
   if (loading || !meta || !students)
@@ -269,13 +229,6 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
-        {DRILL_TITLES[tab] && (
-          <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <button onClick={resolveBack} aria-label="Quay lại" style={{ border: `1.5px solid ${C.line}`, background: C.card, borderRadius: 10, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1, color: C.ink, cursor: "pointer", flexShrink: 0 }}>←</button>
-            <div style={{ flex: 1, minWidth: 0, fontFamily: font.display, fontWeight: 800, fontSize: 17, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{DRILL_TITLES[tab]}</div>
-            <button onClick={goHome} aria-label="Trang chủ" style={{ border: `1.5px solid ${C.line}`, background: C.card, borderRadius: 10, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}><Icon name="home" size={19} color={C.sub} /></button>
-          </div>
-        )}
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600 }}>⚠ Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
