@@ -69,6 +69,12 @@ export async function sbEnsureFresh() {
   await sbRefresh();
 }
 export function sbLogout() { ACCESS_TOKEN = null; REFRESH_TOKEN = null; EXP_AT = 0; setAuthToken(null); saveSbSession(null); }
+// Đăng xuất có phạm vi: "local" = máy này, "others" = mọi máy KHÁC, "global" = tất cả.
+// others/global thu hồi refresh token phía server → máy kia hết hạn (~1h) là phải đăng nhập lại.
+export async function sbSignOut(scope = "local") {
+  try { if (ACCESS_TOKEN) await fetch(`${SUPABASE_URL}/auth/v1/logout?scope=${scope}`, { method: "POST", headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" } }); } catch {}
+  if (scope !== "others") sbLogout(); // máy này chỉ bị gỡ session khi local/global
+}
 sbLoadSession(); // nạp session đã lưu ngay khi tải module
 
 export const MEM = {};
