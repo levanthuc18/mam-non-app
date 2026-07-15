@@ -26,7 +26,8 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
     if (toAssign.length) {
       const { soBienLai, capFor } = await capSoBienLai(meta, toAssign);
       const newFees = { ...mData.fees };
-      Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id] }; });
+      const nlToday = new Date().toISOString().slice(0, 10);
+      Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id], ngayLap: nlToday }; });
       upMeta({ ...meta, soBienLai });
       upMData({ ...mData, fees: newFees });
       setTimeout(() => window.print(), 200);
