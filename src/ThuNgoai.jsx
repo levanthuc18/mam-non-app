@@ -1,6 +1,6 @@
 // ThuNgoai.jsx — Thu ngoài (khoản thu không phải học sinh) + Khoản thu theo lớp.
 // Tách từ ThuPhi.jsx để sửa 2 nghiệp vụ này không phải mở file thu phí chính.
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { C, font, fmt, uid, toast } from "./lib.js";
 import { Card, ABBtn, NumInput } from "./ui.jsx";
 import { Icon } from "./Icon.jsx";
@@ -150,11 +150,15 @@ export function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }
   const [ten, setTen] = useState(""); const [so, setSo] = useState("");
   const [coDinh, setCoDinh] = useState(false);
   const [lopAp, setLopAp] = useState(lopFilter !== "all" ? lopFilter : (classes[0]?.id || ""));
+  const applying = useRef(false);
   const targets = rows.filter((r) => r.lopId === lopAp);
   const apply = () => {
+    if (applying.current) return;                              // chống bấm 2 lần → cộng khoản gấp đôi
     if (!ten.trim() || !so || !lopAp) return;
+    if (Number(so) <= 0) { toast("Số tiền phải lớn hơn 0."); return; }
     const ids = targets.map((r) => r.hs.id);
     if (ids.length === 0) { toast("Lớp này chưa có HS trong tháng."); return; }
+    applying.current = true;
     const fees = { ...mData.fees };
     ids.forEach((sid) => {
       const cur = fees[sid]; if (!cur) return;
@@ -163,6 +167,7 @@ export function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }
     upMData({ ...mData, fees });
     setTen(""); setSo("");
     toast(`Đã thêm "${ten.trim()}" cho ${ids.length} HS lớp ${classes.find((c) => c.id === lopAp)?.ten}.`);
+    setTimeout(() => { applying.current = false; }, 700);
   };
   return (
     <Card style={{ marginTop: 10, background: C.blueASoft, borderColor: C.line }}>
@@ -185,4 +190,3 @@ export function KhoanThuLop({ mData, upMData, locked, classes, rows, lopFilter }
     </Card>
   );
 }
-
