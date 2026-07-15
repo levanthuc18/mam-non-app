@@ -1,7 +1,21 @@
-import { C, font, fmt, printWithName, fileName, LIGHT_VARS, capSoBienLai } from "../lib.js";
+import { C, font, fmt, printWithName, fileName, LIGHT_VARS, capSoBienLai, noDau } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { Icon } from "../Icon.jsx";
 import { QRBox } from "./QRBox.jsx";
+
+// Nội dung CK ≤25 ký tự, KHÔNG cắt ngang tên: thử đủ tên → họ+tên → chỉ tên riêng.
+export function qrNoiDung(ten, month) {
+  const t = noDau(String(ten || "").trim()).replace(/\s+/g, " ");
+  const words = t.split(" ").filter(Boolean);
+  const duoi = ` T${month}`;
+  const cands = [
+    `Hoc phi ${t}${duoi}`,
+    `HP ${t}${duoi}`,
+    words.length >= 2 ? `HP ${words[0]} ${words[words.length - 1]}${duoi}` : null,
+    `HP ${words[words.length - 1] || ""}${duoi}`,
+  ].filter(Boolean);
+  return cands.find((c) => c.length <= 25) || cands[cands.length - 1].slice(0, 25);
+}
 
 export function PhieuThu({
   phieuRow,
@@ -20,6 +34,9 @@ export function PhieuThu({
   const mm = month < 10 ? `0${month}` : `${month}`;
   const bank = meta.bank[nguoiThu] || {};
   const now = new Date();
+  // Ngày lập: dùng ngày LƯU lúc cấp số (in lại sau này không đổi ngày); chưa có thì hôm nay.
+  const nl = phieuRow.rec.ngayLap && /^\d{4}-\d{2}-\d{2}$/.test(phieuRow.rec.ngayLap) ? phieuRow.rec.ngayLap.split("-") : null;
+  const [nlY, nlM, nlD] = nl ? [nl[0], nl[1], String(Number(nl[2]))] : [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate())];
 
   // Tự nén theo số khoản thu để gói gọn 1 trang (không cắt nội dung).
   const nKhoan = phieuRow.ps.dong.length + (phieuRow.noTruoc !== 0 ? 1 : 0);
@@ -33,7 +50,7 @@ export function PhieuThu({
       const { soBienLai, capFor } = await capSoBienLai(meta, [{ id: phieuRow.hs.id, nguoiThu }]);
       const bl = capFor[phieuRow.hs.id];
       upMeta({ ...meta, soBienLai });
-      upMData({ ...mData, fees: { ...mData.fees, [phieuRow.hs.id]: { ...mData.fees[phieuRow.hs.id], bienLai: bl } } });
+      upMData({ ...mData, fees: { ...mData.fees, [phieuRow.hs.id]: { ...mData.fees[phieuRow.hs.id], bienLai: bl, ngayLap: new Date().toISOString().slice(0, 10) } } });
       printWithName(printTitle, 100);
     } else {
       printWithName(printTitle, 0);
@@ -125,7 +142,7 @@ export function PhieuThu({
         {/* ===== XANH: QR + thông báo + chân (bám lề dưới) ===== */}
         <div style={{ flexShrink: 0, padding: "5px 16px 5px" }}>
           <div style={{ padding: "10px 13px", borderRadius: 12, background: C.pineSoft, border: `1.5px solid ${C.line}`, display: "flex", gap: 13, alignItems: "center" }}>
-            <QRBox bank={bank} amount={Math.max(0, phieuRow.conNo)} noiDung={`Hoc phi ${phieuRow.hs.ten} T${month}`} size={dense ? 80 : 90} />
+            <QRBox bank={bank} amount={Math.max(0, phieuRow.conNo)} noiDung={qrNoiDung(phieuRow.hs.ten, month)} size={dense ? 80 : 90} />
             <div style={{ fontSize: 13, lineHeight: 1.55, minWidth: 0 }}>
               <div style={{ fontWeight: 800, color: C.pine, fontSize: 13, letterSpacing: 0.3, marginBottom: 5 }}>THÔNG TIN CHUYỂN KHOẢN</div>
               <div style={{ marginBottom: 2 }}><span style={{ color: C.sub }}>Chủ tài khoản: </span><b>{bank.chu}</b></div>
@@ -138,14 +155,14 @@ export function PhieuThu({
               <Icon name="bell" size={15} color="#fff" />
             </div>
             <div style={{ fontSize: 11.5, lineHeight: 1.4, color: C.ink }}>
-              <div>Phụ huynh đóng tiền từ ngày <b>01/{mm}</b> đến <b>10/{mm}</b> tại văn phòng hoặc giáo viên tại lớp.</div>
+              <div>Phụ huynh đóng tiền {meta?.hanDong?.trim() ? <b>{meta.hanDong.trim()}</b> : <>từ ngày <b>01/{mm}</b> đến <b>10/{mm}</b></>} tại văn phòng hoặc giáo viên tại lớp.</div>
               <div style={{ fontStyle: "italic", color: C.blueA, marginTop: 2 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
             </div>
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 10.5, color: C.sub, paddingTop: 7, marginTop: 8, borderTop: `1px dashed ${C.line}` }}>
             <div>Mã phiếu: <b style={{ color: C.ink }}>{bienLai || "(cấp khi in)"}</b></div>
-            <div>Ngày {now.getDate()} tháng {String(now.getMonth() + 1).padStart(2, "0")} năm {now.getFullYear()}</div>
+            <div>Ngày {nlD} tháng {nlM} năm {nlY}</div>
           </div>
         </div>
       </div>
