@@ -14,6 +14,7 @@ export function SbAuth({ onDone }) {
     setBusy(true); setErr("");
     try {
       await sbLogin(email, pw);
+      try { localStorage.removeItem("mn5:auth"); } catch {} // đăng nhập email mới → hỏi lại PIN vai trò
       onDone();
     } catch (e) {
       setErr(e.message || "Không đăng nhập được. Kiểm tra mạng và thử lại.");
@@ -27,7 +28,7 @@ export function SbAuth({ onDone }) {
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 360 }}>
         <div style={{ textAlign: "center", marginBottom: 22 }}>
-          <Logo w={130} />
+          <div style={{ display: "flex", justifyContent: "center" }}><Logo w={160} style={{ width: "min(150px, 40vw)" }} /></div>
           <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 20, color: C.pine, marginTop: 10 }}>Đăng nhập thiết bị</div>
           <div style={{ fontSize: 13, color: C.sub, marginTop: 4, lineHeight: 1.5 }}>Nhập tài khoản của trường để máy này được phép truy cập dữ liệu. Chỉ cần nhập 1 lần.</div>
         </div>
