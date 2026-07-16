@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { registerDismiss } from "./nav.js";
 import { C, font, PL_COLOR } from "./lib.js";
 import { Icon } from "./Icon.jsx";
 
@@ -99,6 +100,9 @@ export function BottomSheet({ open, onClose, title, children }) {
   const startTimeRef = useRef(null);
   const dyRef = useRef(0);
   const draggingRef = useRef(false);
+  // Nút Back Android: sheet đang mở tự đăng ký "đóng tôi" (nav.js LIFO)
+  const closeRef = useRef(onClose); closeRef.current = onClose;
+  useEffect(() => { if (!open) return; return registerDismiss(() => closeRef.current && closeRef.current()); }, [open]);
   const setT = (y, anim) => {
     const el = sheetRef.current; if (!el) return;
     el.style.transition = anim ? "transform .22s cubic-bezier(.32,.72,.35,1)" : "none";
