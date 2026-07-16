@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, memo } from "react";
 import {
   C, font, noDau, soNgayHoc, ngayNhapHocTrongThang, logAction,
-  ymKey, TT_THU_PHI, TUAN, lopOfMonth, sGet, sSet, uid, toast, ask
+  ymKey, TT_THU_PHI, TUAN, lopOfMonth, sGet, sGetSafe, sSet, uid, toast, ask
 } from "./lib.js";
 import {
   Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
@@ -123,12 +123,14 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   const [baoMoiTen, setBaoMoiTen] = useState("");
   const [baoSentIds, setBaoSentIds] = useState(() => new Set());
   const loadBaoSent = async () => {
-    try { const l = (await sGet("mn5:bao")) || []; setBaoSentIds(new Set(l.filter((b) => !b.done && b.hsId).map((b) => b.hsId))); } catch {}
+    try { const r = await sGetSafe("mn5:bao"); if (r.ok) { const l = r.value || []; setBaoSentIds(new Set(l.filter((b) => !b.done && b.hsId).map((b) => b.hsId))); } } catch {}
   };
   useEffect(() => { loadBaoSent(); }, []);
 
   const guiBao = async (bao) => {
-    const cur = (await sGet("mn5:bao")) || [];
+    const curR = await sGetSafe("mn5:bao");
+    if (!curR.ok) { toast("Không gửi được báo (mạng/phiên) — thử lại sau."); return; }
+    const cur = curR.value || [];
     await sSet("mn5:bao", [...cur, { id: "b" + uid(), ts: Date.now(), gv: gvTen || "Giáo viên", done: false, ...bao }]);
     setBaoOpen(false); setBaoView("menu"); setBaoNote(""); setBaoMoiTen("");
     loadBaoSent();
@@ -146,11 +148,14 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       setLastSaved(now);
       const eff = isGV ? gvLopId : lopFilter;
       const lopIds = eff === "all" ? [...new Set(studentRows.map((r) => r.lopId))] : [eff];
-      const prev = (await sGet(`mn5:ddts:${ym}`)) || {};
-      const dayMap = { ...(prev[viewDay] || {}) };
-      lopIds.forEach((id) => { dayMap[id] = now.toISOString(); });
-      sSet(`mn5:ddts:${ym}`, { ...prev, [viewDay]: dayMap });
-      setDdTimes(dayMap);
+      const prevR = await sGetSafe(`mn5:ddts:${ym}`);
+      if (prevR.ok) { // đọc lỗi → bỏ ghi mốc (tránh đè sạch), điểm danh chính đã lưu ở trên
+        const prev = prevR.value || {};
+        const dayMap = { ...(prev[viewDay] || {}) };
+        lopIds.forEach((id) => { dayMap[id] = now.toISOString(); });
+        sSet(`mn5:ddts:${ym}`, { ...prev, [viewDay]: dayMap });
+        setDdTimes(dayMap);
+      }
     } else {
       setSaveState("err");
     }
