@@ -5,7 +5,7 @@ import {
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
-  trangThaiThu, ask, toast, logAction, hadKey, getSbEmail, sbRpc
+  trangThaiThu, ask, toast, logAction, hadKey, getSbEmail, sbRpc, snapshotTruoc, docSnapshot
 } from "./lib.js";
 import { tinhTKThang, tinhNoLuyKe } from "./taichinh.js";
 
@@ -72,6 +72,7 @@ export function useStore() {
   })(); }, []);
 
   const reseedAll = async () => {
+    await snapshotTruoc("Trước khi Xóa sạch & bắt đầu lại"); // lưới đỡ: chụp trước reset
     // Reset chủ đích duy nhất — qua RPC server (delete+seed trong 1 transaction, GIỮ pinhash).
     const ok = await sbRpc("admin_reset_all", { seed_meta: SEED_META, seed_version: 14 });
     if (!ok) { toast("Không reset được — kiểm tra mạng/đăng nhập rồi thử lại."); return false; }
@@ -83,6 +84,19 @@ export function useStore() {
     setMData(null); setSeeded(true);
     setMonth(now.getMonth() + 1); setYear(now.getFullYear());
     try { logAction("RESET toàn bộ dữ liệu (reseedAll qua RPC)"); } catch {}
+    return true;
+  };
+
+  const khoiPhucTruoc = async () => {
+    const snap = await docSnapshot();
+    if (!snap || !snap.data) { toast("Chưa có bản tự lưu nào."); return false; }
+    const st = snap.data["mn5:students"];
+    const khi = new Date(snap.ts).toLocaleString("vi-VN");
+    if (!(await ask(`Khôi phục về bản tự lưu lúc ${khi}${snap.nhan ? ` (${snap.nhan})` : ""} — ${Array.isArray(st) ? st.length : "?"} học sinh?\n\nGhi đè dữ liệu HIỆN TẠI bằng bản đó.`, { danger: true, okText: "Khôi phục" }))) return false;
+    for (const [k, v] of Object.entries(snap.data)) { if (v != null && k !== "mn5:bak:last") await sSet(k, v); }
+    try { logAction(`Khôi phục bản tự lưu (${khi})`); } catch {}
+    toast("Đã khôi phục — đang tải lại…");
+    setTimeout(() => { try { window.location.reload(); } catch {} }, 900);
     return true;
   };
 
@@ -255,6 +269,7 @@ export function useStore() {
   const delThang = async () => {
     if (locked) { toast("Tháng đã chốt — mở khóa trước khi xóa."); return; }
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
+      await snapshotTruoc(`Trước khi xóa bảng thu T${month}/${year}`);
       await sDel(`mn5:thang:${ym}`);
       delete CHOT_MEM[ym]; saveChotMem();
       setMData(null);
