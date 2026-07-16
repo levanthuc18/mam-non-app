@@ -141,16 +141,24 @@ export default function App() {
 
   if (!splashDone) return <Splash onDone={() => setSplashDone(true)} />;
   if (!sbOk) return <SbAuth onDone={() => window.location.reload()} />;
-  if (loadErr)
+  if (loadErr) {
+    const isAuth = store.loadErrKind === "auth";
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, padding: 24, fontFamily: font.body }}>
       <div style={{ textAlign: "center", maxWidth: 340 }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>📡</div>
-        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>Không kết nối được máy chủ</div>
-        <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6, marginBottom: 18 }}>App tạm thời không tải được dữ liệu (mạng hoặc máy chủ đang trục trặc). <b style={{ color: C.ink }}>Dữ liệu của bạn vẫn an toàn</b> — app sẽ không khởi tạo lại khi chưa đọc được. Vui lòng kiểm tra mạng và thử lại.</div>
-        <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>
-        <div><button onClick={() => { sbLogout(); window.location.reload(); }} style={{ marginTop: 12, padding: "8px 18px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontSize: 12.5, cursor: "pointer" }}>Đăng nhập lại tài khoản</button></div>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>{isAuth ? "🔒" : "📡"}</div>
+        <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>{isAuth ? "Phiên đăng nhập hết hạn" : "Không kết nối được máy chủ"}</div>
+        <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6, marginBottom: 18 }}>
+          {isAuth
+            ? <>Máy này hiện <b style={{ color: C.ink }}>không được phép đọc dữ liệu</b> (chưa đăng nhập hoặc phiên hết hạn). <b style={{ color: C.ink }}>Dữ liệu KHÔNG mất</b> — app đã chủ động dừng để bảo vệ. Đăng nhập lại để tiếp tục.</>
+            : <>App tạm thời không tải được dữ liệu (mạng hoặc máy chủ đang trục trặc). <b style={{ color: C.ink }}>Dữ liệu của bạn vẫn an toàn</b> — app sẽ không khởi tạo lại khi chưa đọc được. Vui lòng kiểm tra mạng và thử lại.</>}
+        </div>
+        {isAuth
+          ? <button onClick={() => { sbLogout(); window.location.reload(); }} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Đăng nhập lại</button>
+          : <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>}
+        <div><button onClick={() => { if (isAuth) window.location.reload(); else { sbLogout(); window.location.reload(); } }} style={{ marginTop: 12, padding: "8px 18px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontSize: 12.5, cursor: "pointer" }}>{isAuth ? "↻ Thử lại" : "Đăng nhập lại tài khoản"}</button></div>
       </div>
     </div>;
+  }
   if (loading || !meta || !students)
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, color: C.sub, fontFamily: font.body }}>Đang tải dữ liệu…</div>;
   if (!auth) return <LoginScreen meta={meta} onLogin={login} />;
@@ -230,6 +238,8 @@ export default function App() {
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
+
+        {!store.ddOk && tab === "dd" && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span>⚠ Chưa tải được điểm danh (mạng/phiên) — tạm khóa sửa để bảo vệ dữ liệu.</span><button onClick={store.reloadDD} style={{ border: "none", background: C.coral, color: "#fff", borderRadius: 8, padding: "6px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>↻ Thử lại</button></div>}
 
         {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600 }}>⚠ Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
 
