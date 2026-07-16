@@ -105,23 +105,21 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
 
       {showImport && <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />}
 
-      {showAddHS && (
-        <Card style={{ marginBottom: 12 }}>
-          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>+ Thêm học sinh</div>
-          <input value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHS()} placeholder="Họ tên học sinh…" style={{ ...inp, marginBottom: 8 }} />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-            <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
-            <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
-            <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-            <ABBtn val={nguoiThu} set={setNguoiThu} small />
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-            <input type="date" value={ngaySinh} onChange={(e) => setNgaySinh(e.target.value)} placeholder="Ngày sinh" style={{ ...inp, flex: "1 1 130px" }} />
-            <input type="date" value={ngayNhap} onChange={(e) => setNgayNhap(e.target.value)} placeholder="Ngày nhập học" style={{ ...inp, flex: "1 1 130px" }} />
-          </div>
-          <button onClick={addHS} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer" }}>+ Thêm ngay</button>
-        </Card>
-      )}
+      <BottomSheet open={showAddHS} onClose={() => setShowAddHS(false)} title="Thêm học sinh">
+        <input value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHS()} placeholder="Họ tên học sinh…" autoFocus style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+          <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
+          <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+          <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+          <ABBtn val={nguoiThu} set={setNguoiThu} small />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày sinh<input type="date" value={ngaySinh} onChange={(e) => setNgaySinh(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
+          <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày nhập học<input type="date" value={ngayNhap} onChange={(e) => setNgayNhap(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
+        </div>
+        <button onClick={addHS} style={{ width: "100%", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, padding: "12px 0", borderRadius: 11, border: "none", cursor: "pointer" }}>+ Thêm ngay</button>
+        <div style={{ fontSize: 11, color: C.sub, marginTop: 8, textAlign: "center" }}>Thêm xong bảng vẫn mở để nhập tiếp bé khác. Vuốt xuống hoặc bấm ✕ để đóng.</div>
+      </BottomSheet>
 
       <SearchBar value={hsSearch} onChange={setHsSearch} />
       
