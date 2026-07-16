@@ -12,6 +12,9 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
   const [hsStatusFilter, setHsStatusFilter] = useState("all");
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
   const [ttSheetOpen, setTtSheetOpen] = useState(false);
+  const [addLopSheet, setAddLopSheet] = useState(false);
+  const [addPlSheet, setAddPlSheet] = useState(false);
+  const [addGtSheet, setAddGtSheet] = useState(false);
   const [expandId, setExpandId] = useState(null);
   const [showAddHS, setShowAddHS] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -105,19 +108,56 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
 
       {showImport && <ImportHSExcel meta={meta} students={students} upStudents={upStudents} ym={ym} />}
 
-      <BottomSheet open={showAddHS} onClose={() => setShowAddHS(false)} title="Thêm học sinh">
-        <input value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHS()} placeholder="Họ tên học sinh…" autoFocus style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
-          <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
-          <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
-          <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          <ABBtn val={nguoiThu} set={setNguoiThu} small />
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày sinh<input type="date" value={ngaySinh} onChange={(e) => setNgaySinh(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
-          <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày nhập học<input type="date" value={ngayNhap} onChange={(e) => setNgayNhap(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
-        </div>
-        <button onClick={addHS} style={{ width: "100%", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 14.5, padding: "12px 0", borderRadius: 11, border: "none", cursor: "pointer" }}>+ Thêm ngay</button>
+      {showAddHS && (
+        <Card style={{ marginBottom: 12 }}>
+          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 8 }}>+ Thêm học sinh</div>
+          <input value={ten} onChange={(e) => setTen(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addHS()} placeholder="Họ tên học sinh…" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
+          {isWide ? (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+              <select value={lop} onChange={(e) => setLop(e.target.value)} style={{ ...inp, flex: "1 1 110px", minWidth: 0 }}>{meta.classes.map((c) => <option key={c.id} value={c.id}>{c.ten}</option>)}</select>
+              <select value={pl} onChange={(e) => setPl(e.target.value)} style={{ ...inp, width: 96 }}>{PHAN_LOAI.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+              <select value={gt} onChange={(e) => setGt(e.target.value)} style={{ ...inp, width: 84 }}><option value="">Giới tính</option>{GIOI_TINH.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+              <ABBtn val={nguoiThu} set={setNguoiThu} small />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+              <button onClick={() => setAddLopSheet(true)} style={{ ...inp, flex: "1 1 110px", minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{meta.classes.find((c) => c.id === lop)?.ten || "Chọn lớp"}</span><span style={{ fontSize: 10, color: C.sub, marginLeft: 6 }}>▼</span></button>
+              <button onClick={() => setAddPlSheet(true)} style={{ ...inp, width: 96, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><span>{pl}</span><span style={{ fontSize: 10, color: C.sub }}>▼</span></button>
+              <button onClick={() => setAddGtSheet(true)} style={{ ...inp, width: 100, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><span>{gt ? (GIOI_TINH.find(([v]) => v === gt)?.[1]) : "Giới tính"}</span><span style={{ fontSize: 10, color: C.sub }}>▼</span></button>
+              <ABBtn val={nguoiThu} set={setNguoiThu} small />
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+            <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày sinh<input type="date" value={ngaySinh} onChange={(e) => setNgaySinh(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
+            <label style={{ flex: "1 1 130px", fontSize: 11, color: C.sub }}>Ngày nhập học<input type="date" value={ngayNhap} onChange={(e) => setNgayNhap(e.target.value)} style={{ ...inp, width: "100%", boxSizing: "border-box", marginTop: 3 }} /></label>
+          </div>
+          <button onClick={addHS} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13.5, padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer" }}>+ Thêm ngay</button>
+        </Card>
+      )}
+
+      <BottomSheet open={addLopSheet} onClose={() => setAddLopSheet(false)} title="Chọn lớp">
+        {meta.classes.map((c) => (
+          <div key={c.id} onClick={() => { setLop(c.id); setAddLopSheet(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${lop === c.id ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{lop === c.id && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: lop === c.id ? C.pine : C.ink }}>{c.ten}</div>
+          </div>
+        ))}
+      </BottomSheet>
+      <BottomSheet open={addPlSheet} onClose={() => setAddPlSheet(false)} title="Phân loại">
+        {PHAN_LOAI.map((p) => (
+          <div key={p} onClick={() => { setPl(p); setAddPlSheet(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${pl === p ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{pl === p && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: pl === p ? C.pine : C.ink }}>{p}</div>
+          </div>
+        ))}
+      </BottomSheet>
+      <BottomSheet open={addGtSheet} onClose={() => setAddGtSheet(false)} title="Giới tính">
+        {[["", "— Chưa chọn —"], ...GIOI_TINH].map(([v, l]) => (
+          <div key={v || "none"} onClick={() => { setGt(v); setAddGtSheet(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 4px", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 99, border: `2px solid ${gt === v ? C.pine : C.line}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{gt === v && <div style={{ width: 12, height: 12, borderRadius: 99, background: C.pine }} />}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: gt === v ? C.pine : C.ink }}>{l}</div>
+          </div>
+        ))}
       </BottomSheet>
 
       <SearchBar value={hsSearch} onChange={setHsSearch} />
