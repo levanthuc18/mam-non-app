@@ -1,4 +1,4 @@
-import { C, font, fmt, printWithName, fileName, LIGHT_VARS, capSoBienLai, noDau } from "../lib.js";
+import { C, font, fmt, printWithName, fileName, LIGHT_VARS, capSoBienLai, noDau, toast } from "../lib.js";
 import { Logo } from "../Brand.jsx";
 import { Icon } from "../Icon.jsx";
 import { QRBox } from "./QRBox.jsx";
@@ -47,7 +47,9 @@ export function PhieuThu({
   const inPhieu = async () => {
     const printTitle = fileName(`${phieuRow.lop?.ten ? phieuRow.lop.ten + " - " : ""}${phieuRow.hs.ten} - T${month}.${year}`);
     if (!bienLai && upMeta && upMData) {
-      const { soBienLai, capFor } = await capSoBienLai(meta, [{ id: phieuRow.hs.id, nguoiThu }]);
+      let soBienLai, capFor;
+      try { ({ soBienLai, capFor } = await capSoBienLai(meta, [{ id: phieuRow.hs.id, nguoiThu }])); }
+      catch { toast("Không cấp được số biên lai (mạng/phiên) — thử lại sau."); return; }
       const bl = capFor[phieuRow.hs.id];
       upMeta({ ...meta, soBienLai });
       upMData({ ...mData, fees: { ...mData.fees, [phieuRow.hs.id]: { ...mData.fees[phieuRow.hs.id], bienLai: bl, ngayLap: new Date().toISOString().slice(0, 10) } } });
