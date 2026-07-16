@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { C, font, noDau, logAction, toast, ask, uid, sGet, sList, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
+import { C, font, noDau, logAction, toast, ask, uid, sGetSafe, sListSafe, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, lopHienTai } from "./lib.js";
 import { Card, ABBtn, SearchBar, BottomSheet, PLBadge, useStickyShrink, StickyBar } from "./ui.jsx";
 import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
@@ -75,10 +75,16 @@ export function HocSinhTab({ meta, students, upStudents, ym, store, isWide, open
   const bulkRaTruong = () => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, ngayNghiHoc: bulkRaNgay, trangThai: "Ra trường" } : s), true); doneBulk(`Cho ra trường hàng loạt ${selectedHS.length} HS`, `Đã cho ${selectedHS.length} HS ra trường`); };
   const bulkDelete = async () => {
     const n = selectedHS.length;
-    const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k));
+    // ⛔ Xóa vĩnh viễn = KHÔNG hoàn tác. Chỉ được chạy khi soi ĐỦ mọi tháng.
+    //   Đọc lỗi ở BẤT KỲ khâu nào → hủy, thà bắt thử lại còn hơn xóa nhầm HS đã đóng tiền (sai quỹ vĩnh viễn).
+    const kR = await sListSafe("mn5:thang:");
+    if (!kR.ok) { toast("Không lấy được danh sách tháng (mạng/phiên) — hủy xóa để bảo vệ số quỹ. Thử lại."); return; }
+    const keys = kR.keys.filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k));
     const co = new Set();
     for (const k of keys) {
-      const td = await sGet(k); if (!td?.fees) continue;
+      const r = await sGetSafe(k);
+      if (!r.ok) { toast("Không kiểm tra được lịch sử thu (mạng/phiên) — hủy xóa để bảo vệ số quỹ. Thử lại."); return; }
+      const td = r.value; if (!td?.fees) continue;
       selectedHS.forEach((id) => { const rec = td.fees[id]; if (rec && (Number(rec.thucThu) || 0) > 0) co.add(id); });
       if (co.size === n) break;
     }

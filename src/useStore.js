@@ -233,12 +233,17 @@ export function useStore() {
   const taoThang = async () => {
     // Chống 2 admin cùng tạo tháng: kiểm server NGAY TRƯỚC khi seed.
     const existed = await sGetSafe(`mn5:thang:${ym}`);
-    if (existed.ok && existed.value?.fees && Object.keys(existed.value.fees).length) {
+    // ⛔ Đọc lỗi → KHÔNG đi tiếp: sẽ vô hiệu luôn chính chốt chặn chống-ghi-đè ngay dưới.
+    if (!existed.ok) { toast("Không kiểm tra được bảng thu trên máy chủ (mạng/phiên) — hủy tạo tháng. Thử lại."); return; }
+    if (existed.value?.fees && Object.keys(existed.value.fees).length) {
       if (!(await ask(`Tháng ${month}/${year} ĐÃ CÓ bảng thu trên máy chủ (có thể máy khác vừa tạo).\n\nTạo lại sẽ GHI ĐÈ bảng đang có. Tiếp tục?`, { danger: true, okText: "Ghi đè, tạo lại" }))) { setMData(existed.value); return; }
     }
     const py = month === 1 ? year - 1 : year;
     const pm = month === 1 ? 12 : month - 1;
-    const prev = await sGet(`mn5:thang:${ymKey(py, pm)}`);
+    // ⛔ Đọc lỗi → prev=null → tháng mới GHI LÊN SERVER thiếu phụ thu/chi phí/thu ngoài CỐ ĐỊNH, admin không hay.
+    const prevR = await sGetSafe(`mn5:thang:${ymKey(py, pm)}`);
+    if (!prevR.ok) { toast("Không đọc được bảng thu tháng trước (mạng/phiên) — hủy tạo tháng để không thiếu khoản cố định. Thử lại."); return; }
+    const prev = prevR.value;
     const data = seedThangData(ym, students, meta);
     data.fees = {};
     students.forEach((hs) => {

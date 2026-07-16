@@ -377,6 +377,22 @@ export async function sList(prefix) {
   try { const r = await window.storage.list(prefix); const dk = r ? r.keys : []; return Array.from(new Set([...memKeys, ...dk])); }
   catch { return memKeys; }
 }
+// ⛔ Bản AN TOÀN của sList — phân biệt "không có key" với "KHÔNG ĐỌC ĐƯỢC".
+// sList nuốt lỗi rồi trả về mỗi memKeys → caller nhận danh sách THIẾU mà không hay biết.
+// BẮT BUỘC dùng cho thao tác PHÁ HỦY cần danh sách ĐẦY ĐỦ (vd: xóa HS phải soi HẾT mọi tháng).
+export async function sListSafe(prefix) {
+  const memKeys = Object.keys(MEM).filter((k) => k.startsWith(prefix) && MEM[k] != null);
+  if (SB) {
+    await sbEnsureFresh();
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/data?select=key&key=like.${encodeURIComponent(prefix + "%")}`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
+      if (r.ok) { const d = await r.json(); return { ok: true, keys: Array.from(new Set([...memKeys, ...d.map((x) => x.key)])) }; }
+    } catch {}
+    return { ok: false, keys: memKeys };
+  }
+  try { const r = await window.storage.list(prefix); const dk = r ? r.keys : []; return { ok: true, keys: Array.from(new Set([...memKeys, ...dk])) }; }
+  catch { return { ok: false, keys: memKeys }; }
+}
 export async function sDel(k) {
   delete MEM[k]; invalidate(k);
   if (SB) { try { await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}`, { method: "DELETE", headers: SB_H }); } catch {} return; }
