@@ -5,7 +5,7 @@ import {
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
-  trangThaiThu, ask, toast, logAction
+  trangThaiThu, ask, toast, logAction, hadKey, getSbEmail, sbRpc
 } from "./lib.js";
 import { tinhTKThang, tinhNoLuyKe } from "./taichinh.js";
 
@@ -22,6 +22,9 @@ export function useStore() {
   const [nextChot, setNextChot] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(false);
+  const [loadErrKind, setLoadErrKind] = useState("network"); // "network" | "auth"
+  const [ddOk, setDDOk] = useState(true);
+  const [ddNonce, setDDNonce] = useState(0);
   const [seeded, setSeeded] = useState(false);
   const [prevDebt, setPrevDebt] = useState({});
   const [prevDebtStale, setPrevDebtStale] = useState(false);
@@ -38,9 +41,15 @@ export function useStore() {
       const m2 = await sGetSafe("mn5:meta");
       return { m: (m2.ok && m2.value) ? m2.value : SEED_META, st: chk.value, skipped: true };
     }
+    // ⛔ null ≠ [] : server thật sự trống (đã từng seed) trả []. null = key không thấy được
+    //   (chưa xác thực / RLS lọc / chưa từng tồn tại) → KHÔNG ĐƯỢC seed khi không chắc.
+    if (chk.value == null) throw new Error("seed-abort-auth");
+    // ⛔ Máy này từng THẤY học sinh thật → server chắc chắn có dữ liệu → cấm seed vĩnh viễn.
+    if (hadKey("mn5:students") || hadKey("mn5:meta")) throw new Error("seed-abort-auth");
     const m = SEED_META, st = [];
     await sSet("mn5:meta", m, { force: true }); await sSet("mn5:students", st, { force: true });
     await sSet("mn5:seedVersion", 14, { force: true });
+    try { logAction(`SEED khởi tạo bởi ${getSbEmail() || "?"} · ${String(navigator.userAgent).slice(0, 60)}`); } catch {}
     return { m, st };
   };
 
@@ -52,29 +61,41 @@ export function useStore() {
     if (!mR.ok || !sR.ok || !svR.ok) { setLoadErr(true); setLoading(false); return; }
     let m = mR.value, st = sR.value; const sv = svR.value;
     if (m == null || st == null || sv !== 14) {
+      // Máy từng thấy dữ liệu thật mà server trả thiếu → nghi phiên/RLS, KHÔNG rơi vào seed.
+      if ((m == null || st == null) && (hadKey("mn5:students") || hadKey("mn5:meta"))) {
+        setLoadErrKind("auth"); setLoadErr(true); setLoading(false); return;
+      }
       try { const r = await doSeed(); m = r.m; st = r.st; if (!r.skipped) setSeeded(true); }
-      catch { setLoadErr(true); setLoading(false); return; }
+      catch (e) { setLoadErrKind(String(e?.message).includes("auth") ? "auth" : "network"); setLoadErr(true); setLoading(false); return; }
     }
     setMeta(m); setStudents(st); setLoading(false);
   })(); }, []);
 
   const reseedAll = async () => {
-    const keys = await sList("mn5:");
-    for (const k of keys) await sDel(k);
+    // Reset chủ đích duy nhất — qua RPC server (delete+seed trong 1 transaction, GIỮ pinhash).
+    const ok = await sbRpc("admin_reset_all", { seed_meta: SEED_META, seed_version: 14 });
+    if (!ok) { toast("Không reset được — kiểm tra mạng/đăng nhập rồi thử lại."); return false; }
     Object.keys(CHOT_MEM).forEach((k) => delete CHOT_MEM[k]); saveChotMem();
+    try { localStorage.removeItem("mn5:had:mn5:students"); localStorage.removeItem("mn5:had:mn5:meta"); } catch {}
+    Object.keys(MEM).forEach((k) => { if (k.startsWith("mn5:") && k !== "mn5:pinhash") delete MEM[k]; });
     const m = SEED_META, st = [];
-    await sSet("mn5:meta", m, { force: true }); await sSet("mn5:students", st, { force: true }); await sSet("mn5:seedVersion", 14, { force: true });
     setMeta({ ...m }); setStudents([...st]);
     setMData(null); setSeeded(true);
     setMonth(now.getMonth() + 1); setYear(now.getFullYear());
+    try { logAction("RESET toàn bộ dữ liệu (reseedAll qua RPC)"); } catch {}
+    return true;
   };
 
   const metaReady = !!meta;
   useEffect(() => { if (!metaReady) return; (async () => {
     const d = await sGet(`mn5:thang:${ym}`);
-    let dd = await sGet(`mn5:dd:${ym}`);
-    if (!dd && d?.att) { dd = d.att; await sSet(`mn5:dd:${ym}`, dd); }
-    setDDData(dd || {});
+    const ddR = await sGetSafe(`mn5:dd:${ym}`);
+    if (!ddR.ok) { setDDOk(false); setDDData({}); } // đọc lỗi → KHÓA sửa điểm danh, không coi là trống
+    else {
+      let dd = ddR.value;
+      if (!dd && d?.att) { dd = d.att; await sSet(`mn5:dd:${ym}`, dd); }
+      setDDData(dd || {}); setDDOk(true);
+    }
     const le = await sGet(`mn5:le:${ym}`);
     setLeData(le || {});
     const pm = month === 1 ? 12 : month - 1, py = month === 1 ? year - 1 : year;
@@ -85,12 +106,15 @@ export function useStore() {
     setNextChot(!!nd?.daChot);
     if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
-  })(); }, [ym, metaReady]);
+  })(); }, [ym, metaReady, ddNonce]);
 
   useEffect(() => {
     if (!SB || !metaReady) return;
     const t = setInterval(async () => {
-      delete MEM[`mn5:dd:${ym}`]; const dd = await sGet(`mn5:dd:${ym}`); setDDData(dd || {});
+      delete MEM[`mn5:dd:${ym}`];
+      const r = await sGetSafe(`mn5:dd:${ym}`);
+      if (r.ok) { setDDData(r.value || {}); setDDOk(true); }
+      else setDDOk(false); // lỗi → GIỮ state cũ, khóa sửa — KHÔNG bao giờ set {} (từng là gốc wipe)
     }, 10000);
     return () => clearInterval(t);
   }, [ym, metaReady]);
@@ -182,7 +206,11 @@ export function useStore() {
   const upMeta = (m) => { setMeta(m); q("mn5:meta", m); };
   const upStudents = (s, now) => { setStudents(s); return (now ? flush : q)("mn5:students", s); };
   const upMData = (d) => { CHOT_MEM[ym] = !!d.daChot; saveChotMem(); const dd = { ...d, __ym: ym }; setMData(dd); return flush(`mn5:thang:${ym}`, stripYm(dd)); };
-  const upDDData = (d) => { setDDData(d); return flush(`mn5:dd:${ym}`, d); };
+  const upDDData = (d) => {
+    if (!ddOk) { toast("Chưa tải được điểm danh (mạng/phiên) — bấm Thử lại trước khi sửa."); return Promise.resolve(false); }
+    setDDData(d); return flush(`mn5:dd:${ym}`, d);
+  };
+  const reloadDD = () => setDDNonce((n) => n + 1);
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
   const getLop = (id) => meta?.classes.find((c) => c.id === id);
@@ -339,7 +367,7 @@ export function useStore() {
 
   return {
     meta, students, month, year, setMonth, setYear,
-    mData, ddData, leData, ddPrev, nextChot, loading, loadErr, seeded, ym,
+    mData, ddData, leData, ddPrev, nextChot, loading, loadErr, loadErrKind, ddOk, reloadDD, seeded, ym,
     reseedAll, upMeta, upStudents, upMData, upDDData, upLeData,
     taoThang, delThang, setRec, thuDuNhieu, setKhoan, resetKhoan,
     resetAllKhoan, setNgayAnAll, addPhuThuHS, delPhuThuHS,
