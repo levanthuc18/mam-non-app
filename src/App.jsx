@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending, hasSbSession, sbLogout } from "./lib.js";
+import { useBackHandler, dismissTop, registerDismiss } from "./nav.js";
 import { SbAuth } from "./SbAuth.jsx";
 import { BottomSheet } from "./ui.jsx";
 import { useStore } from "./useStore.js";
@@ -22,6 +23,7 @@ import { Logo } from "./Brand.jsx";
 function ConfirmHost() {
   const [state, setState] = useState(null);
   useEffect(() => { setAskRef((s) => setState(s)); return () => setAskRef(null); }, []);
+  useEffect(() => { if (!state) return; return registerDismiss(() => { try { state.res(false); } catch {} setState(null); }); }, [state]);
   if (!state) return null;
   const close = (v) => { state.res(v); setState(null); };
   const danger = state.opts.danger;
@@ -92,6 +94,22 @@ function SyncBanner() {
 
 export default function App() {
   const [tab, setTab] = useState("home"); 
+  // ===== Navigation v1: root vs drill-in + nút Back Android =====
+  const DRILL = ["phieu", "dash", "no", "caidat"]; // màn con — push stack; 5 tab gốc thì không
+  const tabStackRef = useRef([]);
+  const navTab = (t) => {
+    if (t === tab) return;
+    if (DRILL.includes(t)) { tabStackRef.current.push(tab); if (tabStackRef.current.length > 10) tabStackRef.current.shift(); }
+    else tabStackRef.current = [];
+    setTab(t);
+  };
+  const goBack = () => {
+    if (dismissTop()) return true;                                        // Dialog / BottomSheet / Profile / phiếu
+    if (DRILL.includes(tab)) { setTab(tabStackRef.current.pop() || "home"); return true; } // màn con → về màn trước
+    if (tab !== "home") { tabStackRef.current = []; setTab("home"); return true; }         // tab gốc ≠ Home → Home
+    return false;                                                          // ở Home → cho thoát app
+  };
+  useBackHandler(goBack);
   const [auth, setAuth] = useState(null);
   const [splashDone, setSplashDone] = useState(false);
   const [sbOk] = useState(() => hasSbSession());
@@ -103,6 +121,9 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
   const [viewStudentId, setViewStudentId] = useState(null); 
+  // Back đóng hồ sơ HS / phiếu chi tiết trước khi lùi màn
+  useEffect(() => { if (viewStudentId == null) return; return registerDismiss(() => setViewStudentId(null)); }, [viewStudentId]);
+  useEffect(() => { if (phieuId == null) return; return registerDismiss(() => setPhieuId(null)); }, [phieuId]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [baoPendingCount, setBaoPendingCount] = useState(0);
   useEffect(() => {
@@ -135,7 +156,7 @@ export default function App() {
   const readAuth = () => { try { const s = localStorage.getItem("mn5:auth"); return s ? JSON.parse(s) : null; } catch { return null; } };
   const writeAuth = (a) => { try { if (a) localStorage.setItem("mn5:auth", JSON.stringify(a)); else localStorage.removeItem("mn5:auth"); } catch {} };
   const login = (a) => { setAuth(a); writeAuth(a); };
-  const logout = () => { setAuth(null); writeAuth(null); setTab("home"); };
+  const logout = () => { setAuth(null); writeAuth(null); navTab("home"); };
 
   useEffect(() => { const a = readAuth(); if (a && (a.role === "admin" || a.role === "gv")) setAuth(a); }, []);
 
@@ -237,6 +258,13 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
+        {DRILL.includes(tab) && (
+          <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <button onClick={goBack} style={{ width: 38, height: 34, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 17, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>←</button>
+            <button onClick={() => navTab("home")} style={{ width: 38, height: 34, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>🏠</button>
+            <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.ink }}>{{ phieu: "Phiếu thu", dash: "Tổng quan", no: "Công nợ", caidat: "Cài đặt" }[tab]}</span>
+          </div>
+        )}
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
         {!store.ddOk && tab === "dd" && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span>⚠ Chưa tải được điểm danh (mạng/phiên) — tạm khóa sửa để bảo vệ dữ liệu.</span><button onClick={store.reloadDD} style={{ border: "none", background: C.coral, color: "#fff", borderRadius: 8, padding: "6px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>↻ Thử lại</button></div>}
@@ -244,7 +272,7 @@ export default function App() {
         {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600 }}>⚠ Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
 
         {tab === "home" && (
-          <HomeTab store={store} auth={auth} setTab={setTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
+          <HomeTab store={store} auth={auth} setTab={navTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
         )}
 
         {tab === "thu" && store.mData && (
@@ -268,7 +296,7 @@ export default function App() {
             setNgayAnAll={store.setNgayAnAll} thuDuNhieu={store.thuDuNhieu}
             addPhuThuHS={store.addPhuThuHS} delPhuThuHS={store.delPhuThuHS}
             locked={store.locked} mData={store.mData} upMData={store.upMData}
-            setPhieuId={setPhieuId} setTab={setTab} isWide={isWide} onSelectStudent={setViewStudentId}
+            setPhieuId={setPhieuId} setTab={navTab} isWide={isWide} onSelectStudent={setViewStudentId}
           />
         )}
         
@@ -302,11 +330,11 @@ export default function App() {
         )}
         
         {tab === "dash" && store.mData && (
-          <DashTab tk={store.tk} mData={store.mData} upMData={store.upMData} month={store.month} year={store.year} locked={store.locked} meta={meta} allRows={store.allRows} delThang={store.delThang} students={students} ym={store.ym} upMeta={store.upMeta} setTab={setTab} />
+          <DashTab tk={store.tk} mData={store.mData} upMData={store.upMData} month={store.month} year={store.year} locked={store.locked} meta={meta} allRows={store.allRows} delThang={store.delThang} students={students} ym={store.ym} upMeta={store.upMeta} setTab={navTab} />
         )}
         
         {tab === "no" && (
-          <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} setPhieuId={setPhieuId} setTab={setTab} />
+          <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} setPhieuId={setPhieuId} setTab={navTab} />
         )}
         
         {tab === "caidat" && (
@@ -326,7 +354,7 @@ export default function App() {
         )}
 
         {tab === "more" && (
-          <MoreMenu setTab={setTab} onLogout={logout} students={students} meta={meta} />
+          <MoreMenu setTab={navTab} onLogout={logout} students={students} meta={meta} />
         )}
 
         {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
