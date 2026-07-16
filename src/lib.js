@@ -310,7 +310,8 @@ export async function sSet(k, v, opts = {}) {
             const dc = await rc.json();
             const srvVer = dc?.[0]?.updated_at;
             if (srvVer && (VER[k] ? srvVer !== VER[k] : true)) { // VER null + server có bản → máy khác đã tạo trước
-              let ghiDe = true;
+              // ⛔ Mặc định KHÔNG ghi đè: nếu hỏi mà lỗi thì giữ bản máy kia, đừng đè mù.
+              let ghiDe = false;
               try { ghiDe = await ask("⚠ Dữ liệu này vừa được máy khác cập nhật.\n\nGhi đè bằng bản trên máy này? (Chọn Hủy để lấy bản của máy kia — app sẽ tải lại)", { okText: "Ghi đè", danger: true }); } catch {}
               if (!ghiDe) {
                 const rv = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=value,updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
@@ -648,14 +649,18 @@ export async function setPinHash(h) {
 }
 // Chụp NHANH toàn bộ dữ liệu mn5: (trừ chính bản snapshot) NGAY TRƯỚC thao tác hủy diệt.
 // Đọc bằng sGetSafe — bất kỳ key lỗi → HỦY chụp (không lưu bản thiếu/rỗng làm hỏng lưới đỡ).
+// Chỉ trả TRUE khi bản chụp ĐẦY ĐỦ và ĐÃ NẰM trên máy chủ. Caller BẮT BUỘC kiểm tra.
 export async function snapshotTruoc(nhan) {
   try {
-    const keys = (await sList("mn5:")).filter((k) => !k.startsWith("mn5:bak"));
+    // ⛔ sList nuốt lỗi → danh sách key THIẾU → chụp thiếu mà vẫn báo thành công.
+    const kR = await sListSafe("mn5:");
+    if (!kR.ok) return false;
+    const keys = kR.keys.filter((k) => !k.startsWith("mn5:bak"));
     const data = {};
     for (const k of keys) { const r = await sGetSafe(k); if (!r.ok) return false; data[k] = r.value; }
     const snap = { ts: Date.now(), nhan: nhan || "", data };
-    await sSet("mn5:bak:last", snap, { force: true });
-    return true;
+    // ⛔ Ghi thất bại mà trả true = hứa suông: người dùng tưởng có bản lưu, thực tế không có.
+    return (await sSet("mn5:bak:last", snap, { force: true })) === true;
   } catch { return false; }
 }
 export async function docSnapshot() { const r = await sGetSafe("mn5:bak:last"); return r.ok ? r.value : null; }

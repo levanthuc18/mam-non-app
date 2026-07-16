@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
-  sGet, sGetSafe, sGetSafeCached, cachePut, sSet, sList, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
+  sGet, sGetSafe, sGetSafeCached, cachePut, sSet, sList, sListSafe, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
@@ -72,7 +72,10 @@ export function useStore() {
   })(); }, []);
 
   const reseedAll = async () => {
-    await snapshotTruoc("Trước khi Xóa sạch & bắt đầu lại"); // lưới đỡ: chụp trước reset
+    // ⛔ Không có bản tự lưu = không có đường lùi. Thà hủy còn hơn xóa sạch mà không cứu được.
+    if (!(await snapshotTruoc("Trước khi Xóa sạch & bắt đầu lại"))) {
+      toast("Không tạo được bản tự lưu (mạng/phiên) — hủy để an toàn. Thử lại."); return false;
+    }
     // Reset chủ đích duy nhất — qua RPC server (delete+seed trong 1 transaction, GIỮ pinhash).
     const ok = await sbRpc("admin_reset_all", { seed_meta: SEED_META, seed_version: 14 });
     if (!ok) { toast("Không reset được — kiểm tra mạng/đăng nhập rồi thử lại."); return false; }
@@ -185,8 +188,10 @@ export function useStore() {
   }, [leData, meta, students, ym]);
 
   useEffect(() => { if (!metaReady || !students) return; let huy = false; (async () => {
-    const keys = await sList("mn5:thang:");
-    const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m < ym).sort();
+    // ⛔ sList thiếu tháng → mọi sGetSafe dưới đều ok → cờ stale KHÔNG bật → hiện nợ THIẾU như thể đúng.
+    const kR = await sListSafe("mn5:thang:");
+    if (!kR.ok) { setPrevDebtStale(true); return; }
+    const months = kR.keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m < ym).sort();
     // Đọc CÓ PHÂN BIỆT LỖI + cache tháng đã chốt (bất biến) — chuyển tháng nhanh hơn.
     const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
     const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));
@@ -274,7 +279,10 @@ export function useStore() {
   const delThang = async () => {
     if (locked) { toast("Tháng đã chốt — mở khóa trước khi xóa."); return; }
     if (await ask(`Xóa toàn bộ bảng THU tháng ${month}/${year}?\nĐiểm danh tháng này vẫn được GIỮ lại.`, { danger: true, okText: "Xóa bảng thu" })) {
-      await snapshotTruoc(`Trước khi xóa bảng thu T${month}/${year}`);
+      // ⛔ Không có bản tự lưu = không có đường lùi.
+      if (!(await snapshotTruoc(`Trước khi xóa bảng thu T${month}/${year}`))) {
+        toast("Không tạo được bản tự lưu (mạng/phiên) — hủy xóa để an toàn. Thử lại."); return;
+      }
       await sDel(`mn5:thang:${ym}`);
       delete CHOT_MEM[ym]; saveChotMem();
       setMData(null);

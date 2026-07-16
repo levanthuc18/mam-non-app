@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Icon } from "./Icon.jsx";
 import {
-  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sDel, SUPABASE_URL, SB_H, sbEnsureFresh, snapshotTruoc,
+  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sListSafe, sDel, SUPABASE_URL, SB_H, sbEnsureFresh, snapshotTruoc,
   ask, toast, logAction, uid,
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
@@ -23,7 +23,11 @@ export function BackupExport({ meta, students }) {
   const dl = (text, name, type) => { try { const blob = new Blob([type === "csv" ? "\uFEFF" + text : text], { type: type === "csv" ? "text/csv;charset=utf-8;" : "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); const d = new Date(); const hh = String(d.getHours()).padStart(2, "0"), mi = String(d.getMinutes()).padStart(2, "0"); try { localStorage.setItem("mn5:lastBackup", `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hh}:${mi}`); } catch {} } catch (e) {} };
 
   const buildJSON = async (includeSecrets) => {
-    const keys = await sList("mn5:"); const data = {};
+    // ⛔ sList nuốt lỗi → key bị bỏ sót thì vòng lặp dưới không đụng tới → không throw →
+    //   xuất ra bản sao lưu THIẾU mà trông như hoàn chỉnh. Phao cứu sinh cuối cùng, không được thủng.
+    const kR = await sListSafe("mn5:");
+    if (!kR.ok) throw new Error("backup-read-fail");
+    const keys = kR.keys; const data = {};
     for (const k of keys) {
       const r = await sGetSafe(k);
       if (!r.ok) throw new Error("backup-read-fail"); // mạng/phiên lỗi → HỦY, tuyệt đối không xuất bản thiếu
@@ -41,14 +45,20 @@ export function BackupExport({ meta, students }) {
     return JSON.stringify(data);
   };
   const buildCSV = async () => {
-    const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).sort();
+    // ⛔ Cùng lỗi với buildJSON: sList thiếu tháng → báo cáo thiếu tháng mà không báo lỗi.
+    const kR = await sListSafe("mn5:thang:");
+    if (!kR.ok) throw new Error("backup-read-fail");
+    const keys = kR.keys.filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).sort();
     const rows = [["Tháng", "Mã HS", "Tên", "Lớp", "Phải thu", "Đã thu", "Còn nợ"]];
     for (const k of keys) {
       const tdR = await sGetSafe(k); if (!tdR.ok) throw new Error("backup-read-fail");
       const td = tdR.value; if (!td?.fees) continue;
       const ym = k.replace("mn5:thang:", ""); const y = Number(ym.slice(0, 4)), mo = Number(ym.slice(5));
       const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
-      const ddPrevM = (await sGet(`mn5:dd:${ymKey(py, pm)}`)) || {};
+      // ⛔ Đọc lỗi → nghỉ=0 → "Phải thu"/"Còn nợ" SAI trong báo cáo mà không ai biết. Hủy như dòng trên.
+      const ddPrevR = await sGetSafe(`mn5:dd:${ymKey(py, pm)}`);
+      if (!ddPrevR.ok) throw new Error("backup-read-fail");
+      const ddPrevM = ddPrevR.value || {};
       for (const [sid, rec] of Object.entries(td.fees)) {
         const hs = students.find((s) => s.id === sid); if (!hs) continue;
         const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, ym));
@@ -90,7 +100,10 @@ export function BackupExport({ meta, students }) {
     if (!okSt || !okMt) { toast("Không phải bản sao lưu hợp lệ (thiếu học sinh hoặc lớp). Đã hủy để bảo vệ dữ liệu."); return; }
     const n = Object.keys(data).length;
     if (!(await ask(`Phục hồi ${st.length} học sinh · ${mt.classes.length} lớp (${n} mục)?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại.`, { danger: true, okText: "Phục hồi" }))) return;
-    await snapshotTruoc("Trước khi phục hồi từ sao lưu"); // lưới đỡ: chụp trước khi ghi đè
+    // ⛔ Phục hồi = GHI ĐÈ toàn bộ. Không có bản tự lưu thì không có đường lùi nếu bản sao lưu này sai.
+    if (!(await snapshotTruoc("Trước khi phục hồi từ sao lưu"))) {
+      toast("Không tạo được bản tự lưu (mạng/phiên) — hủy phục hồi để an toàn. Thử lại."); return;
+    }
     setBusy(true);
     try {
       // Bản sao lưu ẩn PIN: KHÔNG ghi đè PIN đang có bằng giá trị ẩn.
