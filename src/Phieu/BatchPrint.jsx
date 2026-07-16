@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { C, font, capSoBienLai } from "../lib.js";
+import { C, font, capSoBienLai, toast } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
 
@@ -24,7 +24,9 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
     const toAssign = rowsToPrint.filter((r) => !r.rec.bienLai).map((r) => ({ id: r.hs.id, nguoiThu: r.hs.nguoiThu }));
 
     if (toAssign.length) {
-      const { soBienLai, capFor } = await capSoBienLai(meta, toAssign);
+      let soBienLai, capFor;
+      try { ({ soBienLai, capFor } = await capSoBienLai(meta, toAssign)); }
+      catch { toast("Không cấp được số biên lai (mạng/phiên) — thử lại sau."); return; }
       const newFees = { ...mData.fees };
       const nlToday = new Date().toISOString().slice(0, 10);
       Object.keys(capFor).forEach((id) => { newFees[id] = { ...newFees[id], bienLai: capFor[id], ngayLap: nlToday }; });
