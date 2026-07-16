@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Icon } from "./Icon.jsx";
 import {
-  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sDel, SUPABASE_URL, SB_H, sbEnsureFresh,
+  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sDel, SUPABASE_URL, SB_H, sbEnsureFresh, snapshotTruoc,
   ask, toast, logAction, uid,
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
@@ -89,7 +89,8 @@ export function BackupExport({ meta, students }) {
     const okMt = mt && Array.isArray(mt.classes) && mt.classes.length > 0;
     if (!okSt || !okMt) { toast("Không phải bản sao lưu hợp lệ (thiếu học sinh hoặc lớp). Đã hủy để bảo vệ dữ liệu."); return; }
     const n = Object.keys(data).length;
-    if (!(await ask(`Phục hồi ${st.length} học sinh · ${mt.classes.length} lớp (${n} mục)?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại — không hoàn tác được.`, { danger: true, okText: "Phục hồi" }))) return;
+    if (!(await ask(`Phục hồi ${st.length} học sinh · ${mt.classes.length} lớp (${n} mục)?\n⚠️ GHI ĐÈ toàn bộ dữ liệu hiện tại.`, { danger: true, okText: "Phục hồi" }))) return;
+    await snapshotTruoc("Trước khi phục hồi từ sao lưu"); // lưới đỡ: chụp trước khi ghi đè
     setBusy(true);
     try {
       // Bản sao lưu ẩn PIN: KHÔNG ghi đè PIN đang có bằng giá trị ẩn.
@@ -219,7 +220,7 @@ function AuditWipeBadge() {
   );
 }
 
-export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWide }) {
+export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, khoiPhucTruoc, isWide }) {
   const [resetText, setResetText] = useState("");
   const [sec, setSec] = useState("lop");
   const [theme, setThemeState] = useState(getTheme());
@@ -658,6 +659,11 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       {sec === "data" && (
         <>
         <AuditWipeBadge />
+        <Card>
+          <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Khôi phục bản trước thao tác</div>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 12, lineHeight: 1.5 }}>App tự chụp 1 bản NGAY TRƯỚC mỗi thao tác nguy hiểm (xóa sạch, xóa bảng thu, phục hồi). Lỡ tay thì bấm đây để quay lại bản đó.</div>
+          <button onClick={async () => { await khoiPhucTruoc(); }} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>↩ Khôi phục bản tự lưu gần nhất</button>
+        </Card>
         <Card>
           <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 6 }}>Xóa sạch & bắt đầu lại</div>
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Đưa app về trạng thái mới: giữ 6 lớp + đơn giá + tài khoản + giáo viên mẫu (PIN giữ nguyên), nhưng <b style={{ color: C.coral }}>xóa toàn bộ học sinh, điểm danh và các tháng đã nhập.</b> Dùng khi muốn làm lại từ đầu.</div>
