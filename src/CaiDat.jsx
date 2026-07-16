@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Icon } from "./Icon.jsx";
 import {
-  C, font, fmt, ymKey, noDau, sGet, sSet, sList, sDel,
+  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sDel, SUPABASE_URL, SB_H, sbEnsureFresh,
   ask, toast, logAction, uid,
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
@@ -24,7 +24,11 @@ export function BackupExport({ meta, students }) {
 
   const buildJSON = async (includeSecrets) => {
     const keys = await sList("mn5:"); const data = {};
-    for (const k of keys) data[k] = await sGet(k);
+    for (const k of keys) {
+      const r = await sGetSafe(k);
+      if (!r.ok) throw new Error("backup-read-fail"); // mạng/phiên lỗi → HỦY, tuyệt đối không xuất bản thiếu
+      data[k] = r.value;
+    }
     if (!includeSecrets) {
       // Ẩn PIN khỏi bản sao lưu (dùng sentinel để lúc phục hồi KHÔNG xóa PIN đang có).
       if ("mn5:pinhash" in data) data["mn5:pinhash"] = REDACT;
@@ -40,7 +44,8 @@ export function BackupExport({ meta, students }) {
     const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).sort();
     const rows = [["Tháng", "Mã HS", "Tên", "Lớp", "Phải thu", "Đã thu", "Còn nợ"]];
     for (const k of keys) {
-      const td = await sGet(k); if (!td?.fees) continue;
+      const tdR = await sGetSafe(k); if (!tdR.ok) throw new Error("backup-read-fail");
+      const td = tdR.value; if (!td?.fees) continue;
       const ym = k.replace("mn5:thang:", ""); const y = Number(ym.slice(0, 4)), mo = Number(ym.slice(5));
       const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
       const ddPrevM = (await sGet(`mn5:dd:${ymKey(py, pm)}`)) || {};
@@ -102,8 +107,10 @@ export function BackupExport({ meta, students }) {
         if (k === "mn5:pinhash" && v === REDACT) continue; // PIN admin bị ẩn → giữ nguyên bản đang có
         await sSet(k, v);
       }
+      // GIỮ các key không có trong bản sao lưu (vd tháng tạo sau khi backup) — không xóa gì cả.
       const old = await sList("mn5:");
-      for (const k of old) if (!(k in data)) await sDel(k);
+      const giuLai = old.filter((k) => !(k in data));
+      if (giuLai.length) toast(`Giữ nguyên ${giuLai.length} mục không có trong bản sao lưu (tháng/dữ liệu mới hơn).`);
       logAction(`Phục hồi từ sao lưu (${st.length} HS, ${mt.classes.length} lớp)`);
       toast("Đã phục hồi. Đang tải lại…");
       setTimeout(() => location.reload(), 800);
@@ -186,7 +193,34 @@ export function AuditLog() {
   );
 }
 
+// Badge cảnh báo: các cú ghi-rỗng bị khiên server (trigger) chặn trong 7 ngày qua
+function AuditWipeBadge() {
+  const [rows, setRows] = useState(null);
+  useEffect(() => { (async () => {
+    try {
+      await sbEnsureFresh();
+      const since = new Date(Date.now() - 7 * 864e5).toISOString();
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/audit_wipe?select=ts,key,op,actor&ts=gte.${encodeURIComponent(since)}&order=ts.desc&limit=20`, { headers: SB_H, cache: "no-store" });
+      if (r.ok) setRows(await r.json());
+    } catch {}
+  })(); }, []);
+  if (!rows || !rows.length) return null;
+  return (
+    <Card>
+      <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: C.coral, marginBottom: 6 }}>⚠ Khiên dữ liệu đã chặn {rows.length} lần ghi rỗng (7 ngày)</div>
+      <div style={{ fontSize: 12, color: C.sub, marginBottom: 8, lineHeight: 1.5 }}>Server đã tự từ chối các cú ghi làm trống dữ liệu. Nếu con số này tăng đều, có máy đang chạy bản cũ hoặc phiên hết hạn — báo lại để kiểm tra.</div>
+      {rows.slice(0, 5).map((r, i) => (
+        <div key={i} style={{ fontSize: 12, color: C.ink, padding: "5px 0", borderBottom: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", gap: 8 }}>
+          <span>{r.key} · {r.op}</span>
+          <span style={{ color: C.sub, flexShrink: 0 }}>{new Date(r.ts).toLocaleString("vi-VN")}</span>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWide }) {
+  const [resetText, setResetText] = useState("");
   const [sec, setSec] = useState("lop");
   const [theme, setThemeState] = useState(getTheme());
   const [custom, setCustomState] = useState(getCustom());
@@ -298,7 +332,6 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
   const bulkPatch = (patch, logMsg, toastMsg) => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, ...patch } : s), true); doneBulk(logMsg, toastMsg); };
   const bulkChuyenLop = () => { const tenLop = meta.classes.find((c) => c.id === bulkTargetLop)?.ten; upStudents(students.map((s) => { if (!selectedHS.includes(s.id)) return s; const hist = (s.lopHistory || []).filter((h) => h.tuThang !== ym); hist.push({ tuThang: ym, lop: bulkTargetLop }); hist.sort((a, b) => a.tuThang.localeCompare(b.tuThang)); return { ...s, lopHistory: hist }; }), true); doneBulk(`Chuyển lớp hàng loạt ${selectedHS.length} HS → ${tenLop} (từ T${ym})`, `Đã chuyển ${selectedHS.length} HS sang lớp ${tenLop}`); };
   const bulkRaTruong = () => { upStudents(students.map((s) => selectedHS.includes(s.id) ? { ...s, ngayNghiHoc: bulkRaNgay, trangThai: "Ra trường" } : s), true); doneBulk(`Cho ra trường hàng loạt ${selectedHS.length} HS (ngày ${bulkRaNgay})`, `Đã cho ${selectedHS.length} HS ra trường`); };
-  const bulkDelete = () => { const n = selectedHS.length; upStudents(students.filter((s) => !selectedHS.includes(s.id)), true); doneBulk(`XÓA VĨNH VIỄN ${n} HS`, `Đã xóa vĩnh viễn ${n} HS`); };
   const chuyenLop = (id, lopMoi) => {
     const hs = students.find((s) => s.id === id);
     const tenLop = meta.classes.find((c) => c.id === lopMoi)?.ten || lopMoi;
@@ -328,13 +361,15 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
 
   // === Báo từ Giáo viên (Admin nhận + duyệt) ===
   const [baoList, setBaoList] = useState([]);
-  const loadBao = async () => { try { setBaoList((await sGet("mn5:bao")) || []); } catch { setBaoList([]); } };
+  const loadBao = async () => { try { const r = await sGetSafe("mn5:bao"); if (r.ok) setBaoList(r.value || []); } catch {} };
   useEffect(() => { loadBao(); }, []);
   const baoPending = baoList.filter((b) => !b.done);
   const _today = () => new Date().toISOString().slice(0, 10);
   const baoTypeLabel = (t) => t === "thoihoc" ? "Thôi học" : t === "chuyenlop" ? "Chuyển lớp" : t === "moi" ? "Cháu mới" : "Báo";
   const markBaoDone = async (id) => {
-    const cur = (await sGet("mn5:bao")) || [];
+    const curR = await sGetSafe("mn5:bao");
+    if (!curR.ok) { toast("Không cập nhật được (mạng/phiên) — thử lại."); return; }
+    const cur = curR.value || [];
     const next = cur.map((b) => b.id === id ? { ...b, done: true, doneTs: Date.now() } : b);
     await sSet("mn5:bao", next); setBaoList(next);
   };
@@ -621,11 +656,16 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, isWi
       {sec === "log" && <AuditLog />}
 
       {sec === "data" && (
+        <>
+        <AuditWipeBadge />
         <Card>
           <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, marginBottom: 6 }}>Xóa sạch & bắt đầu lại</div>
-          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 14, lineHeight: 1.5 }}>Đưa app về trạng thái mới: giữ 6 lớp + đơn giá + tài khoản + giáo viên mẫu, nhưng <b style={{ color: C.coral }}>xóa toàn bộ học sinh, điểm danh và các tháng đã nhập.</b> Dùng khi muốn làm lại từ đầu.</div>
-          <button onClick={async () => { if (await ask("Xóa TOÀN BỘ học sinh + điểm danh + các tháng, đưa về trạng thái mới?\n⚠️ Không hoàn tác. Nên Sao lưu trước.", { danger: true, okText: "Xóa sạch" })) { await reseedAll(); toast("Đã xóa sạch. Bắt đầu thêm học sinh ở Cài đặt → Học sinh."); } }} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.coral}`, background: C.coralSoft, color: C.coral, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>↻ Xóa sạch & bắt đầu lại</button>
+          <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10, lineHeight: 1.5 }}>Đưa app về trạng thái mới: giữ 6 lớp + đơn giá + tài khoản + giáo viên mẫu (PIN giữ nguyên), nhưng <b style={{ color: C.coral }}>xóa toàn bộ học sinh, điểm danh và các tháng đã nhập.</b> Dùng khi muốn làm lại từ đầu.</div>
+          <div style={{ fontSize: 12.5, color: C.ink, marginBottom: 6 }}>Để xác nhận, gõ <b>XOA HET</b> vào ô dưới:</div>
+          <input value={resetText} onChange={(e) => setResetText(e.target.value)} placeholder="XOA HET" style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 14, fontFamily: font.body, outline: "none", boxSizing: "border-box", marginBottom: 10 }} />
+          <button disabled={resetText.trim().toUpperCase() !== "XOA HET"} onClick={async () => { if (await ask("Xóa TOÀN BỘ học sinh + điểm danh + các tháng, đưa về trạng thái mới?\n⚠️ Không hoàn tác. Nên Sao lưu trước.", { danger: true, okText: "Xóa sạch" })) { const ok = await reseedAll(); if (ok) { setResetText(""); toast("Đã xóa sạch. Bắt đầu thêm học sinh ở tab Học sinh."); } } }} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.coral}`, background: resetText.trim().toUpperCase() === "XOA HET" ? C.coral : C.coralSoft, color: resetText.trim().toUpperCase() === "XOA HET" ? "#fff" : C.coral, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, cursor: resetText.trim().toUpperCase() === "XOA HET" ? "pointer" : "default" }}>↻ Xóa sạch & bắt đầu lại</button>
         </Card>
+        </>
       )}
     </>
   );
