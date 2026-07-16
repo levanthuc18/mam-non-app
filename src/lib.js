@@ -111,7 +111,15 @@ export function getSyncState() { return { pending: Object.keys(PENDING).length, 
 export function subSync(cb) { syncSubs.add(cb); cb(getSyncState()); return () => syncSubs.delete(cb); }
 const notifySync = () => { const s = getSyncState(); syncSubs.forEach((cb) => { try { cb(s); } catch {} }); };
 const markErr = (e) => { if (syncErr !== e) { syncErr = e; notifySync(); } };
-const enqueue = (k, v) => { PENDING[k] = { __pw: 1, v, base: VER[k] ?? null }; savePending(); notifySync(); };
+const enqueue = (k, v) => {
+  // ⛔ Không bao giờ xếp hàng một cú ghi-RỖNG lên key sinh tử — kể cả force.
+  // (Tránh: ghi rỗng thất bại lúc chưa đăng nhập → nằm chờ trong queue → bay lên ngay khi có token.)
+  if (PROTECT_KEYS.has(k)) {
+    const vv = (v && v.__del) ? null : v;
+    if (laRong(k, vv) || (v && v.__del)) { try { logAction(`⛔ Chặn xếp hàng ghi rỗng ${k}`); } catch {} return; }
+  }
+  PENDING[k] = { __pw: 1, v, base: VER[k] ?? null }; savePending(); notifySync();
+};
 const dequeue = (k) => { if (k in PENDING) { delete PENDING[k]; savePending(); notifySync(); } };
 
 // Cache dữ liệu BẤT BIẾN (tháng đã chốt) — đọc 1 lần dùng lại cả phiên, khỏi gọi
@@ -175,7 +183,7 @@ export async function flushPending() {
     const isDel = val && val.__del;
     try {
       // Kiểm xung đột: nếu biết base version và không phải key ghi-dày → so với server.
-      if (base !== undefined && base !== null && !isDel && !NO_CONFLICT.has(k)) {
+      if (base !== undefined && base !== null && !NO_CONFLICT.has(k)) {
         const sv = await srvVersion(k);
         if (!sv.ok) { allOk = false; continue; }          // đọc lỗi → để lần sau
         if (sv.ver && sv.ver !== base) { conflicts.push(k); allOk = false; continue; } // máy khác đã sửa → KHÔNG đè mù
@@ -261,7 +269,7 @@ const NO_CONFLICT = new Set(["mn5:log"]);
 // Các key TỐI QUAN TRỌNG: không bao giờ để ghi rỗng đè lên bản đang có dữ liệu (trừ khi force = xóa chủ đích).
 const PROTECT_KEYS = new Set(["mn5:students", "mn5:meta"]);
 // Cờ BỀN (localStorage): đánh dấu key này ĐÃ TỪNG có dữ liệu thật — dùng làm mốc chặn kể cả khi RAM (MEM) trống lúc app vừa mở.
-function hadKey(k) { try { return localStorage.getItem("mn5:had:" + k) === "1"; } catch { return false; } }
+export function hadKey(k) { try { return localStorage.getItem("mn5:had:" + k) === "1"; } catch { return false; } }
 function markHad(k, v) {
   if (!PROTECT_KEYS.has(k)) return;
   let co = false;
@@ -295,13 +303,13 @@ export async function sSet(k, v, opts = {}) {
   if (SB) {
     try {
       // Tầng 3 — kiểm xung đột: máy khác đã sửa key này sau lần mình đọc?
-      if (!emptyObj && !NO_CONFLICT.has(k) && VER[k]) {
+      if (!emptyObj && !NO_CONFLICT.has(k)) {
         try {
           const rc = await fetch(`${SUPABASE_URL}/rest/v1/data?key=eq.${encodeURIComponent(k)}&select=updated_at`, { headers: { ...SB_H, "Cache-Control": "no-cache" }, cache: "no-store" });
           if (rc.ok) {
             const dc = await rc.json();
             const srvVer = dc?.[0]?.updated_at;
-            if (srvVer && srvVer !== VER[k]) {
+            if (srvVer && (VER[k] ? srvVer !== VER[k] : true)) { // VER null + server có bản → máy khác đã tạo trước
               let ghiDe = true;
               try { ghiDe = await ask("⚠ Dữ liệu này vừa được máy khác cập nhật.\n\nGhi đè bằng bản trên máy này? (Chọn Hủy để lấy bản của máy kia — app sẽ tải lại)", { okText: "Ghi đè", danger: true }); } catch {}
               if (!ghiDe) {
@@ -334,7 +342,9 @@ export async function sSet(k, v, opts = {}) {
 // rows: [{ id, nguoiThu }]. Trả { soBienLai (bản mới để lưu vào meta), capFor:{id:"BL-..."} }.
 export async function capSoBienLai(meta, rows) {
   const fresh = await sGetSafe("mn5:meta");
-  const serverS = (fresh.ok && fresh.value && fresh.value.soBienLai) ? fresh.value.soBienLai : {};
+  if (!fresh.ok) throw new Error("bienlai-network"); // không đọc được bản mới nhất → KHÔNG cấp số (tránh trùng)
+  // Lưu ý (đã chốt PA): 2 máy bấm in trong CÙNG <1 giây vẫn có thể trùng số — chấp nhận với 2 người thu.
+  const serverS = (fresh.value && fresh.value.soBienLai) ? fresh.value.soBienLai : {};
   const propS = (meta && meta.soBienLai) ? meta.soBienLai : {};
   const soBienLai = {};
   new Set([...Object.keys(serverS), ...Object.keys(propS)]).forEach((k) => { soBienLai[k] = Math.max(serverS[k] || 0, propS[k] || 0); });
@@ -548,7 +558,9 @@ let CURRENT_ACTOR = "Admin";
 export function setCurrentActor(a) { CURRENT_ACTOR = a; }
 export async function logAction(act) {
   try {
-    const log = (await sGet("mn5:log")) || [];
+    const r = await sGetSafe("mn5:log");
+    if (!r.ok) return; // đọc lỗi (401/mạng) → bỏ ghi entry này, KHÔNG đè sạch log
+    const log = r.value || [];
     log.unshift({ t: new Date().toISOString(), who: CURRENT_ACTOR, act });
     if (log.length > 800) log.length = 800;
     await sSet("mn5:log", log);
@@ -617,5 +629,12 @@ export async function getPinHashSafe() {
 export async function setPinHash(h) {
   try { localStorage.setItem("mn5:pinhash", h); } catch {}
   await sSet("mn5:pinhash", h);
+}
+export async function sbRpc(name, body) {
+  try {
+    await sbEnsureFresh();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method: "POST", headers: SB_H, body: JSON.stringify(body || {}) });
+    return r.ok;
+  } catch { return false; }
 }
 export function getCurrentActor() { return CURRENT_ACTOR; }
