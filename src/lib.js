@@ -630,6 +630,20 @@ export async function setPinHash(h) {
   try { localStorage.setItem("mn5:pinhash", h); } catch {}
   await sSet("mn5:pinhash", h);
 }
+// Chụp NHANH toàn bộ dữ liệu mn5: (trừ chính bản snapshot) NGAY TRƯỚC thao tác hủy diệt.
+// Đọc bằng sGetSafe — bất kỳ key lỗi → HỦY chụp (không lưu bản thiếu/rỗng làm hỏng lưới đỡ).
+export async function snapshotTruoc(nhan) {
+  try {
+    const keys = (await sList("mn5:")).filter((k) => !k.startsWith("mn5:bak"));
+    const data = {};
+    for (const k of keys) { const r = await sGetSafe(k); if (!r.ok) return false; data[k] = r.value; }
+    const snap = { ts: Date.now(), nhan: nhan || "", data };
+    await sSet("mn5:bak:last", snap, { force: true });
+    return true;
+  } catch { return false; }
+}
+export async function docSnapshot() { const r = await sGetSafe("mn5:bak:last"); return r.ok ? r.value : null; }
+
 export async function sbRpc(name, body) {
   try {
     await sbEnsureFresh();
