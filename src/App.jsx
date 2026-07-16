@@ -310,7 +310,7 @@ export default function App() {
         )}
         
         {tab === "caidat" && (
-          <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} isWide={isWide} />
+          <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} khoiPhucTruoc={store.khoiPhucTruoc} isWide={isWide} />
         )}
 
         {tab === "hs" && (
