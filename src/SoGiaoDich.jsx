@@ -1,22 +1,32 @@
 // SoGiaoDich.jsx — Sổ giao dịch tiền (timeline theo tháng + lọc người/loại).
 // Diễn giải giao dịch nằm ở taichinh.buildGiaoDichThang; file này chỉ fetch + render.
 import { useState, useEffect } from "react";
-import { C, font, fmt, sGet, sList } from "./lib.js";
+import { C, font, fmt, sGetSafe, sListSafe } from "./lib.js";
 import { BottomSheet } from "./ui.jsx";
 import { buildGiaoDichThang } from "./taichinh.js";
 
 export function SoGiaoDichSheet({ open, onClose, ym, students }) {
   const [soGD, setSoGD] = useState(null);
+  const [loi, setLoi] = useState(false);
   const [gdNguoi, setGdNguoi] = useState("ALL");
   const [gdLoai, setGdLoai] = useState("ALL");
   useEffect(() => {
     if (!open) return;
     let huy = false;
     (async () => {
-      const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort().reverse();
+      setLoi(false);
+      // ⛔ Sổ tiền thiếu tháng còn nguy hiểm hơn không có sổ: người dùng tưởng đã xem hết.
+      //   Đọc lỗi ở bất kỳ khâu nào → ẩn sổ, báo lỗi, KHÔNG hiện bản thiếu.
+      const kR = await sListSafe("mn5:thang:");
+      if (huy) return;
+      if (!kR.ok) { setLoi(true); return; }
+      const keys = kR.keys.filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort().reverse();
       const out = [];
       for (const m of keys) {
-        const td = await sGet(`mn5:thang:${m}`); if (!td) continue;
+        const r = await sGetSafe(`mn5:thang:${m}`);
+        if (huy) return;
+        if (!r.ok) { setLoi(true); return; }
+        const td = r.value; if (!td) continue;
         const evs = buildGiaoDichThang(td, students);
         if (evs.length) out.push({ thang: m, label: `T${Number(m.slice(5))}/${m.slice(0, 4)}`, evs });
       }
@@ -36,7 +46,13 @@ export function SoGiaoDichSheet({ open, onClose, ym, students }) {
             <button key={v} onClick={() => setGdLoai(v)} style={{ padding: "5px 12px", borderRadius: 99, border: `1.5px solid ${gdLoai === v ? C.pine : C.line}`, background: gdLoai === v ? C.pineSoft : C.card, color: gdLoai === v ? C.pine : C.sub, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{l}</button>
           ))}
         </div>
-        {soGD === null ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Đang tải…</div> : (() => {
+        {loi ? (
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+            <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600, marginBottom: 4 }}>Không tải được sổ giao dịch</div>
+            <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}>Mạng hoặc phiên đăng nhập đang trục trặc. Sổ đã được <b style={{ color: C.ink }}>tạm ẩn</b> vì có thể thiếu tháng — hiện ra sẽ khiến bạn đối chiếu nhầm. Đóng rồi mở lại để thử.</div>
+          </div>
+        ) : soGD === null ? <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Đang tải…</div> : (() => {
           const fmtNgay = (ts) => { const d = new Date(ts); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`; };
           const colorOf = (dau) => dau === "+" ? C.green : dau === "-" ? C.coral : C.blueA;
           let any = false;

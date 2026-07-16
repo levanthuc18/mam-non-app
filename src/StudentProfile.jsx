@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, fmt, sList, sGet, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
+import { C, font, fmt, sList, sGet, sGetSafe, sListSafe, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { tinhNoLuyKe } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, NumInput, ABBtn, PLBadge, BottomSheet } from "./ui.jsx";
@@ -205,19 +205,27 @@ function InfoTab({ student, meta, ym, students, upStudents }) {
 function ThuPhiTab({ student, meta }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loi, setLoi] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const keys = await sList("mn5:thang:");
-      const months = keys.map(k => k.replace("mn5:thang:", "")).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+      // ⛔ Đây là số tiền phụ huynh nợ. Đọc lỗi mà vẫn hiện = phụ huynh bị đòi sai.
+      //   Thiếu tháng hoặc thiếu điểm danh → ẩn hết, báo lỗi.
+      const kR = await sListSafe("mn5:thang:");
+      if (!kR.ok) { setLoi(true); setLoading(false); return; }
+      const months = kR.keys.map(k => k.replace("mn5:thang:", "")).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
       const rows = [];
       for (const m of months) {
-        const td = await sGet(`mn5:thang:${m}`);
+        const r = await sGetSafe(`mn5:thang:${m}`);
+        if (!r.ok) { setLoi(true); setLoading(false); return; }
+        const td = r.value;
         if (!td?.fees?.[student.id]) continue;
         const rec = td.fees[student.id];
         const y = Number(m.slice(0, 4)), mo = Number(m.slice(5));
         const pm = mo === 1 ? 12 : mo - 1, py = mo === 1 ? y - 1 : y;
-        const ddPrevM = (await sGet(`mn5:dd:${ymKey(py, pm)}`)) || {};
+        const ddR = await sGetSafe(`mn5:dd:${ymKey(py, pm)}`);
+        if (!ddR.ok) { setLoi(true); setLoading(false); return; } // nghỉ=0 → "Phải thu" sai
+        const ddPrevM = ddR.value || {};
         const nghi = Object.keys(ddPrevM[student.id] || {}).length;
         const lop = meta.classes.find(c => c.id === lopOfMonth(student, m));
         const ps = tinhPSFromRec(student, rec, lop, nghi).tong;
@@ -230,6 +238,13 @@ function ThuPhiTab({ student, meta }) {
   }, [student.id]);
 
   if (loading) return <div style={{ textAlign: "center", padding: 20, color: C.sub }}>Đang tải...</div>;
+  if (loi) return (
+    <div style={{ textAlign: "center", padding: 20 }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+      <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600, marginBottom: 4 }}>Không tải được lịch sử thu phí</div>
+      <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}>Mạng hoặc phiên đăng nhập đang trục trặc. Số liệu đã được <b style={{ color: C.ink }}>tạm ẩn</b> vì có thể sai — <b style={{ color: C.ink }}>đừng đòi tiền theo số này</b>. Mở lại hồ sơ để thử.</div>
+    </div>
+  );
 
   return (
     <div>
@@ -318,8 +333,12 @@ function CongNoTab({ student, meta }) {
 
   useEffect(() => { let huy = false; (async () => {
     setDebt(null); setErr(false);
-    const keys = await sList("mn5:thang:");
-    const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
+    // ⛔ sList nuốt lỗi → thiếu tháng → mọi sGetSafeCached dưới đều ok → setErr KHÔNG bật
+    //   → hiện số nợ THIẾU như thể đúng. Chốt chặn dòng 344 vô dụng nếu không vá chỗ này.
+    const kR = await sListSafe("mn5:thang:");
+    if (huy) return;
+    if (!kR.ok) { setErr(true); return; }
+    const months = kR.keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
     // Đọc song song + cache tháng đã chốt; lỗi mạng → KHÔNG hiện số nợ sai.
     const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
     const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));
