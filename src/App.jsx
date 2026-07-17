@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, TT_THU_PHI, setCurrentActor, sGet, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending, hasSbSession, sbLogout } from "./lib.js";
+import { C, font, TT_THU_PHI, setCurrentActor, sGetSafe, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending, hasSbSession, sbLogout } from "./lib.js";
 import { useBackHandler, dismissTop, registerDismiss } from "./nav.js";
 import { SbAuth } from "./SbAuth.jsx";
 import { BottomSheet } from "./ui.jsx";
@@ -128,7 +128,7 @@ export default function App() {
   const [baoPendingCount, setBaoPendingCount] = useState(0);
   useEffect(() => {
     let alive = true;
-    const load = async () => { try { const l = (await sGet("mn5:bao")) || []; if (alive) setBaoPendingCount(l.filter((b) => !b.done).length); } catch {} };
+    const load = async () => { const r = await sGetSafe("mn5:bao"); if (r.ok && alive) setBaoPendingCount((r.value || []).filter((b) => !b.done).length); }; // lỗi → giữ số cũ, không nhảy về 0
     load();
     const iv = setInterval(load, 30000);
     return () => { alive = false; clearInterval(iv); };

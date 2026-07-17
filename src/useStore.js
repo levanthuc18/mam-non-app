@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
-  sGet, sGetSafe, sGetSafeCached, cachePut, sSet, sList, sListSafe, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
+  sGetSafe, sGetSafeCached, cachePut, sSet, sListSafe, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
   defaultKhoan, seedThangData, lopOfMonth,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
@@ -105,22 +105,28 @@ export function useStore() {
 
   const metaReady = !!meta;
   useEffect(() => { if (!metaReady) return; (async () => {
-    const d = await sGet(`mn5:thang:${ym}`);
+    const dR = await sGetSafe(`mn5:thang:${ym}`);
     const ddR = await sGetSafe(`mn5:dd:${ym}`);
     if (!ddR.ok) { setDDOk(false); setDDData({}); } // đọc lỗi → KHÓA sửa điểm danh, không coi là trống
     else {
       let dd = ddR.value;
-      if (!dd && d?.att) { dd = d.att; await sSet(`mn5:dd:${ym}`, dd); }
+      if (!dd && dR.ok && dR.value?.att) { dd = dR.value.att; await sSet(`mn5:dd:${ym}`, dd); }
       setDDData(dd || {}); setDDOk(true);
     }
-    const le = await sGet(`mn5:le:${ym}`);
-    setLeData(le || {});
+    const leR = await sGetSafe(`mn5:le:${ym}`);
+    // ⛔ Lỗi mạng → GIỮ null (không phải {}): hiệu ứng tự-tính-tiền-ăn bên dưới có điều kiện
+    //   dừng khi `leData == null`, nhưng dừng lại NẾU trước đây set {} thì điều kiện đó vô dụng
+    //   và app tự ghi tiền ăn sai (coi như "không ngày lễ nào") lên server không cần ai bấm gì.
+    if (leR.ok) setLeData(leR.value || {});
+    else { setLeData(null); toast("Không tải được lịch nghỉ lễ (mạng/phiên) — tạm dừng tự tính tiền ăn. Thử lại."); }
     const pm = month === 1 ? 12 : month - 1, py = month === 1 ? year - 1 : year;
-    const ddP = await sGet(`mn5:dd:${ymKey(py, pm)}`);
-    setDDPrev(ddP || {});
+    const ddPR = await sGetSafe(`mn5:dd:${ymKey(py, pm)}`);
+    setDDPrev(ddPR.ok ? (ddPR.value || {}) : {}); // chỉ ảnh hưởng hiển thị "phải thu", không ghi lên server
     const nm = month === 12 ? 1 : month + 1, ny = month === 12 ? year + 1 : year;
-    const nd = await sGet(`mn5:thang:${ymKey(ny, nm)}`);
-    setNextChot(!!nd?.daChot);
+    const ndR = await sGetSafe(`mn5:thang:${ymKey(ny, nm)}`);
+    if (ndR.ok) setNextChot(!!ndR.value?.daChot); // lỗi → giữ cờ cũ, tránh hiện nhầm "tháng sau chưa chốt"
+    if (!dR.ok) { toast("Không tải được bảng thu tháng này (mạng/phiên) — thử lại."); setMData(null); return; }
+    const d = dR.value;
     if (d) { const { att, ...rest } = d; if (CHOT_MEM[ym] !== undefined) rest.daChot = CHOT_MEM[ym]; setMData({ ...rest, __ym: ym }); }
     else setMData(null);
   })(); }, [ym, metaReady, ddNonce]);

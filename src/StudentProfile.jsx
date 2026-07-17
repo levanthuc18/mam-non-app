@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, fmt, sList, sGet, sGetSafe, sListSafe, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
+import { C, font, fmt, sGetSafe, sListSafe, sGetSafeCached, cachePut, ymKey, lopOfMonth, tinhPSFromRec, PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, GIOI_TINH, GT_LABEL, KHOAN, noDau, logAction } from "./lib.js";
 import { tinhNoLuyKe } from "./taichinh.js";
 import { Icon } from "./Icon.jsx";
 import { Card, NumInput, ABBtn, PLBadge, BottomSheet } from "./ui.jsx";
@@ -278,15 +278,20 @@ function ThuPhiTab({ student, meta }) {
 // 3. TAB ĐIỂM DANH
 function DiemDanhTab({ student }) {
   const [history, setHistory] = useState([]);
+  const [loi, setLoi] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const keys = await sList("mn5:dd:");
-      const months = keys.map(k => k.replace("mn5:dd:", "")).filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
+      setLoi(false);
+      // ⛔ sList/sGet nuốt lỗi → tháng bị bỏ sót thì lịch sử nghỉ học hiện THIẾU mà tưởng đủ.
+      const kR = await sListSafe("mn5:dd:");
+      if (!kR.ok) { setLoi(true); return; }
+      const months = kR.keys.map(k => k.replace("mn5:dd:", "")).filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
       const rows = [];
       for (const m of months) {
-        const dd = await sGet(`mn5:dd:${m}`);
-        const att = dd?.[student.id] || {};
+        const r = await sGetSafe(`mn5:dd:${m}`);
+        if (!r.ok) { setLoi(true); return; }
+        const att = r.value?.[student.id] || {};
         const soNghi = Object.keys(att).length;
         if (soNghi === 0) continue;
         const [y, mo] = m.split("-").map(Number);
@@ -300,6 +305,14 @@ function DiemDanhTab({ student }) {
       setHistory(rows);
     })();
   }, [student.id]);
+
+  if (loi) return (
+    <div style={{ textAlign: "center", padding: 20 }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+      <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600, marginBottom: 4 }}>Không tải được lịch sử điểm danh</div>
+      <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}>Mạng hoặc phiên đăng nhập đang trục trặc. Mở lại hồ sơ để thử.</div>
+    </div>
+  );
 
   return (
     <div>
@@ -389,14 +402,26 @@ function CongNoTab({ student, meta }) {
 // 5. TAB LỊCH SỬ
 function LichSuTab({ student }) {
   const [log, setLog] = useState([]);
+  const [loi, setLoi] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const all = (await sGet("mn5:log")) || [];
+      setLoi(false);
+      const r = await sGetSafe("mn5:log");
+      if (!r.ok) { setLoi(true); return; } // lỗi → không hiện "chưa có gì", tránh tưởng nhầm rảnh tay
+      const all = r.value || [];
       const filtered = all.filter(e => e.act.includes(student.ten) || e.act.includes(student.id));
       setLog(filtered.slice(0, 50));
     })();
   }, [student.id]);
+
+  if (loi) return (
+    <div style={{ textAlign: "center", padding: 20 }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+      <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600, marginBottom: 4 }}>Không tải được lịch sử thao tác</div>
+      <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}>Mạng hoặc phiên đăng nhập đang trục trặc. Mở lại hồ sơ để thử.</div>
+    </div>
+  );
 
   return (
     <div>

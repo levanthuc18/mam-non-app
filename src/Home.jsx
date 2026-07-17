@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { C, font, sGet, TT_THU_PHI, lopOfMonth } from "./lib.js";
+import { C, font, sGetSafe, toast, TT_THU_PHI, lopOfMonth } from "./lib.js";
 import { Card, BottomSheet } from "./ui.jsx";
 import { Icon } from "./Icon.jsx";
 
@@ -144,7 +144,7 @@ function AlertRow({ type, message, actionLabel, onAction }) {
 function RecentActivity({ onSeeAll }) {
   const [log, setLog] = useState([]);
   useEffect(() => { 
-    sGet("mn5:log").then(d => setLog((d || []).slice(0, 5))).catch(() => {}); 
+    sGetSafe("mn5:log").then(r => { if (r.ok) setLog((r.value || []).slice(0, 5)); }); // lỗi → giữ [] ban đầu, không hiện sai
   }, []);
 
   if (!log.length) return null;
@@ -205,9 +205,11 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile,
   const [ddtsToday, setDdtsToday] = useState(null);
   useEffect(() => {
     let alive = true;
-    sGet(`mn5:ddts:${ymStr}`).then((m) => { 
-      if (alive) setDdtsToday((m && m[todayStr]) || {}); 
-    }).catch(() => { if (alive) setDdtsToday({}); });
+    sGetSafe(`mn5:ddts:${ymStr}`).then((r) => {
+      if (!alive) return;
+      // lỗi → {} (coi như "chưa ai điểm danh hôm nay"): chỉ ảnh hưởng banner nhắc việc, không phải số tiền.
+      setDdtsToday(r.ok ? ((r.value && r.value[todayStr]) || {}) : {});
+    });
     return () => { alive = false; };
   }, [ymStr, todayStr]);
 
@@ -241,10 +243,11 @@ export function HomeTab({ store, auth, setTab, setThuFilter, openStudentProfile,
 
   const [logOpen, setLogOpen] = useState(false);
   const [fullLog, setFullLog] = useState([]);
-  const openFullLog = async () => { 
-    const all = await sGet("mn5:log") || []; 
-    setFullLog(all); 
-    setLogOpen(true); 
+  const openFullLog = async () => {
+    const r = await sGetSafe("mn5:log");
+    if (!r.ok) { toast("Không tải được nhật ký (mạng/phiên)."); return; }
+    setFullLog(r.value || []);
+    setLogOpen(true);
   };
 
   const vnd = (n) => (n || 0).toLocaleString("vi-VN") + " đ";

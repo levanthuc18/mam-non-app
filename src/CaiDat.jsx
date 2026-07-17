@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Icon } from "./Icon.jsx";
 import {
-  C, font, fmt, ymKey, noDau, sGet, sGetSafe, sSet, sList, sListSafe, sDel, SUPABASE_URL, SB_H, sbEnsureFresh, snapshotTruoc,
+  C, font, fmt, ymKey, noDau, sGetSafe, sSet, sListSafe, sDel, SUPABASE_URL, SB_H, sbEnsureFresh, snapshotTruoc,
   ask, toast, logAction, uid,
   PHAN_LOAI, PL_LABEL, TRANG_THAI, TT_COLOR, TT_THU_PHI, GIOI_TINH, GT_LABEL, normGt,
   lopHienTai, lopOfMonth, ngayNhapHocTrongThang, soNgayHoc, tinhPSFromRec,
@@ -122,9 +122,12 @@ export function BackupExport({ meta, students }) {
         await sSet(k, v);
       }
       // GIỮ các key không có trong bản sao lưu (vd tháng tạo sau khi backup) — không xóa gì cả.
-      const old = await sList("mn5:");
-      const giuLai = old.filter((k) => !(k in data));
-      if (giuLai.length) toast(`Giữ nguyên ${giuLai.length} mục không có trong bản sao lưu (tháng/dữ liệu mới hơn).`);
+      // Chỉ là toast thông báo số lượng — sList thiếu key ở đây không gây mất dữ liệu, bỏ qua im lặng nếu lỗi.
+      const oldR = await sListSafe("mn5:");
+      if (oldR.ok) {
+        const giuLai = oldR.keys.filter((k) => !(k in data));
+        if (giuLai.length) toast(`Giữ nguyên ${giuLai.length} mục không có trong bản sao lưu (tháng/dữ liệu mới hơn).`);
+      }
       logAction(`Phục hồi từ sao lưu (${st.length} HS, ${mt.classes.length} lớp)`);
       toast("Đã phục hồi. Đang tải lại…");
       setTimeout(() => location.reload(), 800);
@@ -171,7 +174,7 @@ export function BackupExport({ meta, students }) {
 export function AuditLog() {
   const [log, setLog] = useState(null);
   const [limit, setLimit] = useState(100);
-  const load = async () => { setLog((await sGet("mn5:log")) || []); setLimit(100); };
+  const load = async () => { const r = await sGetSafe("mn5:log"); if (!r.ok) { toast("Không tải được nhật ký (mạng/phiên)."); return; } setLog(r.value || []); setLimit(100); };
   useEffect(() => { load(); }, []);
   const fmtT = (iso) => { try { const d = new Date(iso); return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; } catch { return iso; } };
   const clear = async () => { if (await ask("Xóa toàn bộ nhật ký thao tác?", { danger: true, okText: "Xóa" })) { await sSet("mn5:log", []); setLog([]); toast("Đã xóa nhật ký."); } };

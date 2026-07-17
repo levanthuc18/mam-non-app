@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   C, font, fmt, ask, toast, logAction, uid,
   LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec,
-  sGet, sGetSafe, sGetSafeCached, cachePut, sList
+  sGetSafe, sGetSafeCached, cachePut, sListSafe
 } from "./lib.js";
 import {
   Card, BottomSheet, NumInput, ABBtn, Badge
@@ -70,9 +70,14 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const bB = { open: openB, thu: 0, cIn: 0, cOut: 0, tra: 0, rut: 0 };
       let tongLKT = 0, rutNhanA = 0, rutNhanB = 0, duocChiaCumA = 0, duocChiaCumB = 0;
       const tyA0 = meta?.tyLeLaiA ?? 50;
-      const keys = (await sList("mn5:thang:")).filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort();
-      const ls = [];
       let docLoi = false;
+      // ⛔ sList nuốt lỗi → tháng bị bỏ sót thì các check "docLoi" dưới không bắt được
+      //   → dòng tiền/lãi lũy kế hiện THIẾU mà tưởng đủ.
+      const kR = await sListSafe("mn5:thang:");
+      if (huy) return;
+      if (!kR.ok) docLoi = true;
+      const keys = kR.ok ? kR.keys.filter((k) => /mn5:thang:\d{4}-\d{2}$/.test(k)).map((k) => k.replace("mn5:thang:", "")).filter((m) => m <= ym).sort() : [];
+      const ls = [];
       // Đọc SONG SONG + cache tháng đã chốt (bất biến) — thay vì đọc tuần tự từng tháng.
       const tdRs = await Promise.all(keys.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
       if (tdRs.some((r) => !r.ok)) docLoi = true;
@@ -222,15 +227,22 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
   const moChot = async () => {
     // #5 (AUD-10): nếu có tháng đã chốt SAU tháng này, sửa ở đây sẽ KHÔNG tự cập nhật nợ các tháng đó.
     let sauChot = [];
+    let khongKiemTraDuoc = false;
     try {
-      const keys = await sList("mn5:thang:");
-      const later = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m > ym).sort();
-      for (const m of later) { const d = await sGetSafe(`mn5:thang:${m}`); if (d.ok && d.value?.daChot) sauChot.push(m); }
-    } catch {}
-    const canhBao = sauChot.length
+      // ⛔ sList/sGetSafe lỗi → "later" thiếu tháng → có thể BỎ SÓT cảnh báo tháng đã chốt sau này.
+      const kR = await sListSafe("mn5:thang:");
+      if (!kR.ok) khongKiemTraDuoc = true;
+      else {
+        const later = kR.keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m) && m > ym).sort();
+        for (const m of later) { const d = await sGetSafe(`mn5:thang:${m}`); if (!d.ok) { khongKiemTraDuoc = true; break; } if (d.value?.daChot) sauChot.push(m); }
+      }
+    } catch { khongKiemTraDuoc = true; }
+    const canhBao = khongKiemTraDuoc
+      ? `\n\n⚠️ Không kiểm tra được các tháng sau (mạng/phiên) — có thể có tháng đã chốt sẽ bị ảnh hưởng mà không được cảnh báo. Cẩn thận, hoặc thử lại sau.`
+      : sauChot.length
       ? `\n\n⚠️ Có ${sauChot.length} tháng đã chốt SAU tháng này (${sauChot.map((m) => "T" + m.slice(5) + "/" + m.slice(0, 4)).join(", ")}).\nSửa xong tháng này, các tháng đó sẽ KHÔNG tự cập nhật nợ lũy kế — cần mở khóa & chốt lại từng tháng theo thứ tự.`
       : "";
-    if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?" + canhBao, { okText: "Mở khóa", danger: sauChot.length > 0 })) {
+    if (await ask("Mở khóa tháng đã chốt để chỉnh sửa lại?" + canhBao, { okText: "Mở khóa", danger: sauChot.length > 0 || khongKiemTraDuoc })) {
       const { noLuyKe, snapThuNgoai, snapNCC, snapTK, ...rest } = mData;
       await upMData({ ...rest, daChot: false }); logAction(`Mở khóa tháng ${month}/${year}`); toast("Đã mở khóa.");
     }

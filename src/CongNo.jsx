@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  sList, sGet, sGetSafe, sGetSafeCached, cachePut, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
+  sListSafe, sGetSafe, sGetSafeCached, cachePut, sSet, ymKey, lopOfMonth, tinhPSFromRec, fmt, noDau,
   C, font, TT_COLOR, toast, ask, getCurrentActor
 } from "./lib.js";
 import { tinhNoNCCThang, nhomNoNCC, tinhNoLuyKe } from "./taichinh.js";
@@ -30,8 +30,12 @@ export function CongNoTab({ students, meta, ym, mData, setPhieuId, setTab }) {
 
   useEffect(() => { let huy = false; (async () => {
     setLoading(true); setLoadErr(false);
-    const keys = await sList("mn5:thang:");
-    const months = keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
+    // ⛔ sList nuốt lỗi → tháng bị bỏ sót thì các sGetSafeCached dưới không đụng tới nó
+    //   → check "some !ok" không bắt được → công nợ hiện THIẾU mà tưởng đủ.
+    const kR = await sListSafe("mn5:thang:");
+    if (huy) return;
+    if (!kR.ok) { setLoadErr(true); setLoading(false); return; }
+    const months = kR.keys.map((k) => k.replace("mn5:thang:", "")).filter((m) => /^\d{4}-\d{2}$/.test(m)).sort();
     // Đọc phân biệt lỗi + CACHE tháng đã chốt (bất biến) → chuyển tháng/mở lại nhanh.
     const dRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:thang:${m}`)));
     const ddRes = await Promise.all(months.map((m) => sGetSafeCached(`mn5:dd:${m}`)));

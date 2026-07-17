@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, memo } from "react";
 import {
   C, font, noDau, soNgayHoc, ngayNhapHocTrongThang, logAction,
-  ymKey, TT_THU_PHI, TUAN, lopOfMonth, sGet, sGetSafe, sSet, uid, toast, ask
+  ymKey, TT_THU_PHI, TUAN, lopOfMonth, sGetSafe, sSet, uid, toast, ask
 } from "./lib.js";
 import {
   Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
@@ -164,8 +164,10 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
     setSaveState(null); setChiVang(false); setDirty(false);
     let alive = true;
     const eff = isGV ? gvLopId : lopFilter;
-    sGet(`mn5:ddts:${ym}`).then((m) => {
+    sGetSafe(`mn5:ddts:${ym}`).then((r) => {
       if (!alive) return;
+      // lỗi → coi như trống: chỉ ảnh hưởng nhãn "đã lưu lúc", không phải dữ liệu điểm danh thật.
+      const m = r.ok ? r.value : null;
       const dayMap = (m && m[viewDay]) || {};
       setDdTimes(dayMap);
       const iso = eff === "all" ? Object.values(dayMap).sort().slice(-1)[0] : dayMap[eff];
