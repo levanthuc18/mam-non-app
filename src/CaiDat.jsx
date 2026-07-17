@@ -272,6 +272,7 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, khoi
   const luuLop = () => { if (!lopDraft) return; upMeta({ ...meta, classes: lopDraft }); logAction("Cập nhật bảng giá lớp"); setLopDraft(null); setLuuFlash(true); setTimeout(() => setLuuFlash(false), 1200); };
   const [gvTen, setGvTen] = useState("");
   const [gvPin, setGvPin] = useState("");
+  const [showPinId, setShowPinId] = useState(null); // PIN GV ẩn mặc định — chỉ hiện khi bấm, mỗi lúc 1 người
   const [gvLop, setGvLop] = useState(meta.classes[0]?.id || "");
   const [editHS, setEditHS] = useState(null);
   const [hsFilter, setHsFilter] = useState("all");
@@ -540,7 +541,11 @@ export function CaiDat({ meta, upMeta, students, upStudents, ym, reseedAll, khoi
             <Card key={gv.id} style={{ marginBottom: 10, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{gv.ten}</div>
-                <div style={{ fontSize: 12, color: C.sub }}>PIN: <b style={{ color: C.ink }}>{gv.pin}</b> · Lớp: {meta.classes.find((c) => c.id === gv.lopId)?.ten || "?"}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>
+                  PIN: <b style={{ color: C.ink, fontFamily: "monospace" }}>{showPinId === gv.id ? gv.pin : "••••"}</b>
+                  <button onClick={() => setShowPinId(showPinId === gv.id ? null : gv.id)} style={{ marginLeft: 6, padding: "1px 8px", borderRadius: 8, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontSize: 11, cursor: "pointer" }}>{showPinId === gv.id ? "Ẩn" : "Hiện"}</button>
+                  {" "}· Lớp: {meta.classes.find((c) => c.id === gv.lopId)?.ten || "?"}
+                </div>
               </div>
               <button onClick={() => xoaGV(gv.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", display:"inline-flex", alignItems:"center" }}><Icon name="trash" size={16} color={C.coral} /></button>
             </Card>
