@@ -1,0 +1,21 @@
+# Thư viện cài bằng npm install — KHÔNG bao giờ đưa lên GitHub (hàng chục nghìn file).
+node_modules/
+
+# Kết quả build — sinh lại được bằng `npm run build`.
+dist/
+dist-ssr/
+
+# Biến môi trường / khoá bí mật — tuyệt đối không đẩy lên.
+.env
+.env.*
+!.env.example
+
+# Log & file tạm
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Thư mục của trình soạn thảo
+.vscode/
+.idea/
