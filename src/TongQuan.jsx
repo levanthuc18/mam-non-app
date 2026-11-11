@@ -1,17 +1,21 @@
+import { lopTai } from "./giaLop.js";
 import { Logo } from "./Brand.jsx";
-import { Icon } from "./Icon.jsx";
+import { Icon, Ii } from "./Icon.jsx";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  C, font, fmt, ask, toast, logAction, uid,
+  C, font, fmt, ask, toast, logAction, uid, hoiXoa, baoDaXoa,
   LOAI_CHI, ymKey, lopOfMonth, tinhPSFromRec,
   sGetSafe, sGetSafeCached, cachePut, sListSafe
 } from "./lib.js";
 import {
-  Card, BottomSheet, NumInput, ABBtn, Badge
+  Ring, Segmented, Card, BottomSheet, NumInput, ABBtn, Badge
 } from "./ui.jsx";
+import { VanHanhCard } from "./Home.jsx";
+import { Kpi } from "./ThuPhiPC.jsx";
 import { tinhThangFull, GD_META } from "./taichinh.js";
 import { SoGiaoDichSheet } from "./SoGiaoDich.jsx";
 import { BaoCaoSheet } from "./BaoCao.jsx";
+import { LuongPanel } from "./Luong.jsx";
 
 function BlurNum({ value, onCommit, placeholder, style }) {
   const [v, setV] = useState(value == null ? "" : String(value));
@@ -20,19 +24,29 @@ function BlurNum({ value, onCommit, placeholder, style }) {
   return <input type="number" value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }} placeholder={placeholder} style={style} />;
 }
 
-export function Donut({ pct, color, size = 76 }) {
-  const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
-  const dash = circ * Math.min(100, pct) / 100;
+
+function StatTable({ title, heads, rows, foot, right = [] }) {
+  const th = (i) => ({ padding: "10px 14px", fontWeight: 700, textAlign: right.includes(i) ? "right" : "left", whiteSpace: "nowrap" });
+  const td = (i, b) => ({ padding: "10px 14px", textAlign: right.includes(i) ? "right" : "left", fontVariantNumeric: "tabular-nums", fontWeight: b ? 800 : 500, color: C.ink, whiteSpace: "nowrap" });
   return (
-    <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={8} />
-      <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={8} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
-      <text x={c} y={c + 5} textAnchor="middle" fontSize={16} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
-    </svg>
+    <Card style={{ padding: 0, overflow: "clip", marginBottom: 12 }}>
+      <div style={{ padding: "12px 14px", fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, borderBottom: `1px solid ${C.line}` }}>{title}</div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, fontFamily: font.body }}>
+          <thead><tr style={{ background: C.graySoft, color: C.sub, fontSize: 12.5 }}>{heads.map((h, i) => <th key={h} scope="col" style={th(i)}>{h}</th>)}</tr></thead>
+          <tbody>
+            {rows.map((r, ri) => <tr key={ri} style={{ borderTop: `1px solid ${C.line}` }}>{r.map((c, i) => <td key={i} style={td(i, i === 0)}>{c}</td>)}</tr>)}
+            {foot && <tr style={{ borderTop: `2px solid ${C.line}`, background: C.graySoft }}>{foot.map((c, i) => <td key={i} style={td(i, true)}>{c}</td>)}</tr>}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 
-export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta, setTab }) {
+export function Donut({ pct, color, size = 76 }) { return <Ring pct={pct} color={color} size={size} sub="Đã thu" />; } // giữ tên cũ, dùng chung Ring
+
+export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows, delThang, students, ym, upMeta, setTab, view = "all", ddData }) {  // view: all | bc (Báo cáo & quỹ, không có chi phí) | cp (Chi phí & lương) — CHỈ đổi hiển thị, không đổi phép tính
   const [openCards, setOpenCards] = useState(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("dashOpenCards") : null;
     if (saved) { try { return JSON.parse(saved); } catch {} }
@@ -45,6 +59,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       return next;
     });
   };
+  const [cpTab, setCpTab] = useState("cpm"); // view cp: cpm (chi phí tháng) | luong | cc
+  const [bcTab, setBcTab] = useState("tq"); // chỉ dùng khi view === "bc": tq | hp | dd | hs | quy
   const [showDelConfirm, setShowDelConfirm] = useState(false);
   const [delConfirmText, setDelConfirmText] = useState("");
   const [topNoLimit, setTopNoLimit] = useState(3);
@@ -152,7 +168,17 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     upMData({ ...mData, chiPhi: [...cp, item] }); setNd(""); setSo("");
   };
   const set = (id, p) => upMData({ ...mData, chiPhi: cp.map((c) => (c.id === id ? { ...c, ...p } : c)) });
-  const del = (id) => upMData({ ...mData, chiPhi: cp.filter((c) => c.id !== id) });
+  // Xóa khoản chi: luôn hỏi xác nhận (khoản đã có số tiền / đã trả thì nhắc rõ)
+  const del = async (id) => {
+    const c = cp.find((x) => x.id === id); if (!c) return;
+    const coTien = (Number(c.soTien) || 0) > 0, daTra = (Number(c.daTra) || 0) > 0;
+    const ghiChu = daTra ? ` Khoản này đã trả ${fmt(Number(c.daTra))}đ.` : coTien ? ` Khoản này đang ghi ${fmt(Number(c.soTien))}đ.` : "";
+    if (!(await hoiXoa(`khoản chi "${c.noiDung || ""}"`, ghiChu.trim()))) return;
+    const conLai = cp.filter((x) => x.id !== id);
+    upMData({ ...mData, chiPhi: conLai });
+    logAction(`Xóa khoản chi "${c.noiDung || ""}"`);
+    baoDaXoa("khoản chi", () => upMData({ ...mData, chiPhi: [...conLai, c] }));
+  };
   
   const traDuTatCa = async () => {
     const targets = cp.filter((c) => (c.loai === "CO_DINH" || c.loai === "PHAT_SINH") && (Number(c.soTien) || 0) > 0 && (Number(c.daTra) || 0) < (Number(c.soTien) || 0));
@@ -216,7 +242,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       const feesFrozen = { ...(mData.fees || {}) };
       Object.keys(feesFrozen).forEach((sid) => {
         const hs = students.find((s) => s.id === sid); if (!hs) return;
-        const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, ym));
+        const lop = lopTai(meta.classes.find((c) => c.id === lopOfMonth(hs, ym)), ym);
         feesFrozen[sid] = { ...feesFrozen[sid], giaT7: lop?.t7 || 0, giaAn: lop?.tienAn || 0 };
       });
       await upMData({ ...mData, fees: feesFrozen, daChot: true, noLuyKe, snapThuNgoai, snapNCC, snapTK });
@@ -282,23 +308,76 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
     ["Ngày ăn = 0", recRows0.filter((r) => r.hs.pl !== "GV" && r.hs.pl !== "T7" && (r.rec.ngayAn || 0) === 0), C.coral],
   ].filter((g) => g[1].length > 0);
   const sheetTitle = { fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.ink, margin: "14px 0 8px" };
-  const drillBtn = { background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", cursor: "pointer" };
+  const td = { padding: "8px 14px", verticalAlign: "middle" };
+  const drillBtn = { background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 13, padding: "8px 18px", borderRadius: 10, border: "none", cursor: "pointer" };
   const brkRow = (label, va, vb, neg, hideZero) => (hideZero && !va && !vb) ? null : (
     <div style={{ display: "flex", fontSize: 12, padding: "5px 10px", borderTop: `1px solid ${C.line}` }}>
       <span style={{ flex: 1.5, color: C.sub }}>{label}</span>
-      <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>{neg ? "−" : "+"}{fmt(va)}</span>
-      <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>{neg ? "−" : "+"}{fmt(vb)}</span>
+      <span style={{ flex: 1, textAlign: "right", color: C.blueAText }}>{neg ? "−" : "+"}{fmt(va)}</span>
+      <span style={{ flex: 1, textAlign: "right", color: C.violetBText }}>{neg ? "−" : "+"}{fmt(vb)}</span>
     </div>
   );
 
   return (
     <>
       {lkErr && (
-        <div style={{ background: C.amberSoft, border: `1.5px solid ${C.amber}`, borderRadius: 12, padding: "10px 13px", marginBottom: 12, fontSize: 12.5, color: C.amber, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-          <span>⚠</span><span style={{ flex: 1 }}>Không tải đủ dữ liệu các tháng (lỗi mạng) — số liệu lũy kế bên dưới có thể chưa chính xác. Kiểm tra mạng rồi mở lại.</span>
+        <div style={{ background: C.amberSoft, border: `1.5px solid ${C.amber}`, borderRadius: 12, padding: "10px 13px", marginBottom: 12, fontSize: 12.5, color: C.amberText, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+          <span><Ii name="alertTriangle" size={14} /></span><span style={{ flex: 1 }}>Không tải đủ dữ liệu các tháng (lỗi mạng) — số liệu lũy kế bên dưới có thể chưa chính xác. Kiểm tra mạng rồi mở lại.</span>
         </div>
       )}
-      <Card style={{ marginBottom: 12, boxShadow: "0 3px 12px -8px rgba(23,107,91,.5)" }}>
+      {(view === "bc" || view === "bcm") && (
+        <Segmented scroll className="no-print" style={{ marginBottom: 14 }} items={[["tq", "Tổng quan"], ["hp", "Thống kê học phí"], ["dd", "Thống kê điểm danh"], ["hs", "Thống kê học sinh"], ["quy", "Quỹ & lãi"]]} value={bcTab} onChange={setBcTab} />
+      )}
+
+      {(view === "bc" || view === "bcm") && bcTab === "hp" && (() => {
+        const lops = meta.classes.map((l) => {
+          const rs = recRows0.filter((r) => r.lopId === l.id);
+          const can = rs.reduce((a, r) => a + r.tongPhaiThu, 0), da = rs.reduce((a, r) => a + (r.rec.thucThu || 0), 0);
+          return { l, n: rs.length, can, da, no: rs.filter((r) => r.conNo > 0).reduce((a, r) => a + r.conNo, 0), soNo: rs.filter((r) => r.conNo > 0).length };
+        });
+        return (
+          <StatTable title={`Thống kê học phí — T${month}/${year}`} heads={["Lớp", "Sĩ số", "Cần thu", "Đã thu", "Còn nợ", "Số HS nợ", "Tỷ lệ thu"]} right={[1, 2, 3, 4, 5, 6]}
+            rows={lops.map((x) => [x.l.ten, x.n, fmt(x.can), fmt(x.da), fmt(x.no), x.soNo, (x.can > 0 ? Math.round(x.da / x.can * 100) : 100) + "%"])}
+            foot={["Tổng", recRows0.length, fmt(canThuAll), fmt(daThuAll), fmt(conNoAll), noRows.length, tyLeThu + "%"]} />
+        );
+      })()}
+
+      {(view === "bc" || view === "bcm") && bcTab === "dd" && (() => {
+        const lops = meta.classes.map((l) => {
+          const ss = students.filter((s) => lopOfMonth(s, ym) === l.id && s.trangThai === "Đang học");
+          const nghi = ss.reduce((a, s) => a + Object.keys((ddData || {})[s.id] || {}).length, 0);
+          const nhieu = ss.filter((s) => Object.keys((ddData || {})[s.id] || {}).length >= 5).length;
+          return { l, n: ss.length, nghi, nhieu };
+        });
+        const tn = lops.reduce((a, x) => a + x.n, 0), tnghi = lops.reduce((a, x) => a + x.nghi, 0), tnhieu = lops.reduce((a, x) => a + x.nhieu, 0);
+        return (
+          <StatTable title={`Thống kê điểm danh — T${month}/${year}`} heads={["Lớp", "Đang học", "Tổng lượt nghỉ", "Nghỉ TB / HS", "HS nghỉ từ 5 ngày"]} right={[1, 2, 3, 4]}
+            rows={lops.map((x) => [x.l.ten, x.n, x.nghi, x.n ? (x.nghi / x.n).toFixed(1) : "0", x.nhieu])}
+            foot={["Tổng", tn, tnghi, tn ? (tnghi / tn).toFixed(1) : "0", tnhieu]} />
+        );
+      })()}
+
+      {(view === "bc" || view === "bcm") && bcTab === "hs" && (() => {
+        const lops = meta.classes.map((l) => {
+          const ss = students.filter((s) => lopOfMonth(s, ym) === l.id);
+          return { l, tong: ss.length, hoc: ss.filter((s) => s.trangThai === "Đang học").length, nghiHoc: ss.filter((s) => s.trangThai !== "Đang học").length, nam: ss.filter((s) => s.gt === "nam").length, nu: ss.filter((s) => s.gt === "nu").length };
+        });
+        const sum = (k) => lops.reduce((a, x) => a + x[k], 0);
+        return (
+          <StatTable title="Thống kê học sinh" heads={["Lớp", "Tổng", "Đang học", "Khác (nghỉ/bảo lưu…)", "Nam", "Nữ"]} right={[1, 2, 3, 4, 5]}
+            rows={lops.map((x) => [x.l.ten, x.tong, x.hoc, x.nghiHoc, x.nam, x.nu])}
+            foot={["Tổng", sum("tong"), sum("hoc"), sum("nghiHoc"), sum("nam"), sum("nu")]} />
+        );
+      })()}
+
+      {view !== "cp" && ((view !== "bc" && view !== "bcm") || bcTab === "tq") && (<>
+      {view === "bc" ? (
+        <div style={{ marginBottom: 12 }}>
+          <VanHanhCard month={month} year={year} can={canThuAll} da={daThuAll} onDetail={() => setTab && setTab("thu")}
+            rows={meta.classes.map((c) => { const rr = recRows0.filter((r) => r.lopId === c.id); if (!rr.length) return null; const can = rr.reduce((x, r) => x + r.tongPhaiThu, 0), da = rr.reduce((x, r) => x + (r.rec.thucThu || 0), 0); return { id: c.id, ten: c.ten, hs: rr.length, pct: can > 0 ? Math.min(100, Math.round(da / can * 100)) : 0 }; }).filter(Boolean)} />
+        </div>
+      ) : (
+      <Card style={{ marginBottom: 12, boxShadow: "0 3px 12px -8px rgba(13,111,168,.5)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <Icon name="barChart" size={16} color={C.pine} />
           <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>Tổng quan vận hành — T{month}/{year}</span>
@@ -308,30 +387,131 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", gap: 18, marginBottom: 8 }}>
               <div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: C.ink }}>{dashTong}</div><div style={{ fontSize: 10.5, color: C.sub }}>Tổng HS</div></div>
-              <div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: C.green }}>{dashDangHoc}</div><div style={{ fontSize: 10.5, color: C.sub }}>Đang học</div></div>
+              <div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: C.greenText }}>{dashDangHoc}</div><div style={{ fontSize: 10.5, color: C.sub }}>Đang học</div></div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "1px 0" }}><span style={{ color: C.sub }}>Cần thu</span><b>{fmt(canThuAll)}</b></div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "1px 0" }}><span style={{ color: C.sub }}>Đã thu ({tyLeThu}%)</span><b style={{ color: C.green }}>{fmt(daThuAll)}</b></div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "1px 0" }}><span style={{ color: C.sub }}>Đã thu ({tyLeThu}%)</span><b style={{ color: C.greenText }}>{fmt(daThuAll)}</b></div>
           </div>
         </div>
         {noRows.length > 0 && (
-          <button onClick={() => setTab && setTab("no")} style={{ width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 9, border: `1px solid ${C.line}`, background: C.coralSoft, color: C.coral, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {noRows.length} HS còn nợ — {fmt(conNoAll)} đ ❯</span></button>
+          <button onClick={() => setTab && setTab("no")} style={{ width: "100%", marginTop: 10, padding: "8px 0", borderRadius: 10, border: `1px solid ${C.line}`, background: C.coralSoft, color: C.coralText, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {noRows.length} HS còn nợ — {fmt(conNoAll)} đ <Ii name="chevronRight" size={14} /></span></button>
         )}
       </Card>
+      )}
 
       {cbGroups.length > 0 && (
-        <button onClick={() => setSheetCB(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.amberSoft, color: C.amber, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <button onClick={() => setSheetCB(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "10px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.amberSoft, color: C.amberText, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={14} color={C.coral} /> Cảnh báo: {cbGroups.map((g) => `${g[0]} (${g[1].length})`).join(" · ")}</span>
-          <span style={{ flexShrink: 0, fontWeight: 700 }}>❯</span>
+          <span style={{ flexShrink: 0, fontWeight: 700 }}><Ii name="chevronRight" size={14} /></span>
         </button>
       )}
 
+      </>)}
+
+      {view === "cp" && (
+        <Segmented className="no-print" style={{ marginBottom: 14 }} items={[["cpm", "Chi phí tháng"], ["luong", "Bảng lương"], ["cc", "Chấm công"]]} value={cpTab} onChange={setCpTab} />
+      )}
+      {view === "cp" && cpTab !== "cpm" && <LuongPanel mode={cpTab} meta={meta} mData={mData} upMData={upMData} locked={locked} month={month} year={year} />}
+
+      {view === "cp" && cpTab === "cpm" && (
+        <>
+          <div className="kpi-row" style={{ marginBottom: 14 }}>
+            <Kpi icon="banknote" tint={C.pineSoft} mau={C.pine} nhan="Phải chi" giaTri={`${fmt(tongChi)} đ`} />
+            <Kpi icon="check" tint={C.greenSoft} mau={C.greenText} nhan="Đã chi" giaTri={`${fmt(tongTra)} đ`} />
+            <Kpi icon="clipboard" tint={C.blueASoft} mau={C.blueAText} nhan="Khoản đã xử lý" giaTri={`${cpDone.length}/${cpKhoan.length}`} />
+            <Kpi icon="building" tint={(luyKe?.noNCC ?? noNCC) > 0 ? C.coralSoft : C.graySoft} mau={(luyKe?.noNCC ?? noNCC) > 0 ? C.coralText : C.sub} nhan="Nợ nhà cung cấp" giaTri={`${fmt(luyKe?.noNCC ?? noNCC)} đ`} />
+          </div>
+          <Card style={{ padding: 0, overflow: "clip", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "12px 14px", borderBottom: `1px solid ${C.line}` }}>
+              <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink, marginRight: "auto" }}>Khoản chi tháng {month}/{year}</span>
+              {!locked && <button onClick={themCoDinhMau} style={{ background: C.pineSoft, color: C.pine, border: "none", borderRadius: 10, padding: "8px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>+ 5 khoản cố định mẫu</button>}
+              {!locked && <button onClick={traDuTatCa} style={{ background: C.greenSoft, color: C.greenText, border: `1.5px solid ${C.green}`, borderRadius: 10, padding: "7px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}><Ii name="check" size={13} /> Trả đủ tất cả khoản còn thiếu</button>}
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, fontFamily: font.body }}>
+                <thead>
+                  <tr style={{ background: C.graySoft, color: C.sub, fontSize: 12.5, textAlign: "left" }}>
+                    {["Khoản chi", "Loại", "Số tiền", "Đã trả", "Người chi", "Trạng thái", ""].map((h, i2) => <th key={i2} scope="col" style={{ padding: "10px 14px", fontWeight: 700, textAlign: i2 === 2 || i2 === 3 ? "right" : "left" }}>{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cp.map((c) => {
+                    const e = Number(c.soTien) || 0, k = Number(c.daTra) || 0;
+                    const delBtn = !locked ? <button onClick={() => del(c.id)} aria-label="Xóa khoản" style={{ border: "none", background: "none", cursor: "pointer", padding: 6 }}><Icon name="trash" size={16} color={C.coral} /></button> : null;
+                    const special = c.loai === "TRA_NO" || c.loai === "RUT_LOI" || c.loai === "CHUYEN" || c.loai === "HOAN_UNG";
+                    if (special) {
+                      const lbl = GD_META[c.loai]?.label || c.loai;
+                      const ben = c.loai === "RUT_LOI" ? (c.nhan || c.nguoiChi || "A") : c.loai === "TRA_NO" ? c.nguoiChi : c.loai === "HOAN_UNG" ? (c.huong === "A->B" ? "B" : "A") : (c.huong === "A->B" ? "A → B" : "B → A");
+                      const tien = (c.loai === "CHUYEN" || c.loai === "HOAN_UNG") ? e : k;
+                      return (
+                        <tr key={c.id} style={{ borderTop: `1px solid ${C.line}` }}>
+                          <td style={{ ...td, fontWeight: 700, color: C.ink }}>{c.noiDung}</td>
+                          <td style={{ ...td, color: C.sub }}>{lbl}</td>
+                          <td style={{ ...td, textAlign: "right", color: C.sub }}>—</td>
+                          <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(tien)}</td>
+                          <td style={td}>{ben}</td>
+                          <td style={td}><span style={{ color: C.sub, fontSize: 12.5 }}>Ghi nhận</span></td>
+                          <td style={{ ...td, textAlign: "right" }}>{delBtn}</td>
+                        </tr>
+                      );
+                    }
+                    const st = k === 0 ? ["Chưa trả", C.coralSoft, C.coralText] : k < e ? ["Trả một phần", C.amberSoft, C.amberText] : ["Đã trả", C.greenSoft, C.greenText];
+                    return (
+                      <tr key={c.id} style={{ borderTop: `1px solid ${C.line}` }}>
+                        <td style={{ ...td, fontWeight: 700, color: C.ink }}>{c.noiDung}{c.loai === "NO_AB" && <span style={{ color: C.goldText, fontSize: 11, fontWeight: 700 }}> · NỢ {c.huong}</span>}</td>
+                        <td style={{ ...td, color: C.sub }}>{c.loai === "CO_DINH" ? "Cố định" : c.loai === "PHAT_SINH" ? "Phát sinh" : (GD_META[c.loai]?.label || c.loai)}</td>
+                        <td style={{ ...td, textAlign: "right" }}>
+                          {c.loai === "CO_DINH" && !locked ? <NumInput lazy value={c.soTien} onChange={(v) => set(c.id, { soTien: v })} w={120} /> : <span style={{ fontVariantNumeric: "tabular-nums" }}>{e > 0 ? fmt(e) : "—"}</span>}
+                        </td>
+                        <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <NumInput lazy value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={120} disabled={locked} />
+                            {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.greenText, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
+                          </span>
+                          {k > e && <div style={{ fontSize: 11.5, color: C.amberText, marginTop: 4 }}>Đã trả nhiều hơn phải trả {fmt(k - e)} đ</div>}
+                        </td>
+                        <td style={td}>{c.loai === "CO_DINH" && !locked ? <ABBtn val={c.nguoiChi} set={(p) => set(c.id, { nguoiChi: p })} small disabled={locked} /> : (c.nguoiChi || "—")}</td>
+                        <td style={td}><span style={{ background: st[1], color: st[2], borderRadius: 99, padding: "3px 10px", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap" }}>{st[0]}</span></td>
+                        <td style={{ ...td, textAlign: "right" }}>{delBtn}</td>
+                      </tr>
+                    );
+                  })}
+                  {cp.length === 0 && <tr><td colSpan={7} style={{ padding: 20, textAlign: "center", color: C.sub }}>Chưa có khoản chi nào — thêm ở dòng bên dưới hoặc bấm "+ 5 khoản cố định mẫu".</td></tr>}
+                  {!locked && (
+                    <tr style={{ borderTop: `2px solid ${C.line}`, background: C.graySoft }}>
+                      <td style={td}><input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : loai === "RUT_LOI" ? "Ghi chú (VD: rút đợt 1)" : loai === "HOAN_UNG" ? "Ghi chú (tuỳ chọn)" : "Khoản chi mới"} style={{ width: "100%", minWidth: 150, padding: "9px 10px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, background: C.card, color: C.ink }} /></td>
+                      <td style={td}>
+                        <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "RUT_LOI") setSo(String(goiYRut(ng))); }} style={{ padding: "8px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card, color: C.ink }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{GD_META[l]?.label || l}</option>)}</select>
+                      </td>
+                      <td style={{ ...td, textAlign: "right" }}><input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ width: 120, padding: "9px 10px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, textAlign: "right", background: C.card, color: C.ink }} /></td>
+                      <td style={td} />
+                      <td style={td}>
+                        {(loai === "NO_AB" || loai === "CHUYEN" || loai === "HOAN_UNG")
+                          ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card, color: C.ink }}><option value="A->B">{loai === "HOAN_UNG" ? "Trả cho B" : "A → B"}</option><option value="B->A">{loai === "HOAN_UNG" ? "Trả cho A" : "B → A"}</option></select>
+                          : loai === "RUT_LOI"
+                            ? (<span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: C.sub, fontWeight: 600 }}>Lãi của <ABBtn val={ng} set={(v) => { setNg(v); setSo(String(goiYRut(v))); }} small /> Trừ quỹ <ABBtn val={truQuy} set={setTruQuy} small /></span>)
+                            : <ABBtn val={ng} set={setNg} small />}
+                      </td>
+                      <td style={td} />
+                      <td style={{ ...td, textAlign: "right" }}><button onClick={() => { if (loai === "TRA_NO" && !nd.trim()) { toast("Nhập tên nợ cần trả"); return; } add(); }} style={{ background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 10, border: "none", cursor: "pointer", whiteSpace: "nowrap" }}>+ Thêm</button></td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {loai === "RUT_LOI" && !locked && <div style={{ fontSize: 11.5, color: C.sub, padding: "8px 14px 12px" }}>Lãi tháng này còn rút được — A: <b style={{ color: C.blueAText }}>{fmt(goiYRut("A"))}</b> · B: <b style={{ color: C.violetBText }}>{fmt(goiYRut("B"))}</b> (số đã điền sẵn, sửa được)</div>}
+            {locked && <div style={{ fontSize: 12.5, color: C.sub, padding: 12, textAlign: "center" }}><Icon name="lock" size={13} color={C.sub} /> Tháng đã chốt — chỉ xem.</div>}
+          </Card>
+        </>
+      )}
+
+      {(view === "all" || (view === "bcm" && bcTab === "tq")) && (
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="banknote" size={16} color={C.coral} /><span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15 }}>Chi phí tháng {month}</span></div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 11.5, color: C.sub }}>Phải chi: <b style={{ color: C.ink }}>{fmt(tongChi)}</b></div>
-            <div style={{ fontSize: 11.5, color: C.sub }}>Đã chi: <b style={{ color: tongTra > 0 ? C.green : C.ink }}>{fmt(tongTra)}</b></div>
+            <div style={{ fontSize: 11.5, color: C.sub }}>Đã chi: <b style={{ color: tongTra > 0 ? C.greenText : C.ink }}>{fmt(tongTra)}</b></div>
           </div>
         </div>
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="barChart" size={13} color={C.sub} /> {cpDone.length}/{cpKhoan.length} khoản đã xử lý</div>
@@ -339,32 +519,56 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           <div style={{ width: cpPct + "%", height: "100%", background: cpPct >= 100 ? C.green : C.pine, borderRadius: 99, transition: "width .3s" }} />
         </div>
         {cpChua.slice(0, 2).map((c) => (
-          <div key={c.id} style={{ fontSize: 13, color: C.ink, padding: "3px 0", display:"inline-flex", alignItems:"center", gap:6 }}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {c.noiDung}: <span style={{ color: C.coral, fontWeight: 600 }}>{(Number(c.daTra) || 0) > 0 ? "Trả 1 phần" : "Chưa trả"}</span></div>
+          <div key={c.id} style={{ fontSize: 13, color: C.ink, padding: "3px 0", display:"inline-flex", alignItems:"center", gap:6 }}><span style={{width:7,height:7,borderRadius:99,background:C.coral,flexShrink:0}} /> {c.noiDung}: <span style={{ color: C.coralText, fontWeight: 600 }}>{(Number(c.daTra) || 0) > 0 ? "Trả 1 phần" : "Chưa trả"}</span></div>
         ))}
-        {cpKhoan.length > 0 && cpChua.length === 0 && <div style={{ fontSize: 13, color: C.green, fontWeight: 600, padding: "3px 0" }}>✓ Đã xử lý hết các khoản chi</div>}
+        {cpKhoan.length > 0 && cpChua.length === 0 && <div style={{ fontSize: 13, color: C.greenText, fontWeight: 600, padding: "3px 0" }}><Ii name="check" size={14} /> Đã xử lý hết các khoản chi</div>}
         {cpKhoan.length === 0 && <div style={{ fontSize: 13, color: C.sub, padding: "3px 0" }}>Chưa có khoản chi nào — bấm Quản lý để thêm.</div>}
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={() => setSheetCP(true)} style={drillBtn}>Quản lý ❯</button>
+          <button onClick={() => setSheetCP(true)} style={drillBtn}>Quản lý <Ii name="chevronRight" size={14} /></button>
         </div>
       </Card>
+      )}
 
-      <Card style={{ marginBottom: 12, background: C.greenSoft, borderColor: C.line }}>
+      {view !== "cp" && (<>
+      {((view !== "bc" && view !== "bcm") || bcTab === "quy") && (
+      <Card style={{ marginBottom: 12, background: view === "bc" ? C.card : C.greenSoft, borderColor: C.line }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}><Icon name="trendingUp" size={16} color={C.pine} /><span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15 }}>Lợi nhuận & chia quỹ</span></div>
+        {view === "bc" ? (() => {
+          const am = (n) => (n < 0 ? C.coralText : null);
+          const o = (nhan, giaTri, nen, mau) => (
+            <div key={nhan} style={{ background: nen, border: `1px solid ${C.line}`, borderRadius: 14, padding: "8px clamp(8px, 1.4cqw, 12px)", minWidth: 0 }}>
+              <div className="kpi-nhan" style={{ fontSize: 12, color: C.sub, fontWeight: 600, lineHeight: 1.2 }}>{nhan}</div>
+              <div className="kpi-val" style={{ fontFamily: font.display, fontWeight: 800, fontSize: 17, color: mau, lineHeight: 1.25, whiteSpace: "nowrap" }}>{giaTri}</div>
+            </div>
+          );
+          return (
+            <div className="kpi-row" style={{ marginBottom: 8 }}>
+              {o("LN kế toán", fmt(lnKeToan), C.greenSoft, am(lnKeToan) || C.greenText)}
+              {o("LN tiền mặt", fmt(lnTienMat), C.blueASoft, am(lnTienMat) || C.blueAText)}
+              {o("Quỹ A giữ", luyKe ? fmt(luyKe.giuA) : "…", C.blueASoft, am(luyKe?.giuA ?? 0) || C.blueAText)}
+              {o("Quỹ B giữ", luyKe ? fmt(luyKe.giuB) : "…", C.violetBSoft, am(luyKe?.giuB ?? 0) || C.violetBText)}
+              {o("Tiền mặt", luyKe ? fmt(tongTienMat) : "…", C.graySoft, am(tongTienMat) || C.ink)}
+              {o("Nợ NCC", luyKe ? fmt(noNCCcum) : "…", C.amberSoft, noNCCcum > 0 ? C.amberText : C.ink)}
+              {o("Có thể chia", luyKe ? fmt(coTheChia) : "…", C.pineSoft, am(coTheChia) || C.pine)}
+            </div>
+          );
+        })() : (<>
         <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.green, fontWeight: 600 }}>LN kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: lnKeToan < 0 ? C.coral : C.green }}>{fmt(lnKeToan)}</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.blueA, fontWeight: 600 }}>LN tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: lnTienMat < 0 ? C.coral : C.blueA }}>{fmt(lnTienMat)}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.greenText, fontWeight: 600 }}>LN kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: lnKeToan < 0 ? C.coralText : C.greenText }}>{fmt(lnKeToan)}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.blueAText, fontWeight: 600 }}>LN tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: lnTienMat < 0 ? C.coralText : C.blueAText }}>{fmt(lnTienMat)}</div></div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.blueA, fontWeight: 600 }}>Quỹ A giữ</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: (luyKe?.giuA ?? 0) < 0 ? C.coral : C.blueA }}>{luyKe ? fmt(luyKe.giuA) : "…"}</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.violetB, fontWeight: 600 }}>Quỹ B giữ</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: (luyKe?.giuB ?? 0) < 0 ? C.coral : C.violetB }}>{luyKe ? fmt(luyKe.giuB) : "…"}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.blueAText, fontWeight: 600 }}>Quỹ A giữ</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: (luyKe?.giuA ?? 0) < 0 ? C.coralText : C.blueAText }}>{luyKe ? fmt(luyKe.giuA) : "…"}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10.5, color: C.violetBText, fontWeight: 600 }}>Quỹ B giữ</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 15, color: (luyKe?.giuB ?? 0) < 0 ? C.coralText : C.violetBText }}>{luyKe ? fmt(luyKe.giuB) : "…"}</div></div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>Tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: tongTienMat < 0 ? C.coral : C.ink }}>{luyKe ? fmt(tongTienMat) : "…"}</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.amber, fontWeight: 600 }}>Nợ NCC</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: noNCCcum > 0 ? C.amber : C.ink }}>{luyKe ? fmt(noNCCcum) : "…"}</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.pineSoft, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.pine, fontWeight: 600 }}>Có thể chia</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: coTheChia < 0 ? C.coral : C.pine }}>{luyKe ? fmt(coTheChia) : "…"}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>Tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: tongTienMat < 0 ? C.coralText : C.ink }}>{luyKe ? fmt(tongTienMat) : "…"}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.card, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.amberText, fontWeight: 600 }}>Nợ NCC</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: noNCCcum > 0 ? C.amberText : C.ink }}>{luyKe ? fmt(noNCCcum) : "…"}</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: C.pineSoft, borderRadius: 10 }}><div style={{ fontSize: 10, color: C.pine, fontWeight: 600 }}>Có thể chia</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: coTheChia < 0 ? C.coralText : C.pine }}>{luyKe ? fmt(coTheChia) : "…"}</div></div>
         </div>
+        </>)}
         {luyKe && (guiQuyA < 0 || guiQuyB < 0) && (
-          <div style={{ marginTop: 8, fontSize: 11.5, color: C.coral, background: C.coralSoft, borderRadius: 8, padding: "6px 10px", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 8, fontSize: 11.5, color: C.coralText, background: C.coralSoft, borderRadius: 8, padding: "6px 10px", display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
             <Icon name="alertTriangle" size={13} color={C.coral} />
             {guiQuyA < 0 && <span>Trường đang nợ <b>A</b> (ứng/chi hộ): <b>{fmt(-guiQuyA)}</b>đ</span>}
             {guiQuyA < 0 && guiQuyB < 0 && <span>·</span>}
@@ -372,47 +576,52 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           </div>
         )}
         {luyKe && (conNhanA !== 0 || conNhanB !== 0 || daRutA !== 0 || daRutB !== 0) && (
-          <div style={{ marginTop: 8, fontSize: 11.5, color: C.sub, textAlign: "center" }}>Lãi còn được nhận — A: <b style={{ color: conNhanA < 0 ? C.coral : C.blueA }}>{fmt(conNhanA)}</b> · B: <b style={{ color: conNhanB < 0 ? C.coral : C.violetB }}>{fmt(conNhanB)}</b></div>
+          <div style={{ marginTop: 8, fontSize: 11.5, color: C.sub, textAlign: "center" }}>Lãi còn được nhận — A: <b style={{ color: conNhanA < 0 ? C.coralText : C.blueAText }}>{fmt(conNhanA)}</b> · B: <b style={{ color: conNhanB < 0 ? C.coralText : C.violetBText }}>{fmt(conNhanB)}</b></div>
         )}
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-          <button onClick={() => setSheetLN(true)} style={drillBtn}>Chi tiết ❯</button>
+          <button onClick={() => setSheetLN(true)} style={drillBtn}>Chi tiết <Ii name="chevronRight" size={14} /></button>
         </div>
       </Card>
+      )}
 
+      {((view !== "bc" && view !== "bcm") || bcTab === "tq") && (<>
       <button onClick={() => setSheetLS(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="trendingUp" size={15} color={C.pine} /> Lịch sử các tháng trước</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="trendingUp" size={15} color={C.pine} /> Lịch sử các tháng trước</span><span style={{ color: C.sub, fontWeight: 700 }}><Ii name="chevronRight" size={14} /></span>
       </button>
 
       <button onClick={() => setSheetGD(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="receipt" size={15} color={C.pine} /> Sổ giao dịch tiền</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="receipt" size={15} color={C.pine} /> Sổ giao dịch tiền</span><span style={{ color: C.sub, fontWeight: 700 }}><Ii name="chevronRight" size={14} /></span>
       </button>
 
       <button onClick={() => setSheetBC(true)} style={{ width: "100%", textAlign: "left", marginBottom: 12, padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 13.5, fontWeight: 600, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="barChart" size={15} color={C.pine} /> Báo cáo & biểu đồ</span><span style={{ color: C.sub, fontWeight: 700 }}>❯</span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="barChart" size={15} color={C.pine} /> Báo cáo & biểu đồ</span><span style={{ color: C.sub, fontWeight: 700 }}><Ii name="chevronRight" size={14} /></span>
       </button>
 
       {!locked
-        ? <button onClick={chotThang} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.gold}`, background: C.goldSoft, color: C.amber, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="lock" size={15} color="#7A5E12" /> Chốt tháng {month}/{year}</span></button>
+        ? <button onClick={chotThang} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.gold}`, background: C.goldSoft, color: C.amberText, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="lock" size={15} color={C.amberText} /> Chốt tháng {month}/{year}</span></button>
         : <button onClick={moChot} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="unlock" size={15} color={C.sub} /> Mở khóa tháng {month}/{year}</span></button>}
       {!locked && (
         <div style={{ marginTop: 8 }}>
           {!showDelConfirm ? (
-            <button onClick={() => setShowDelConfirm(true)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.coralSoft}`, background: C.card, color: C.coral, fontFamily: font.body, fontWeight: 600, fontSize: 13, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="trash" size={14} color={C.coral} /> Xóa bảng thu tháng này (tạo lại)</span></button>
+            <button onClick={() => setShowDelConfirm(true)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.coralSoft}`, background: C.card, color: C.coralText, fontFamily: font.body, fontWeight: 600, fontSize: 13, cursor: "pointer" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="trash" size={14} color={C.coral} /> Xóa bảng thu tháng này (tạo lại)</span></button>
           ) : (
             <div style={{ background: C.coralSoft, borderRadius: 12, padding: 12, border: `1.5px solid ${C.coral}` }}>
-              <div style={{ fontSize: 13, color: C.coral, fontWeight: 700, marginBottom: 8, display:"flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={14} color={C.coral} /> Nhập "XOA" để xác nhận xóa bảng thu tháng {month}/{year}</div>
+              <div style={{ fontSize: 13, color: C.coralText, fontWeight: 700, marginBottom: 8, display:"flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={14} color={C.coral} /> Nhập "XOA" để xác nhận xóa bảng thu tháng {month}/{year}</div>
               <input value={delConfirmText} onChange={(e) => setDelConfirmText(e.target.value)} placeholder="Nhập XOA" style={{ width: "100%", padding: "10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 14, marginBottom: 8, textAlign: "center", fontWeight: 700, textTransform: "uppercase" }} />
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => { setShowDelConfirm(false); setDelConfirmText(""); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Hủy</button>
-                <button onClick={() => { if (delConfirmText.trim().toUpperCase() === "XOA") { delThang(); setShowDelConfirm(false); setDelConfirmText(""); } else { toast("Nhập sai — gõ XOA để xác nhận"); } }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: delConfirmText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: "#fff", fontWeight: 700, fontSize: 13, cursor: delConfirmText.trim().toUpperCase() === "XOA" ? "pointer" : "default" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="trash" size={14} color={delConfirmText.trim().toUpperCase() === "XOA" ? "#fff" : C.sub} /> Xóa</span></button>
+                <button onClick={() => { if (delConfirmText.trim().toUpperCase() === "XOA") { delThang(); setShowDelConfirm(false); setDelConfirmText(""); } else { toast("Nhập sai — gõ XOA để xác nhận"); } }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: delConfirmText.trim().toUpperCase() === "XOA" ? C.coral : C.graySoft, color: C.onFill, fontWeight: 700, fontSize: 13, cursor: delConfirmText.trim().toUpperCase() === "XOA" ? "pointer" : "default" }}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Icon name="trash" size={14} color={delConfirmText.trim().toUpperCase() === "XOA" ? C.onFill : C.sub} /> Xóa</span></button>
               </div>
             </div>
           )}
         </div>
       )}
 
+      </>)}
+      </>)}
+
       <BottomSheet open={sheetCB} onClose={() => setSheetCB(false)} title={`Cảnh báo bất thường — T${month}/${year}`}>
-        {cbGroups.length === 0 ? <div style={{ color: C.green, fontSize: 14, padding: 10 }}>✓ Không có bất thường.</div> : cbGroups.map((g) => (
+        {cbGroups.length === 0 ? <div style={{ color: C.greenText, fontSize: 14, padding: 10 }}><Ii name="check" size={14} /> Không có bất thường.</div> : cbGroups.map((g) => (
           <div key={g[0]} style={{ marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13.5, color: g[2], marginBottom: 4 }}>{g[0]} ({g[1].length})</div>
             {g[1].map((r) => (
@@ -427,45 +636,45 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
       <BottomSheet open={sheetCP} onClose={() => setSheetCP(false)} title={`Chi tiết chi phí — T${month}/${year}`}>
         <div style={{ display: "flex", gap: 14, fontSize: 12.5, color: C.sub, marginBottom: 10, flexWrap: "wrap" }}>
           <span>Tổng chi <b style={{ color: C.ink }}>{fmt(tongChi)}</b></span>
-          <span>Đã trả <b style={{ color: C.green }}>{fmt(tongTra)}</b></span>
-          <span>Nợ NCC <b style={{ color: noNCC > 0 ? C.coral : C.green }}>{fmt(noNCC)}</b></span>
+          <span>Đã trả <b style={{ color: C.greenText }}>{fmt(tongTra)}</b></span>
+          <span>Nợ NCC <b style={{ color: noNCC > 0 ? C.coralText : C.greenText }}>{fmt(noNCC)}</b></span>
           {!locked && <button onClick={themCoDinhMau} style={{ marginLeft: "auto", background: C.pineSoft, color: C.pine, border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{cp.filter((c) => c.loai === "CO_DINH").length === 5 ? (showCoDinh ? "Ẩn" : "Hiện") + " 5 cố định" : "+ 5 khoản cố định"}</button>}
         </div>
         {!locked && (
-          <button onClick={traDuTatCa} style={{ width: "100%", marginBottom: 10, padding: "9px 0", borderRadius: 9, border: `1.5px solid ${C.green}`, background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>✓ Trả đủ tất cả khoản còn thiếu</button>
+          <button onClick={traDuTatCa} style={{ width: "100%", marginBottom: 10, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${C.green}`, background: C.greenSoft, color: C.greenText, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}><Ii name="check" size={14} /> Trả đủ tất cả khoản còn thiếu</button>
         )}
         {cp.map((c) => {
           const e = Number(c.soTien) || 0, k = Number(c.daTra) || 0; const isNoAB = c.loai === "NO_AB"; const isCT = c.loai === "CHUYEN";
           if (c.loai === "CO_DINH" && !showCoDinh) return null;
           if (c.loai === "TRA_NO") return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
-              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={15} color={C.amber} /> Trả nợ NCC · <b style={{ color: c.nguoiChi === "A" ? C.blueA : C.violetB }}>[{c.nguoiChi}]</b> {c.noiDung} · {fmt(k)} đ</div>
-              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={15} color={C.amber} /> Trả nợ NCC · <b style={{ color: c.nguoiChi === "A" ? C.blueAText : C.violetBText }}>[{c.nguoiChi}]</b> {c.noiDung} · {fmt(k)} đ</div>
+              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coralText, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
             </div>
           );
           if (c.loai === "RUT_LOI") { const ben = c.nhan || c.nguoiChi || "A"; const src = c.tuQuy || "A"; return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
-              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6, flexWrap:"wrap" }}><Icon name="banknote" size={15} color={C.violetB} /> Rút lãi <b style={{ color: ben === "A" ? C.blueA : C.violetB }}>[{ben}]</b> {c.noiDung} · <span style={{ fontSize: 11.5, color: C.sub }}>trừ quỹ {src}</span> · <b style={{ color: C.coral }}>−{fmt(k)} đ</b></div>
-              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6, flexWrap:"wrap" }}><Icon name="banknote" size={15} color={C.violetB} /> Rút lãi <b style={{ color: ben === "A" ? C.blueAText : C.violetBText }}>[{ben}]</b> {c.noiDung} · <span style={{ fontSize: 11.5, color: C.sub }}>trừ quỹ {src}</span> · <b style={{ color: C.coralText }}>−{fmt(k)} đ</b></div>
+              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coralText, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
             </div>
           ); }
           if (isCT) return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
-              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="arrowRightLeft" size={15} color={C.blueA} /> Chuyển tiền <b style={{ color: c.huong === "A->B" ? C.blueA : C.violetB }}>{c.huong === "A->B" ? "A → B" : "B → A"}</b> · {fmt(e)} đ</div>
-              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="arrowRightLeft" size={15} color={C.blueA} /> Chuyển tiền <b style={{ color: c.huong === "A->B" ? C.blueAText : C.violetBText }}>{c.huong === "A->B" ? "A → B" : "B → A"}</b> · {fmt(e)} đ</div>
+              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coralText, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
             </div>
           );
           if (c.loai === "HOAN_UNG") { const nhanLai = c.huong === "A->B" ? "B" : "A"; return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5 }}>
-              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="refresh" size={15} color={C.green} /> Hoàn ứng cho <b style={{ color: nhanLai === "A" ? C.blueA : C.violetB }}>[{nhanLai}]</b> {c.noiDung && c.noiDung !== "Hoàn ứng" ? `· ${c.noiDung}` : ""} · <b style={{ color: C.green }}>{fmt(e)} đ</b></div>
-              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+              <div style={{ fontWeight: 600, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="refresh" size={15} color={C.green} /> Hoàn ứng cho <b style={{ color: nhanLai === "A" ? C.blueAText : C.violetBText }}>[{nhanLai}]</b> {c.noiDung && c.noiDung !== "Hoàn ứng" ? `· ${c.noiDung}` : ""} · <b style={{ color: C.greenText }}>{fmt(e)} đ</b></div>
+              {!locked && <button onClick={() => del(c.id)} style={{ color: C.coralText, border: "none", background: "none", cursor: "pointer", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
             </div>
           ); }
           const st = k === 0 ? { t: "Chưa trả", c: C.coral, bg: C.coralSoft } : k < e ? { t: "Trả 1 phần", c: C.amber, bg: C.amberSoft } : { t: "Đã trả", c: C.green, bg: C.greenSoft };
           return (
             <div key={c.id} style={{ padding: "9px 0", borderTop: `1px solid ${C.line}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{!isNoAB && <span style={{ color: c.nguoiChi === "A" ? C.blueA : C.violetB, fontWeight: 800 }}>[{c.nguoiChi}]</span>} {c.noiDung}{isNoAB && <span style={{ color: C.gold, fontSize: 11, fontWeight: 700 }}> · NỢ {c.huong}</span>}{c.loai === "CO_DINH" && <span style={{ color: C.sub, fontSize: 11 }}> · cố định</span>}</div>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{!isNoAB && <span style={{ color: c.nguoiChi === "A" ? C.blueAText : C.violetBText, fontWeight: 800 }}>[{c.nguoiChi}]</span>} {c.noiDung}{isNoAB && <span style={{ color: C.goldText, fontSize: 11, fontWeight: 700 }}> · NỢ {c.huong}</span>}{c.loai === "CO_DINH" && <span style={{ color: C.sub, fontSize: 11 }}> · cố định</span>}</div>
                 <Badge s={st} />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -478,10 +687,10 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5, color: C.sub }}>
                   <span style={{ minWidth: 52 }}>Đã trả</span>
                   <NumInput lazy value={c.daTra} onChange={(v) => set(c.id, { daTra: v })} w={120} disabled={locked} />
-                  {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.green, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
-                  {!locked && <button onClick={() => del(c.id)} style={{ color: C.coral, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
+                  {!locked && <button onClick={() => set(c.id, { daTra: e })} style={{ background: C.greenSoft, color: C.greenText, fontWeight: 700, fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer" }}>Trả đủ</button>}
+                  {!locked && <button onClick={() => del(c.id)} style={{ color: C.coralText, border: "none", background: "none", cursor: "pointer", marginLeft: "auto", padding: 4 }}><Icon name="trash" size={15} color={C.coral} /></button>}
                 </div>
-                {k > e && <div style={{ fontSize: 11.5, color: C.amber, background: C.amberSoft, borderRadius: 7, padding: "4px 8px", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="alertTriangle" size={12} color={C.amber} /> Đã trả nhiều hơn phải trả {fmt(k - e)} đ</div>}
+                {k > e && <div style={{ fontSize: 11.5, color: C.amberText, background: C.amberSoft, borderRadius: 7, padding: "4px 8px", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="alertTriangle" size={12} color={C.amber} /> Đã trả nhiều hơn phải trả {fmt(k - e)} đ</div>}
               </div>
             </div>
           );
@@ -489,25 +698,25 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         {!locked && (
           <div style={{ marginTop: 10, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-              <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : loai === "RUT_LOI" ? "Ghi chú (VD: rút đợt 1)" : loai === "HOAN_UNG" ? "Ghi chú (tuỳ chọn)" : "Khoản chi"} style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-              <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+              <input value={nd} onChange={(e) => setNd(e.target.value)} placeholder={loai === "TRA_NO" ? "Tên nợ (VD: Thực phẩm T4)" : loai === "RUT_LOI" ? "Ghi chú (VD: rút đợt 1)" : loai === "HOAN_UNG" ? "Ghi chú (tuỳ chọn)" : "Khoản chi"} style={{ flex: "2 1 150px", padding: "9px 10px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
+              <input type="number" value={so} onChange={(e) => setSo(e.target.value)} placeholder="Số tiền" style={{ flex: "1 1 90px", padding: "9px 10px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-              <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "RUT_LOI") setSo(String(goiYRut(ng))); }} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{GD_META[l]?.label || l}</option>)}</select>
+              <select value={loai} onChange={(e) => { setLoai(e.target.value); if (e.target.value === "RUT_LOI") setSo(String(goiYRut(ng))); }} style={{ padding: "8px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}>{LOAI_CHI.map((l) => <option key={l} value={l}>{GD_META[l]?.label || l}</option>)}</select>
               {(loai === "NO_AB" || loai === "CHUYEN" || loai === "HOAN_UNG")
-                ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}><option value="A->B">{loai === "HOAN_UNG" ? "Trả cho B" : "A → B"}</option><option value="B->A">{loai === "HOAN_UNG" ? "Trả cho A" : "B → A"}</option></select>
+                ? <select value={huong} onChange={(e) => setHuong(e.target.value)} style={{ padding: "8px 8px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 12.5, fontFamily: font.body, background: C.card }}><option value="A->B">{loai === "HOAN_UNG" ? "Trả cho B" : "A → B"}</option><option value="B->A">{loai === "HOAN_UNG" ? "Trả cho A" : "B → A"}</option></select>
                 : loai === "RUT_LOI"
                   ? (<><span style={{ fontSize: 11.5, color: C.sub, fontWeight: 600 }}>Lãi của</span><ABBtn val={ng} set={(v) => { setNg(v); setSo(String(goiYRut(v))); }} small /><span style={{ fontSize: 11.5, color: C.sub, fontWeight: 600 }}>Trừ quỹ</span><ABBtn val={truQuy} set={setTruQuy} small /></>)
                   : <ABBtn val={ng} set={setNg} small />}
-              <button onClick={() => { if (loai === "TRA_NO" && !nd.trim()) { toast("Nhập tên nợ cần trả"); return; } add(); }} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", marginLeft: "auto" }}>+ Thêm</button>
+              <button onClick={() => { if (loai === "TRA_NO" && !nd.trim()) { toast("Nhập tên nợ cần trả"); return; } add(); }} style={{ background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 13, padding: "9px 16px", borderRadius: 10, border: "none", cursor: "pointer", marginLeft: "auto" }}>+ Thêm</button>
             </div>
             {loai === "RUT_LOI" && (
-              <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}>💡 Lãi tháng này còn rút được — A: <b style={{ color: C.blueA }}>{fmt(goiYRut("A"))}</b> · B: <b style={{ color: C.violetB }}>{fmt(goiYRut("B"))}</b> (số đã điền sẵn, sửa được)</div>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 6 }}><Icon name="zap" size={12} color={C.sub} /> Lãi tháng này còn rút được — A: <b style={{ color: C.blueAText }}>{fmt(goiYRut("A"))}</b> · B: <b style={{ color: C.violetBText }}>{fmt(goiYRut("B"))}</b> (số đã điền sẵn, sửa được)</div>
             )}
           </div>
         )}
         {locked && <div style={{ fontSize: 12.5, color: C.sub, marginTop: 10, textAlign: "center", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}><Icon name="lock" size={13} color={C.sub} /> Tháng đã chốt — chỉ xem.</div>}
-        <button onClick={() => setSheetCP(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
+        <button onClick={() => setSheetCP(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Hoàn thành</button>
       </BottomSheet>
 
       <BottomSheet open={sheetLN} onClose={() => setSheetLN(false)} title={`Lợi nhuận & chia quỹ — T${month}/${year}`}>
@@ -517,8 +726,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
             <b style={{ fontFamily: font.display, fontSize: 17, color: C.ink }}>{fmt(tk.thu)} đ</b>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12.5 }}>
-            <span style={{ flex: 1 }}>A thu: <b style={{ color: C.blueA }}>{fmt(tk.A)}</b></span>
-            <span style={{ flex: 1 }}>B thu: <b style={{ color: C.violetB }}>{fmt(tk.B)}</b></span>
+            <span style={{ flex: 1 }}>A thu: <b style={{ color: C.blueAText }}>{fmt(tk.A)}</b></span>
+            <span style={{ flex: 1 }}>B thu: <b style={{ color: C.violetBText }}>{fmt(tk.B)}</b></span>
           </div>
         </div>
         <div style={{ background: C.graySoft, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
@@ -527,20 +736,20 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
             <b style={{ fontFamily: font.display, fontSize: 17, color: C.ink }}>{fmt(tongTra)} đ</b>
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 6, fontSize: 12.5 }}>
-            <span style={{ flex: 1 }}>A chi: <b style={{ color: C.blueA }}>{fmt(tk.traA)}</b></span>
-            <span style={{ flex: 1 }}>B chi: <b style={{ color: C.violetB }}>{fmt(tk.traB)}</b></span>
+            <span style={{ flex: 1 }}>A chi: <b style={{ color: C.blueAText }}>{fmt(tk.traA)}</b></span>
+            <span style={{ flex: 1 }}>B chi: <b style={{ color: C.violetBText }}>{fmt(tk.traB)}</b></span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>LN kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnKeToan < 0 ? C.coral : C.green }}>{fmt(lnKeToan)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Phải thu − Chi phí</div></div>
-          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.blueASoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.blueA, fontWeight: 600 }}>LN tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnTienMat < 0 ? C.coral : C.blueA }}>{fmt(lnTienMat)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Đã thu − Đã trả</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.greenSoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.greenText, fontWeight: 600 }}>LN kế toán</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnKeToan < 0 ? C.coralText : C.greenText }}>{fmt(lnKeToan)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Phải thu − Chi phí</div></div>
+          <div style={{ flex: 1, textAlign: "center", padding: "9px 4px", background: C.blueASoft, borderRadius: 10 }}><div style={{ fontSize: 11, color: C.blueAText, fontWeight: 600 }}>LN tiền mặt</div><div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: lnTienMat < 0 ? C.coralText : C.blueAText }}>{fmt(lnTienMat)}</div><div style={{ fontSize: 9.5, color: C.sub }}>Đã thu − Đã trả</div></div>
         </div>
 
         <div style={{...sheetTitle, display:"flex", alignItems:"center", gap:8}}><Icon name="pieChart" size={17} color={C.pine} /> Phân chia tài chính T{month}</div>
-        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 8 }}>Tổng LN kế toán toàn trường: <b style={{ color: lnKeToan < 0 ? C.coral : C.green, fontSize: 14 }}>{fmt(lnKeToan)} đ</b></div>
+        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 8 }}>Tổng LN kế toán toàn trường: <b style={{ color: lnKeToan < 0 ? C.coralText : C.greenText, fontSize: 14 }}>{fmt(lnKeToan)} đ</b></div>
         {!locked && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, background: C.goldSoft, borderRadius: 10, padding: "8px 10px" }}>
-            <span style={{ fontSize: 12, color: C.amber, fontWeight: 600 }}>Tỷ lệ chia</span>
+            <span style={{ fontSize: 12, color: C.amberText, fontWeight: 600 }}>Tỷ lệ chia</span>
             <button onClick={() => upMeta({ ...meta, tyLeLaiA: Math.max(0, tyLeA - 5) })} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 800, fontSize: 17, cursor: "pointer", lineHeight: 1 }}>−</button>
             <span style={{ minWidth: 92, textAlign: "center", fontSize: 13, fontWeight: 700 }}>A {tyLeA}% / B {100 - tyLeA}%</span>
             <button onClick={() => upMeta({ ...meta, tyLeLaiA: Math.min(100, tyLeA + 5) })} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 800, fontSize: 17, cursor: "pointer", lineHeight: 1 }}>+</button>
@@ -549,44 +758,44 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
         {!locked && (laiTay ? (
           <div style={{ marginBottom: 10, background: C.blueASoft, borderRadius: 10, padding: "9px 10px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: C.blueA, fontWeight: 700 }}>✎ Lãi nhập tay (tháng này)</span>
-              <button onClick={() => { const m2 = { ...mData }; delete m2.laiTay; upMData(m2); }} style={{ fontSize: 11, color: C.coral, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>↺ Tự động lại</button>
+              <span style={{ fontSize: 12, color: C.blueAText, fontWeight: 700 }}><Ii name="edit" size={13} /> Lãi nhập tay (tháng này)</span>
+              <button onClick={() => { const m2 = { ...mData }; delete m2.laiTay; upMData(m2); }} style={{ fontSize: 11, color: C.coralText, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>↺ Tự động lại</button>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.blueA, marginBottom: 2, fontWeight: 600 }}>Lãi A</div><BlurNum value={laiTay.A} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, A: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.violetB, marginBottom: 2, fontWeight: 600 }}>Lãi B</div><BlurNum value={laiTay.B} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, B: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.blueAText, marginBottom: 2, fontWeight: 600 }}>Lãi A</div><BlurNum value={laiTay.A} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, A: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 10.5, color: C.violetBText, marginBottom: 2, fontWeight: 600 }}>Lãi B</div><BlurNum value={laiTay.B} onCommit={(n) => upMData({ ...mData, laiTay: { ...laiTay, B: n ?? 0 } })} style={{ width: "100%", padding: "8px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, boxSizing: "border-box" }} /></div>
             </div>
             {(() => {
               const tong = (Number(laiTay.A) || 0) + (Number(laiTay.B) || 0);
               const lech = tong - lnKeToan;
-              if (lech === 0) return <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>Tỷ lệ % không áp dụng cho tháng này. Tổng A+B = LN kế toán ({fmt(lnKeToan)}) ✓</div>;
-              return <div style={{ fontSize: 11, color: C.coral, marginTop: 6, fontWeight: 600, background: C.coralSoft, borderRadius: 8, padding: "6px 9px" }}>⚠ A + B = {fmt(tong)}, {lech > 0 ? "CAO hơn" : "THẤP hơn"} LN kế toán ({fmt(lnKeToan)}) {lech > 0 ? "+" : ""}{fmt(lech)}đ. Kiểm tra lại để chia đúng.</div>;
+              if (lech === 0) return <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>Tỷ lệ % không áp dụng cho tháng này. Tổng A+B = LN kế toán ({fmt(lnKeToan)}) <Ii name="check" size={14} /></div>;
+              return <div style={{ fontSize: 11, color: C.coralText, marginTop: 6, fontWeight: 600, background: C.coralSoft, borderRadius: 8, padding: "6px 9px" }}><Ii name="alertTriangle" size={14} /> A + B = {fmt(tong)}, {lech > 0 ? "CAO hơn" : "THẤP hơn"} LN kế toán ({fmt(lnKeToan)}) {lech > 0 ? "+" : ""}{fmt(lech)}đ. Kiểm tra lại để chia đúng.</div>;
             })()}
           </div>
         ) : (
-          <button onClick={() => upMData({ ...mData, laiTay: { A: Math.round(lnKeToan * tyLeA / 100), B: lnKeToan - Math.round(lnKeToan * tyLeA / 100) } })} style={{ marginBottom: 10, fontSize: 12, color: C.blueA, background: C.blueASoft, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 600 }}>✎ Nhập tay lãi A/B tháng này</button>
+          <button onClick={() => upMData({ ...mData, laiTay: { A: Math.round(lnKeToan * tyLeA / 100), B: lnKeToan - Math.round(lnKeToan * tyLeA / 100) } })} style={{ marginBottom: 10, fontSize: 12, color: C.blueAText, background: C.blueASoft, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 600 }}><Ii name="edit" size={13} /> Nhập tay lãi A/B tháng này</button>
         ))}
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", marginBottom: 6 }}>
           <div style={{ display: "flex", background: C.graySoft, fontSize: 11.5, color: C.sub, fontWeight: 700, padding: "7px 10px" }}>
             <span style={{ flex: 1.5 }}>Nội dung</span>
-            <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Người A</span>
-            <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Người B</span>
+            <span style={{ flex: 1, textAlign: "right", color: C.blueAText }}>Người A</span>
+            <span style={{ flex: 1, textAlign: "right", color: C.violetBText }}>Người B</span>
           </div>
           <div style={{ display: "flex", fontSize: 12.5, padding: "8px 10px", borderTop: `1px solid ${C.line}` }}>
-            <span style={{ flex: 1.5, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={14} color={C.amber} /> Lãi được chia{laiTay ? <span style={{ fontSize: 10, color: C.blueA, fontWeight: 700 }}> ✎ tay</span> : null}</span>
-            <b style={{ flex: 1, textAlign: "right", color: C.blueA }}>{fmt(laiChiaA)}</b>
-            <b style={{ flex: 1, textAlign: "right", color: C.violetB }}>{fmt(laiChiaB)}</b>
+            <span style={{ flex: 1.5, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={14} color={C.amber} /> Lãi được chia{laiTay ? <span style={{ fontSize: 10, color: C.blueAText, fontWeight: 700 }}> <Ii name="edit" size={12} /> tay</span> : null}</span>
+            <b style={{ flex: 1, textAlign: "right", color: C.blueAText }}>{fmt(laiChiaA)}</b>
+            <b style={{ flex: 1, textAlign: "right", color: C.violetBText }}>{fmt(laiChiaB)}</b>
           </div>
           <div style={{ display: "flex", fontSize: 12.5, padding: "8px 10px", borderTop: `1px solid ${C.line}` }}>
             <div style={{ flex: 1.5 }}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="landmark" size={14} color={C.pine} /> Quỹ trường đang giữ</span><div style={{ fontSize: 10, color: C.sub }}>(lũy kế đến hết tháng)</div></div>
-            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuA ?? 0) < 0 ? C.coral : C.blueA }}>{luyKe ? fmt(luyKe.giuA) : "…"}</b><div style={{ fontSize: 10, color: giuThangA < 0 ? C.coral : C.sub }}>T{month}: {fmt(giuThangA)}</div></div>
-            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuB ?? 0) < 0 ? C.coral : C.violetB }}>{luyKe ? fmt(luyKe.giuB) : "…"}</b><div style={{ fontSize: 10, color: giuThangB < 0 ? C.coral : C.sub }}>T{month}: {fmt(giuThangB)}</div></div>
+            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuA ?? 0) < 0 ? C.coralText : C.blueAText }}>{luyKe ? fmt(luyKe.giuA) : "…"}</b><div style={{ fontSize: 10, color: giuThangA < 0 ? C.coralText : C.sub }}>T{month}: {fmt(giuThangA)}</div></div>
+            <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: (luyKe?.giuB ?? 0) < 0 ? C.coralText : C.violetBText }}>{luyKe ? fmt(luyKe.giuB) : "…"}</b><div style={{ fontSize: 10, color: giuThangB < 0 ? C.coralText : C.sub }}>T{month}: {fmt(giuThangB)}</div></div>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingTop: 2 }}><span style={{ color: C.sub }}>Tổng quỹ trường đang giữ</span><b style={{ color: tongTienMat < 0 ? C.coral : C.pine }}>{fmt(tongTienMat)} đ</b></div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingTop: 2 }}><span style={{ color: C.sub }}>Tổng quỹ trường đang giữ</span><b style={{ color: tongTienMat < 0 ? C.coralText : C.pine }}>{fmt(tongTienMat)} đ</b></div>
         <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Quỹ âm = A/B đang ứng tiền túi, trường nợ lại.</div>
         {luyKe && (guiQuyA < 0 || guiQuyB < 0) && (
-          <div style={{ marginTop: 6, fontSize: 12, color: C.coral, background: C.coralSoft, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 6, fontSize: 12, color: C.coralText, background: C.coralSoft, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <Icon name="alertTriangle" size={14} color={C.coral} />
             {guiQuyA < 0 && <span>Trường đang nợ <b>A</b> (ứng/chi hộ): <b>{fmt(-guiQuyA)}</b>đ</span>}
             {guiQuyA < 0 && guiQuyB < 0 && <span>·</span>}
@@ -604,8 +813,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden", marginTop: 4 }}>
                 <div style={{ display: "flex", background: C.graySoft, fontSize: 11.5, color: C.sub, fontWeight: 700, padding: "6px 10px" }}>
                   <span style={{ flex: 1.5 }}>Lũy kế từ đầu</span>
-                  <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Tiền A giữ</span>
-                  <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Tiền B giữ</span>
+                  <span style={{ flex: 1, textAlign: "right", color: C.blueAText }}>Tiền A giữ</span>
+                  <span style={{ flex: 1, textAlign: "right", color: C.violetBText }}>Tiền B giữ</span>
                 </div>
                 {brkRow("Số dư đầu kỳ", luyKe.brkA.open, luyKe.brkB.open, false)}
                 {brkRow("Thu (học phí + ngoài)", luyKe.brkA.thu, luyKe.brkB.thu, false)}
@@ -615,8 +824,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
                 {brkRow("Đã trả lãi (rút ra)", luyKe.brkA.rut, luyKe.brkB.rut, true, true)}
                 <div style={{ display: "flex", fontSize: 12.5, padding: "7px 10px", borderTop: `2px solid ${C.line}`, background: C.greenSoft, fontWeight: 800 }}>
                   <span style={{ flex: 1.5, color: C.ink }}>= Đang giữ</span>
-                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuA < 0 ? C.coral : C.blueA }}>{fmt(luyKe.giuA)}</span>
-                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuB < 0 ? C.coral : C.violetB }}>{fmt(luyKe.giuB)}</span>
+                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuA < 0 ? C.coralText : C.blueAText }}>{fmt(luyKe.giuA)}</span>
+                  <span style={{ flex: 1, textAlign: "right", color: luyKe.giuB < 0 ? C.coralText : C.violetBText }}>{fmt(luyKe.giuB)}</span>
                 </div>
               </div>
             )}
@@ -629,13 +838,13 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
             <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
               <div style={{ display: "flex", background: C.graySoft, fontSize: 11.5, color: C.sub, fontWeight: 700, padding: "7px 10px" }}>
                 <span style={{ flex: 1.5 }}>Nội dung</span>
-                <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Người A</span>
-                <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Người B</span>
+                <span style={{ flex: 1, textAlign: "right", color: C.blueAText }}>Người A</span>
+                <span style={{ flex: 1, textAlign: "right", color: C.violetBText }}>Người B</span>
               </div>
               <div style={{ display: "flex", fontSize: 12.5, padding: "7px 10px", borderTop: `1px solid ${C.line}` }}>
                 <span style={{ flex: 1.5, color: C.sub }}>Được chia</span>
-                <b style={{ flex: 1, textAlign: "right", color: C.blueA }}>{fmt(duocChiaA)}</b>
-                <b style={{ flex: 1, textAlign: "right", color: C.violetB }}>{fmt(duocChiaB)}</b>
+                <b style={{ flex: 1, textAlign: "right", color: C.blueAText }}>{fmt(duocChiaA)}</b>
+                <b style={{ flex: 1, textAlign: "right", color: C.violetBText }}>{fmt(duocChiaB)}</b>
               </div>
               <div style={{ display: "flex", fontSize: 12.5, padding: "7px 10px", borderTop: `1px solid ${C.line}` }}>
                 <span style={{ flex: 1.5, color: C.sub }}>Đã rút</span>
@@ -644,13 +853,13 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               </div>
               <div style={{ display: "flex", fontSize: 12.5, padding: "8px 10px", borderTop: `2px solid ${C.line}`, background: C.greenSoft, fontWeight: 800 }}>
                 <span style={{ flex: 1.5, color: C.ink }}>Còn được nhận</span>
-                <span style={{ flex: 1, textAlign: "right", color: conNhanA < 0 ? C.coral : C.blueA }}>{fmt(conNhanA)}</span>
-                <span style={{ flex: 1, textAlign: "right", color: conNhanB < 0 ? C.coral : C.violetB }}>{fmt(conNhanB)}</span>
+                <span style={{ flex: 1, textAlign: "right", color: conNhanA < 0 ? C.coralText : C.blueAText }}>{fmt(conNhanA)}</span>
+                <span style={{ flex: 1, textAlign: "right", color: conNhanB < 0 ? C.coralText : C.violetBText }}>{fmt(conNhanB)}</span>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8, background: C.pineSoft, borderRadius: 10, padding: "9px 12px" }}>
-              <span style={{ fontSize: 12.5, color: C.pine, fontWeight: 700 }}>💰 Tiền có thể chia ngay</span>
-              <b style={{ fontFamily: font.display, fontSize: 16, color: coTheChia < 0 ? C.coral : C.pine }}>{fmt(coTheChia)} đ</b>
+              <span style={{ fontSize: 12.5, color: C.pine, fontWeight: 700 }}><Icon name="coins" size={13} color={C.pine} /> Tiền có thể chia ngay</span>
+              <b style={{ fontFamily: font.display, fontSize: 16, color: coTheChia < 0 ? C.coralText : C.pine }}>{fmt(coTheChia)} đ</b>
             </div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>= Tiền mặt {fmt(tongTienMat)} − Nợ NCC {fmt(noNCCcum)}. <i>"Được chia" là lãi trên giấy (gồm cả tiền HS chưa thu); chỉ rút được tối đa bằng "có thể chia".</i></div>
           </>
@@ -667,7 +876,7 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               </div>
               {mData?.demThat != null && (() => {
                 const lech = (Number(mData.demThat) || 0) - tongTienMat;
-                return <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, paddingTop: 7, borderTop: `1px solid ${C.line}`, fontWeight: 800 }}><span style={{ color: C.ink }}>Lệch (thật − app)</span><b style={{ color: lech === 0 ? C.green : C.coral }}>{lech > 0 ? "+" : ""}{fmt(lech)} đ</b></div>;
+                return <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, paddingTop: 7, borderTop: `1px solid ${C.line}`, fontWeight: 800 }}><span style={{ color: C.ink }}>Lệch (thật − app)</span><b style={{ color: lech === 0 ? C.greenText : C.coralText }}>{lech > 0 ? "+" : ""}{fmt(lech)} đ</b></div>;
               })()}
             </div>
             {mData?.demThat != null && ((Number(mData.demThat) || 0) - tongTienMat !== 0) && (
@@ -678,12 +887,12 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
 
         {(tk.noAB_AtoB > 0 || tk.noAB_BtoA > 0) && (<>
           <div style={sheetTitle}>Nợ nội bộ A ↔ B</div>
-          {noAB > 0 && <div style={{ fontSize: 13.5 }}>A đang nợ B: <b style={{ color: C.gold }}>{fmt(noAB)} đ</b></div>}
-          {noAB < 0 && <div style={{ fontSize: 13.5 }}>B đang nợ A: <b style={{ color: C.gold }}>{fmt(-noAB)} đ</b></div>}
-          {noAB === 0 && <div style={{ fontSize: 13.5, color: C.green }}>Đã cấn trừ xong.</div>}
+          {noAB > 0 && <div style={{ fontSize: 13.5 }}>A đang nợ B: <b style={{ color: C.goldText }}>{fmt(noAB)} đ</b></div>}
+          {noAB < 0 && <div style={{ fontSize: 13.5 }}>B đang nợ A: <b style={{ color: C.goldText }}>{fmt(-noAB)} đ</b></div>}
+          {noAB === 0 && <div style={{ fontSize: 13.5, color: C.greenText }}>Đã cấn trừ xong.</div>}
         </>)}
 
-        <button onClick={() => setSheetLN(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
+        <button onClick={() => setSheetLN(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Hoàn thành</button>
       </BottomSheet>
 
       <BottomSheet open={sheetLS} onClose={() => setSheetLS(false)} title="Lịch sử các tháng trước">
@@ -695,8 +904,8 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
           const rowLine = { display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "1px 0" };
           const sub2 = (la, va, lb, vb) => (
             <div style={{ display: "flex", gap: 10, marginTop: 3, fontSize: 12 }}>
-              <span style={{ flex: 1, color: C.sub }}>{la} <b style={{ color: C.blueA }}>{fmt(va)}</b></span>
-              <span style={{ flex: 1, color: C.sub }}>{lb} <b style={{ color: C.violetB }}>{fmt(vb)}</b></span>
+              <span style={{ flex: 1, color: C.sub }}>{la} <b style={{ color: C.blueAText }}>{fmt(va)}</b></span>
+              <span style={{ flex: 1, color: C.sub }}>{lb} <b style={{ color: C.violetBText }}>{fmt(vb)}</b></span>
             </div>
           );
           return (
@@ -711,35 +920,35 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
                   {sub2("A thu:", r.thuA, "B thu:", r.thuB)}
                   {(r.tnPhai > 0 || r.tnThu > 0) && (
                     <div style={{ ...rowLine, marginTop: 3, fontSize: 11.5 }}>
-                      <span style={{ color: C.sub, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="droplet" size={12} color={C.blueA} /> trong đó thu ngoài (KV4)</span>
-                      <span style={{ color: C.sub }}>thu <b style={{ color: C.ink }}>{fmt(r.tnThu)}</b>{r.tnPhai - r.tnThu > 0 ? <b style={{ color: C.coral }}> · nợ {fmt(r.tnPhai - r.tnThu)}</b> : null}</span>
+                      <span style={{ color: C.sub, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="droplet" size={12} color={C.blueA} /> trong đó thu ngoài</span>
+                      <span style={{ color: C.sub }}>thu <b style={{ color: C.ink }}>{fmt(r.tnThu)}</b>{r.tnPhai - r.tnThu > 0 ? <b style={{ color: C.coralText }}> · nợ {fmt(r.tnPhai - r.tnThu)}</b> : null}</span>
                     </div>
                   )}
                   <div style={{ ...rowLine, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}><span style={{ color: C.sub, fontWeight: 600 }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="banknote" size={13} color={C.coral} /> Chi phí xử lý (đã chi)</span></span><b style={{ color: C.ink }}>{fmt(r.traThang)} đ</b></div>
                   {sub2("A chi:", r.traA, "B chi:", r.traB)}
                   {(r.noNCCThang !== 0 || r.noNCC > 0) && (
                     <div style={{ ...rowLine, marginTop: 3, fontSize: 11.5 }}>
-                      <span style={{ color: C.amber, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="building" size={13} color="#9A6B00" /> Nợ NCC (trường nợ)</span>
-                      <span style={{ color: C.amber }}>{r.noNCCThang !== 0 ? `T${r.mm}: ${r.noNCCThang > 0 ? "+" : ""}${fmt(r.noNCCThang)} · ` : ""}dồn <b>{fmt(r.noNCC)}</b></span>
+                      <span style={{ color: C.amberText, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="building" size={13} color={C.amberText} /> Nợ NCC (trường nợ)</span>
+                      <span style={{ color: C.amberText }}>{r.noNCCThang !== 0 ? `T${r.mm}: ${r.noNCCThang > 0 ? "+" : ""}${fmt(r.noNCCThang)} · ` : ""}dồn <b>{fmt(r.noNCC)}</b></span>
                     </div>
                   )}
                   <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.line}` }}>
-                    <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginBottom: 6, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="pieChart" size={13} color={C.sub} /> Phân chia tài chính · LN kế toán: <b style={{ color: r.laiKeToan < 0 ? C.coral : C.green }}>{fmt(r.laiKeToan)} đ</b></div>
-                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 9, overflow: "hidden" }}>
+                    <div style={{ fontSize: 12.5, color: C.sub, fontWeight: 600, marginBottom: 6, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="pieChart" size={13} color={C.sub} /> Phân chia tài chính · LN kế toán: <b style={{ color: r.laiKeToan < 0 ? C.coralText : C.greenText }}>{fmt(r.laiKeToan)} đ</b></div>
+                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
                       <div style={{ display: "flex", background: C.graySoft, fontSize: 11, color: C.sub, fontWeight: 700, padding: "5px 9px" }}>
                         <span style={{ flex: 1.5 }}>Nội dung</span>
-                        <span style={{ flex: 1, textAlign: "right", color: C.blueA }}>Người A</span>
-                        <span style={{ flex: 1, textAlign: "right", color: C.violetB }}>Người B</span>
+                        <span style={{ flex: 1, textAlign: "right", color: C.blueAText }}>Người A</span>
+                        <span style={{ flex: 1, textAlign: "right", color: C.violetBText }}>Người B</span>
                       </div>
                       <div style={{ display: "flex", fontSize: 12, padding: "6px 9px", borderTop: `1px solid ${C.line}` }}>
-                        <span style={{ flex: 1.5, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={14} color={C.amber} /> Lãi chia {r.laiTay ? <span style={{ fontSize: 10, color: C.blueA, fontWeight: 700 }}>✎ tay</span> : `(${tyLeA}/${100 - tyLeA})`}</span>
-                        <b style={{ flex: 1, textAlign: "right", color: C.blueA }}>{fmt(aKT)}</b>
-                        <b style={{ flex: 1, textAlign: "right", color: C.violetB }}>{fmt(bKT)}</b>
+                        <span style={{ flex: 1.5, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="coins" size={14} color={C.amber} /> Lãi chia {r.laiTay ? <span style={{ fontSize: 10, color: C.blueAText, fontWeight: 700 }}><Ii name="edit" size={13} /> tay</span> : `(${tyLeA}/${100 - tyLeA})`}</span>
+                        <b style={{ flex: 1, textAlign: "right", color: C.blueAText }}>{fmt(aKT)}</b>
+                        <b style={{ flex: 1, textAlign: "right", color: C.violetBText }}>{fmt(bKT)}</b>
                       </div>
                       <div style={{ display: "flex", fontSize: 12, padding: "6px 9px", borderTop: `1px solid ${C.line}` }}>
                         <div style={{ flex: 1.5 }}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Icon name="landmark" size={14} color={C.pine} /> Quỹ trường giữ</span><div style={{ fontSize: 9.5, color: C.sub }}>(lũy kế)</div></div>
-                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuACum < 0 ? C.coral : C.blueA }}>{fmt(r.giuACum)}</b><div style={{ fontSize: 9.5, color: r.deltaA < 0 ? C.coral : C.sub }}>T{r.mm}: {fmt(r.deltaA)}</div></div>
-                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuBCum < 0 ? C.coral : C.violetB }}>{fmt(r.giuBCum)}</b><div style={{ fontSize: 9.5, color: r.deltaB < 0 ? C.coral : C.sub }}>T{r.mm}: {fmt(r.deltaB)}</div></div>
+                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuACum < 0 ? C.coralText : C.blueAText }}>{fmt(r.giuACum)}</b><div style={{ fontSize: 9.5, color: r.deltaA < 0 ? C.coralText : C.sub }}>T{r.mm}: {fmt(r.deltaA)}</div></div>
+                        <div style={{ flex: 1, textAlign: "right" }}><b style={{ color: r.giuBCum < 0 ? C.coralText : C.violetBText }}>{fmt(r.giuBCum)}</b><div style={{ fontSize: 9.5, color: r.deltaB < 0 ? C.coralText : C.sub }}>T{r.mm}: {fmt(r.deltaB)}</div></div>
                       </div>
                     </div>
                   </div>
@@ -748,15 +957,15 @@ export function DashTab({ tk, mData, upMData, month, year, locked, meta, allRows
               );
             })}
             <div style={{ background: C.goldSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 4 }}>
-              <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 13.5, color: C.amber, marginBottom: 4 }}>Σ Cộng tất cả các tháng</div>
-              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN kế toán</span><b style={{ color: tongLKT < 0 ? C.coral : C.green }}>{fmt(tongLKT)} đ</b></div>
-              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN tiền mặt</span><b style={{ color: tongLTM < 0 ? C.coral : C.blueA }}>{fmt(tongLTM)} đ</b></div>
-              <div style={rowLine}><span style={{ color: C.sub }}>Chia lãi · A {tyLeA}% / B {100 - tyLeA}%</span><b><span style={{ color: C.blueA }}>{fmt(splitA(tongLKT))}</span> / <span style={{ color: C.violetB }}>{fmt(tongLKT - splitA(tongLKT))}</span></b></div>
+              <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 13.5, color: C.amberText, marginBottom: 4 }}>Σ Cộng tất cả các tháng</div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN kế toán</span><b style={{ color: tongLKT < 0 ? C.coralText : C.greenText }}>{fmt(tongLKT)} đ</b></div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Tổng LN tiền mặt</span><b style={{ color: tongLTM < 0 ? C.coralText : C.blueAText }}>{fmt(tongLTM)} đ</b></div>
+              <div style={rowLine}><span style={{ color: C.sub }}>Chia lãi · A {tyLeA}% / B {100 - tyLeA}%</span><b><span style={{ color: C.blueAText }}>{fmt(splitA(tongLKT))}</span> / <span style={{ color: C.violetBText }}>{fmt(tongLKT - splitA(tongLKT))}</span></b></div>
             </div>
           </div>
           );
         })()}
-        <button onClick={() => setSheetLS(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Hoàn thành</button>
+        <button onClick={() => setSheetLS(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Hoàn thành</button>
       </BottomSheet>
 
       <SoGiaoDichSheet open={sheetGD} onClose={() => setSheetGD(false)} ym={ym} students={students} />

@@ -4,7 +4,7 @@ import { C } from "./lib.js";
 export function Cloud({ w = 90, style }) {
   return (
     <svg width={w} height={w * 0.42} viewBox="0 0 100 42" fill="none" style={style}>
-      <g fill="#FFFFFF">
+      <g fill="var(--c-cloud, #FFFFFF)">
         <ellipse cx="30" cy="28" rx="22" ry="14" />
         <ellipse cx="52" cy="22" rx="20" ry="16" />
         <ellipse cx="72" cy="29" rx="18" ry="12" />
@@ -39,8 +39,8 @@ export function Sun({ w = 76, style }) {
 export function Grass({ h = 70, style }) {
   return (
     <svg width="100%" height={h} viewBox="0 0 400 70" preserveAspectRatio="none" style={style}>
-      <path d="M0 30 Q100 0 200 14 T400 24 L400 70 L0 70 Z" fill="#CDEBD3" />
-      <path d="M0 44 Q120 22 220 34 T400 40 L400 70 L0 70 Z" fill="#B5DFC0" />
+      <path d="M0 30 Q100 0 200 14 T400 24 L400 70 L0 70 Z" fill="var(--c-grassA, #CDEBD3)" />
+      <path d="M0 44 Q120 22 220 34 T400 40 L400 70 L0 70 Z" fill="var(--c-grassB, #B5DFC0)" />
     </svg>
   );
 }

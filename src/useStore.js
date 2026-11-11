@@ -1,9 +1,11 @@
+import { lopTai } from "./giaLop.js";
+import { dongBoPhuThuLop, phuThuLopMoi } from "./khoanThem.js";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ymKey, stripYm, uid, noDau,
   sGetSafe, sGetSafeCached, cachePut, sSet, sListSafe, sDel, queueWrite, MEM, CHOT_MEM, saveChotMem,
   SB, TT_THU_PHI, KHOAN, SEED_META,
-  defaultKhoan, seedThangData, lopOfMonth,
+  defaultKhoan, seedThangData, lopOfMonth, thuTuGoc,
   soBuoiT7Auto, soNgayHoc, ngayNhapHocTrongThang, tinhPSFromRec,
   trangThaiThu, ask, toast, logAction, hadKey, getSbEmail, sbRpc, snapshotTruoc, docSnapshot
 } from "./lib.js";
@@ -149,7 +151,7 @@ export function useStore() {
     const fees = { ...mData.fees };
     students.forEach((hs) => {
       if (!TT_THU_PHI[hs.trangThai]) return;
-      const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, ym)); if (!lop) return;
+      const lop = lopTai(meta.classes.find((c) => c.id === lopOfMonth(hs, ym)), ym); if (!lop) return;
       if (!fees[hs.id]) {
         const ngayAn = soNgayHoc(year, month, leData);
         const rec = { ngayAn, buoiT7: 0, thucThu: 0, khoan: {}, khoanDefault: {}, phuThu: [] };
@@ -165,6 +167,12 @@ export function useStore() {
           if (want !== od) { nd[k.key] = want; if (ov === od || isKhongThu) nk[k.key] = want; rc = true; }
         });
         if (rc) { fees[hs.id] = { ...cur, khoan: nk, khoanDefault: nd }; changed = true; }
+      }
+      // Khoản thu thêm theo lớp (cùng quy tắc: chỉ tháng CHƯA chốt; không áp cho con GV — miễn phí; HS Chỉ thứ 7 vẫn chịu phụ thu như cách tính cũ)
+      if (hs.pl !== "GV") {
+        const r0 = fees[hs.id];
+        const d = dongBoPhuThuLop(r0, lop, ym, () => uid());
+        if (d.changed) { fees[hs.id] = { ...r0, phuThu: d.phuThu }; changed = true; }
       }
     });
     if (changed) setMData((m) => { const ndata = { ...m, fees }; flush(`mn5:thang:${ym}`, stripYm(ndata)); return ndata; });
@@ -182,7 +190,7 @@ export function useStore() {
       const nhap = ngayNhapHocTrongThang(hs, year, month);
       const snh = nhap <= 26 ? soNgayHoc(year, month, leData, nhap) : 0;
       if (cur.ngayAn === snh) return;
-      const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, ym));
+      const lop = lopTai(meta.classes.find((c) => c.id === lopOfMonth(hs, ym)), ym);
       const isKhongThu = lop?.lapLai?.tienAn === "khong";
       const newDef = isKhongThu ? 0 : snh * (lop?.tienAn || 0);
       const giuSuaTayTienAn = cur.khoan.tienAn !== cur.khoanDefault.tienAn;
@@ -239,6 +247,7 @@ export function useStore() {
   const upLeData = (d) => { setLeData(d); flush(`mn5:le:${ym}`, d); };
 
   const getLop = (id) => meta?.classes.find((c) => c.id === id);
+  const getLopTai = (id, y = ym) => lopTai(getLop(id), y); // lớp với giá hiệu lực ở tháng y
   const locked = mData?.daChot;
 
   const taoThang = async () => {
@@ -259,7 +268,7 @@ export function useStore() {
     data.fees = {};
     students.forEach((hs) => {
       if (!TT_THU_PHI[hs.trangThai]) return;
-      const lop = getLop(lopOfMonth(hs, ym));
+      const lop = getLopTai(lopOfMonth(hs, ym));
       const nhap = ngayNhapHocTrongThang(hs, year, month);
       const ngayAn = nhap <= 26 ? soNgayHoc(year, month, leData, nhap) : 0;
       const rec = { ngayAn, buoiT7: hs.pl === "T7" ? 4 : 0, thucThu: 0, khoan: {}, khoanDefault: {}, phuThu: [] };
@@ -268,11 +277,15 @@ export function useStore() {
         rec.khoan[k.key] = d; rec.khoanDefault[k.key] = d;
       });
       const prevRec = prev?.fees?.[hs.id];
-      if (prevRec?.phuThu) rec.phuThu = prevRec.phuThu.filter((p) => p.coDinh).map((p) => ({ ...p, id: uid() }));
+      if (prevRec?.phuThu) rec.phuThu = prevRec.phuThu.filter((p) => p.coDinh && !p.lopKhoan).map((p) => ({ ...p, id: uid() }));
+      if (hs.pl !== "GV") rec.phuThu = [...rec.phuThu, ...phuThuLopMoi(lop, ym, () => uid())];
       data.fees[hs.id] = rec;
     });
     if (prev?.chiPhi?.length) {
       data.chiPhi = prev.chiPhi.filter((c) => c.loai === "CO_DINH").map((c) => ({ id: uid(), noiDung: c.noiDung, soTien: c.soTien, nguoiChi: c.nguoiChi, loai: "CO_DINH", daTra: 0 }));
+    }
+    if (prev?.luong) { // chép lương cơ bản + phụ cấp sang tháng mới (khấu trừ và trạng thái chi về 0)
+      data.luong = Object.fromEntries(Object.entries(prev.luong).map(([id, v]) => [id, { cb: v.cb || 0, pc: v.pc || 0, kt: 0, paid: false }]));
     }
     if (prev?.thuNgoai?.length) {
       data.thuNgoai = prev.thuNgoai.filter((k) => k.coDinh).map((k) => ({ id: uid(), ten: k.ten, soTien: k.soTien, thucThu: 0, nguoiThu: k.nguoiThu || "A", coDinh: true }));
@@ -297,13 +310,20 @@ export function useStore() {
     }
   };
 
+  // Lịch sử từng lần thu: chỉ THÊM trường rec.lichSu (mảng [{ts, truoc, sau}]); dữ liệu cũ không có trường này vẫn chạy bình thường.
+  const voiLichSu = (cur, sau) => {
+    const truoc = Number(cur?.thucThu) || 0, s2 = Number(sau) || 0;
+    if (truoc === s2) return cur?.lichSu;
+    return [...(cur?.lichSu || []), { ts: Date.now(), truoc, sau: s2 }].slice(-40);
+  };
   const setRec = (sid, patch) => {
     if (locked) return;
     const cur = mData.fees[sid];
+    if (patch.thucThu !== undefined) patch = { ...patch, lichSu: voiLichSu(cur, patch.thucThu) };
     let next = { ...cur, ...patch };
     if (patch.ngayAnManual === false) { patch = { ...patch, ngayAn: soNgayHoc(year, month, leData) }; next = { ...cur, ...patch }; }
     if (patch.ngayAn != null) {
-      const lop = getLop(lopOfMonth(students.find((s) => s.id === sid), ym));
+      const lop = getLopTai(lopOfMonth(students.find((s) => s.id === sid), ym));
       const newDef = (patch.ngayAn || 0) * (lop?.tienAn || 0);
       next.khoanDefault = { ...next.khoanDefault, tienAn: newDef };
       if (cur.khoan.tienAn === cur.khoanDefault.tienAn) next.khoan = { ...next.khoan, tienAn: newDef };
@@ -314,7 +334,7 @@ export function useStore() {
   const thuDuNhieu = (pairs) => {
     if (locked) return;
     const fees = { ...mData.fees };
-    pairs.forEach(({ sid, thucThu }) => { if (fees[sid]) fees[sid] = { ...fees[sid], thucThu }; });
+    pairs.forEach(({ sid, thucThu }) => { if (fees[sid]) fees[sid] = { ...fees[sid], thucThu, lichSu: voiLichSu(fees[sid], thucThu) }; });
     upMData({ ...mData, fees });
     if (pairs.length > 1) logAction(`Thu đủ hàng loạt ${pairs.length} HS (T${month}/${year})`);
   };
@@ -345,7 +365,7 @@ export function useStore() {
     const ids = onlyIds && onlyIds.length ? onlyIds.filter((id) => fees[id]) : Object.keys(fees);
     ids.forEach((sid) => {
       const cur = fees[sid];
-      const lop = getLop(lopOfMonth(students.find((s) => s.id === sid), ym));
+      const lop = getLopTai(lopOfMonth(students.find((s) => s.id === sid), ym));
       const newDef = (val || 0) * (lop?.tienAn || 0);
       const giuSuaTay = cur.khoan.tienAn !== cur.khoanDefault.tienAn;
       fees[sid] = { ...cur, ngayAn: val, ngayAnManual: true, khoanDefault: { ...cur.khoanDefault, tienAn: newDef }, khoan: { ...cur.khoan, tienAn: giuSuaTay ? cur.khoan.tienAn : newDef } };
@@ -366,16 +386,16 @@ export function useStore() {
     if (locked) return;
     const cur = mData.fees[sid];
     const pt = (cur.phuThu || []).find((p) => p.id === pid);
-    upMData({ ...mData, fees: { ...mData.fees, [sid]: { ...cur, phuThu: (cur.phuThu || []).filter((p) => p.id !== pid) } } });
+    upMData({ ...mData, fees: { ...mData.fees, [sid]: { ...cur, phuThu: (cur.phuThu || []).filter((p) => p.id !== pid), ...(pt?.lopKhoan ? { boKhoanLop: [...(cur.boKhoanLop || []), pt.lopKhoan] } : {}) } } });
     logAction(`Xóa khoản riêng "${pt?.ten || "?"}" của HS "${hsTen(sid)}" (T${ym})`);
   };
 
   const allRows = useMemo(() => {
     if (!mData || !students) return [];
-    return students.map((hs) => {
+    return thuTuGoc(students, meta?.classes, ym).map((hs) => {
       let rec = mData.fees?.[hs.id];
       const lopId = lopOfMonth(hs, ym);
-      const lop = getLop(lopId);
+      const lop = getLopTai(lopId);
       const nghi = Object.keys(ddPrev?.[hs.id] || {}).length;
       if (rec && hs.pl === "T7" && !rec.buoiT7Manual) {
         const auto = soBuoiT7Auto(year, month, ddData?.[hs.id]);

@@ -19,7 +19,8 @@ export function MoreMenu({ setTab, onLogout, students = [], meta = {} }) {
     {
       title: "Quản lý & Cài đặt",
       items: [
-        { icon: "settings", label: "Cài đặt hệ thống (Lớp, HS, Đơn giá...)", action: () => setTab("caidat") },
+        { icon: "building", label: "Lớp học (tên lớp, bảng giá)", action: () => setTab("lop") },
+        { icon: "settings", label: "Cài đặt hệ thống (Giáo viên, Đơn giá...)", action: () => setTab("caidat") },
       ]
     },
     {
@@ -48,7 +49,7 @@ export function MoreMenu({ setTab, onLogout, students = [], meta = {} }) {
             >
               <Icon name={item.icon} size={19} color={C.pine} />
               <span style={{ flex: 1 }}>{item.label}</span>
-              <span style={{ color: C.gray }}>›</span>
+              <span style={{ color: C.grayText }}>›</span>
             </button>
           ))}
         </div>
@@ -64,7 +65,7 @@ export function MoreMenu({ setTab, onLogout, students = [], meta = {} }) {
           <div style={{ height: 1, background: C.line }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0" }}>
             <Icon name="download" size={18} color={backup ? C.pine : C.amber} />
-            <span style={{ fontSize: 13, color: C.sub }}>Sao lưu gần nhất: <b style={{ color: backup ? C.ink : C.amber }}>{backup || "chưa sao lưu lần nào"}</b></span>
+            <span style={{ fontSize: 13, color: C.sub }}>Sao lưu gần nhất: <b style={{ color: backup ? C.ink : C.amberText }}>{backup || "chưa sao lưu lần nào"}</b></span>
           </div>
         </div>
         <div style={{ textAlign: "center", fontSize: 11, color: C.sub, marginTop: 12 }}>Mầm Non Tuổi Thần Tiên</div>

@@ -1,4 +1,6 @@
 import { C, font, fmt } from "../lib.js";
+import { Ii } from "../Icon.jsx";
+import { ClassAnimal } from "../Brand.jsx";
 
 export function ClassList({ meta, rows, selectedLop, onSelectLop }) {
   const lopMap = {};
@@ -14,12 +16,11 @@ export function ClassList({ meta, rows, selectedLop, onSelectLop }) {
   });
 
   const items = Object.values(lopMap).filter((l) => l.totalHS > 0);
-  const icons = ["🐿", "🌱", "🍃", "🌸", "🌳", "🌻", "🍄", "🦋"];
 
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 13.5, color: C.ink, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 15 }}>📋</span> DANH SÁCH LỚP
+        <Ii name="clipboard" size={15} /> DANH SÁCH LỚP
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {items.map((l, i) => {
@@ -37,7 +38,7 @@ export function ClassList({ meta, rows, selectedLop, onSelectLop }) {
                 transition: "all .15s ease"
               }}
             >
-              <span style={{ fontSize: 22, flexShrink: 0 }}>{icons[i % icons.length]}</span>
+              <ClassAnimal name={l.ten} index={i} size={30} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: 13.5, color: C.ink }}>{l.ten}</span>
@@ -47,11 +48,11 @@ export function ClassList({ meta, rows, selectedLop, onSelectLop }) {
                   <div style={{ width: pct + "%", height: "100%", background: pct >= 80 ? C.green : pct >= 50 ? C.amber : C.coral, borderRadius: 99, transition: "width .3s" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 11.5 }}>
-                  <span style={{ color: l.conNo > 0 ? C.coral : C.green, fontWeight: 600 }}>{l.conNo} còn nợ</span>
+                  <span style={{ color: l.conNo > 0 ? C.coralText : C.greenText, fontWeight: 600 }}>{l.conNo} còn nợ</span>
                   <span style={{ color: C.sub }}>{l.daThu} đã thu</span>
                 </div>
               </div>
-              <span style={{ fontSize: 14, color: C.sub, flexShrink: 0, marginLeft: 4 }}>❯</span>
+              <span style={{ fontSize: 14, color: C.sub, flexShrink: 0, marginLeft: 4 }}><Ii name="chevronRight" size={14} /></span>
             </button>
           );
         })}

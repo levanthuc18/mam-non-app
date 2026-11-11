@@ -36,8 +36,8 @@ export function SbAuth({ onDone }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (vd: mamnon@gmail.com)" style={inp} />
           <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === "Enter" && login()} placeholder="Mật khẩu" style={inp} />
-          {err && <div style={{ fontSize: 12.5, color: C.coral, fontWeight: 600, padding: "2px 2px" }}>{err}</div>}
-          <button onClick={login} disabled={busy} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: busy ? C.gray : C.pine, color: "#fff", fontWeight: 800, fontSize: 15.5, fontFamily: font.display, cursor: busy ? "default" : "pointer", marginTop: 4, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>
+          {err && <div style={{ fontSize: 12.5, color: C.coralText, fontWeight: 600, padding: "2px 2px" }}>{err}</div>}
+          <button onClick={login} disabled={busy} style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: busy ? C.gray : C.pine, color: C.onFill, fontWeight: 800, fontSize: 15.5, fontFamily: font.display, cursor: busy ? "default" : "pointer", marginTop: 4, boxShadow: "0 4px 14px rgba(13,111,168,0.28)" }}>
             {busy ? "Đang đăng nhập…" : "Đăng nhập"}
           </button>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Ii } from "../Icon.jsx";
 import { C, font, capSoBienLai, toast } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
@@ -79,7 +80,7 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
         }
       `}</style>
 
-      <div className="no-print" style={{ position: "sticky", top: 0, background: "#fff", padding: "12px 0", borderBottom: `1px solid ${C.line}`, zIndex: 10 }}>
+      <div className="no-print" style={{ position: "sticky", top: 0, background: C.card, padding: "12px 0", borderBottom: `1px solid ${C.line}`, zIndex: 10 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <select 
             value={selectedLop} 
@@ -105,16 +106,16 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
               borderRadius: 8, 
               border: "none", 
               background: rowsToPrint.length === 0 ? C.graySoft : C.pine, 
-              color: rowsToPrint.length === 0 ? C.gray : "#fff", 
+              color: rowsToPrint.length === 0 ? C.grayText : C.onFill, 
               fontWeight: 700, 
               cursor: rowsToPrint.length === 0 ? "not-allowed" : "pointer" 
             }}
           >
-            🖨 In {rowsToPrint.length} phiếu
+            <Ii name="printer" size={16} /> In {rowsToPrint.length} phiếu
           </button>
           <button 
             onClick={onClose} 
-            style={{ padding: "10px 16px", borderRadius: 8, border: `1px solid ${C.line}`, background: "#fff", color: C.ink, fontWeight: 700, cursor: "pointer" }}
+            style={{ padding: "10px 16px", borderRadius: 8, border: `1px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, cursor: "pointer" }}
           >
             Đóng
           </button>
@@ -123,9 +124,9 @@ export function BatchPrint({ allRows, meta, month, year, mData, upMData, upMeta,
         {/* Hiển thị số lượng */}
         <div style={{ marginTop: 8, fontSize: 12, color: C.sub }}>
           {rowsToPrint.length === 0 ? (
-            <span style={{ color: C.coral }}>⚠️ Không có học sinh nào trong lớp này</span>
+            <span style={{ color: C.coralText }}><Ii name="alertTriangle" size={14} /> Không có học sinh nào trong lớp này</span>
           ) : (
-            <span>✓ {rowsToPrint.length} học sinh sẵn sàng in</span>
+            <span><Ii name="check" size={14} /> {rowsToPrint.length} học sinh sẵn sàng in</span>
           )}
         </div>
       </div>

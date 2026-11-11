@@ -8,6 +8,7 @@
 //    2. Thêm nhánh xử lý trong duyetChiPhi() bên dưới
 //    → KHÔNG cần sửa useStore / TongQuan / CongNo.
 // =============================================================
+import { lopTai } from "./giaLop.js";
 import { lopOfMonth, tinhPSFromRec, soBuoiT7Auto, ymKey } from "./lib.js";
 
 // ---- Metadata từng loại giao dịch (nhãn hiển thị + cờ) ----
@@ -101,7 +102,7 @@ export function tinhThangFull(td, m, students, meta, ddPrevM, tyA0) {
     const hs = students.find((s) => s.id === sid); if (!hs) return;
     const tt = Number(rec.thucThu) || 0;
     if (hs.nguoiThu === "A") thuA += tt; else if (hs.nguoiThu === "B") thuB += tt;
-    const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
+    const lop = lopTai(meta.classes.find((c) => c.id === lopOfMonth(hs, m)), m);
     const nghi = Object.keys(ddPrevM[sid] || {}).length;
     const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;
     if (hs.nguoiThu === "A") psA += ps; else if (hs.nguoiThu === "B") psB += ps;
@@ -248,7 +249,7 @@ export function tinhNoLuyKe({ months, datas, dds, ddExtra = {}, students, meta, 
       const hs = (students || []).find((s) => s.id === sid); if (!hs) return;
       ensure(sid, hs);
       let rec = td.fees[sid];
-      const lop = meta.classes.find((c) => c.id === lopOfMonth(hs, m));
+      const lop = lopTai(meta.classes.find((c) => c.id === lopOfMonth(hs, m)), m);
       const nghi = Object.keys(ddPrevM[sid] || {}).length;
       if (hs.pl === "T7" && !rec.buoiT7Manual) rec = { ...rec, buoiT7: soBuoiT7Auto(y, mo, ddM[sid]) };
       const ps = tinhPSFromRec(hs, rec, lop, nghi).tong;

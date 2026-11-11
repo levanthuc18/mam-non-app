@@ -27,7 +27,8 @@ export function PhieuThu({
   upMeta = null,
   mData = null,
   upMData = null,
-  isBatch = false
+  isBatch = false,
+  hideNutIn = false
 }) {
   const nguoiThu = phieuRow.hs.nguoiThu;
   const bienLai = phieuRow.rec.bienLai || null;
@@ -70,7 +71,7 @@ export function PhieuThu({
             html, body { margin: 0 !important; padding: 0 !important; }
             body * { visibility: hidden !important; }
             #phieu-in, #phieu-in * { visibility: visible !important; }
-            #phieu-in { position: absolute !important; left: 0 !important; top: 0 !important; margin: 0 !important; box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 205mm !important; height: auto !important; padding: 5mm 6mm !important; box-sizing: border-box !important; break-inside: avoid !important; page-break-inside: avoid !important; zoom: .9; }
+            #phieu-in { position: fixed !important; left: 0 !important; top: 0 !important; margin: 0 !important; box-shadow: none !important; background: #fff !important; max-width: none !important; width: 100% !important; aspect-ratio: auto !important; min-height: 0 !important; height: calc(210mm / .9) !important; padding: 5mm 6mm !important; box-sizing: border-box !important; break-inside: avoid !important; page-break-inside: avoid !important; zoom: .9; }
             .no-print { display: none !important; }
           }
         `}</style>
@@ -114,11 +115,11 @@ export function PhieuThu({
             {phieuRow.ps.dong.map(([l, v], i) => (
               <div key={i} style={{ ...amtRow, padding: `${rowPad}px 0`, borderBottom: `1px dotted ${C.line}`, fontSize: rowFont }}>
                 <span>{l}</span>
-                <span style={{ color: v < 0 ? C.coral : C.ink }}>{v < 0 ? "−" + fmt(-v) : fmt(v)} đ</span>
+                <span style={{ color: v < 0 ? C.coralText : C.ink }}>{v < 0 ? "−" + fmt(-v) : fmt(v)} đ</span>
               </div>
             ))}
             {phieuRow.noTruoc !== 0 && (
-              <div style={{ ...amtRow, padding: `${rowPad}px 0`, borderBottom: `1px dotted ${C.line}`, fontSize: rowFont, color: phieuRow.noTruoc > 0 ? C.coral : C.green }}>
+              <div style={{ ...amtRow, padding: `${rowPad}px 0`, borderBottom: `1px dotted ${C.line}`, fontSize: rowFont, color: phieuRow.noTruoc > 0 ? C.coralText : C.greenText }}>
                 <span>{phieuRow.noTruoc > 0 ? "Nợ tháng trước" : "Dư tháng trước"}</span>
                 <span>{phieuRow.noTruoc > 0 ? fmt(phieuRow.noTruoc) : "−" + fmt(-phieuRow.noTruoc)} đ</span>
               </div>
@@ -133,7 +134,7 @@ export function PhieuThu({
               <span>Đã thu</span><span>{fmt(phieuRow.rec.thucThu)} đ</span>
             </div>
             {phieuRow.conNo !== 0 && (
-              <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: dense ? 15 : 16, color: phieuRow.conNo > 0 ? C.coral : C.amber, marginTop: 3 }}>
+              <div style={{ ...amtRow, fontFamily: font.display, fontWeight: 800, fontSize: dense ? 15 : 16, color: phieuRow.conNo > 0 ? C.coralText : C.amberText, marginTop: 3 }}>
                 <span>{phieuRow.conNo > 0 ? "Còn lại cần đóng" : "Thu thừa"}</span>
                 <span>{fmt(Math.abs(phieuRow.conNo))} đ</span>
               </div>
@@ -158,7 +159,7 @@ export function PhieuThu({
             </div>
             <div style={{ fontSize: 11.5, lineHeight: 1.4, color: C.ink }}>
               <div>Phụ huynh đóng tiền {meta?.hanDong?.trim() ? <b>{meta.hanDong.trim()}</b> : <>từ ngày <b>01/{mm}</b> đến <b>10/{mm}</b></>} tại văn phòng hoặc giáo viên tại lớp.</div>
-              <div style={{ fontStyle: "italic", color: C.blueA, marginTop: 2 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
+              <div style={{ fontStyle: "italic", color: C.blueAText, marginTop: 2 }}>Vui lòng kiểm tra thông tin trước khi thanh toán. Xin cảm ơn!</div>
             </div>
           </div>
 
@@ -169,7 +170,7 @@ export function PhieuThu({
         </div>
       </div>
 
-      {!isBatch && (
+      {!isBatch && !hideNutIn && (
         <button className="no-print" onClick={inPhieu} style={{ marginTop: 14, width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
           {bienLai ? "In / Lưu PDF" : "Cấp số biên lai & In"}
         </button>

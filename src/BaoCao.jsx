@@ -1,7 +1,7 @@
 // BaoCao.jsx — Báo cáo & biểu đồ thu/chi theo tháng + xuất CSV.
 import { C, font, fmt, toast } from "./lib.js";
-import { BottomSheet } from "./ui.jsx";
-import { Icon } from "./Icon.jsx";
+import { BottomSheet, Bar } from "./ui.jsx";
+import { Icon, Ii } from "./Icon.jsx";
 
 export function BaoCaoSheet({ open, onClose, lichSu, ym }) {
   const taiFile = (text, name) => { try { const blob = new Blob(["\uFEFF" + text], { type: "text/csv;charset=utf-8;" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch {} };
@@ -28,13 +28,13 @@ export function BaoCaoSheet({ open, onClose, lichSu, ym }) {
               <div style={{ marginBottom: 14 }}>
                 {data.map((r) => (
                   <div key={r.thang} style={{ marginBottom: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}><b style={{ color: C.pine }}>{r.thang}</b><span style={{ color: r.laiKeToan < 0 ? C.coral : C.green, fontWeight: 700 }}>Lãi {fmt(r.laiKeToan)}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}><b style={{ color: C.pine }}>{r.thang}</b><span style={{ color: r.laiKeToan < 0 ? C.coralText : C.greenText, fontWeight: 700 }}>Lãi {fmt(r.laiKeToan)}</span></div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.thuThang / maxV * 100)}%`, height: "100%", background: C.green, borderRadius: 4 }} /></div>
+                      <Bar pct={Math.max(2, r.thuThang / maxV * 100)} color={C.green} h={12} style={{ flex: 1 }} />
                       <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.thuThang)}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ flex: 1, height: 14, background: C.graySoft, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${Math.max(2, r.chiThang / maxV * 100)}%`, height: "100%", background: C.coral, borderRadius: 4 }} /></div>
+                      <Bar pct={Math.max(2, r.chiThang / maxV * 100)} color={C.coral} h={12} style={{ flex: 1 }} />
                       <span style={{ fontSize: 11, color: C.sub, minWidth: 80, textAlign: "right" }}>{fmt(r.chiThang)}</span>
                     </div>
                   </div>
@@ -45,7 +45,7 @@ export function BaoCaoSheet({ open, onClose, lichSu, ym }) {
             </>
           );
         })()}
-        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
+        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Đóng</button>
       </BottomSheet>
   );
 }

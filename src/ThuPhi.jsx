@@ -1,14 +1,17 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import {
-  C, font, fmt, soNgayHoc, ask, toast, uid, noDau,
+  C, font, fmt, soNgayHoc, ask, toast, uid, noDau, hoiXoa, baoDaXoa,
   KHOAN
 } from "./lib.js";
 import {
-  Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, Emo
+  Bar, Segmented, Card, NumInput, ABBtn, Badge, SearchBar, useStickyShrink, StickyBar, BottomSheet, PLBadge, LockNote, Emo, Button
 } from "./ui.jsx";
-import { Icon } from "./Icon.jsx";
+import { Icon, Ii } from "./Icon.jsx";
 import { Avatar } from "./Avatar.jsx";
 import { ThuNgoai, KhoanThuLop } from "./ThuNgoai.jsx";
+import { ClassAnimal } from "./Brand.jsx";
+import { PhieuQuick } from "./Phieu/PhieuQuick.jsx";
+import { ThuPhiDeskHead, ThuPhiBang, xuatCSV, cotHienThi, NutThaoTac } from "./ThuPhiPC.jsx";
 
 /* ============================================================
    TIỆN ÍCH
@@ -32,7 +35,7 @@ function EmptyState({ search, onClear }) {
     <div style={{ textAlign: "center", padding: "36px 20px", color: C.sub }}>
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><Icon name="search" size={40} color={C.gray} strokeWidth={1.6} /></div>
       <div style={{ fontSize: 14, marginBottom: 12 }}>{search ? "Không tìm thấy học sinh phù hợp" : "Không có học sinh trong bộ lọc này"}</div>
-      <button onClick={onClear} style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Xóa bộ lọc</button>
+      <button onClick={onClear} style={{ padding: "8px 16px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Xóa bộ lọc</button>
     </div>
   );
 }
@@ -45,9 +48,9 @@ export function NgayAnBar({ onApply, rows, dangLoc }) {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: C.pine, display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="utensils" size={14} color={C.pine} /> Số ngày ăn:</span>
         <NumInput value={v} onChange={setV} w={62} />
         <span style={{ fontSize: 12.5, color: C.pine }}>ngày</span>
-        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 9, border: "none", cursor: "pointer" }}>Áp {v} ngày cho {rows.length} HS đang lọc</button>
+        <button onClick={() => onApply(v, rows.map((r) => r.hs.id))} style={{ background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 12.5, padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer" }}>Áp {v} ngày cho {rows.length} HS đang lọc</button>
       </div>
-      <div style={{ fontSize: 11, color: dangLoc ? C.amber : C.sub, marginTop: 6, fontWeight: dangLoc ? 700 : 400 }}>{dangLoc ? `⚠ Đang lọc — chỉ áp cho ${rows.length} HS hiển thị, KHÔNG phải cả lớp. ` : ""}Tiền ăn = số ngày ăn × đơn giá. HS đã sửa tay vẫn giữ riêng.</div>
+      <div style={{ fontSize: 11, color: dangLoc ? C.amberText : C.sub, marginTop: 6, fontWeight: dangLoc ? 700 : 400 }}>{dangLoc ? `Đang lọc — chỉ áp cho ${rows.length} HS hiển thị, KHÔNG phải cả lớp. ` : ""}Tiền ăn = số ngày ăn × đơn giá. HS đã sửa tay vẫn giữ riêng.</div>
     </Card>
   );
 }
@@ -98,11 +101,14 @@ function LopFilterSheet({ open, onClose, chipsLop, lopFilter, setLopFilter, allR
 /* ============================================================
    2. BOTTOM SHEET THU TIỀN
    ============================================================ */
-function ThuTienSheet({ r, open, onClose, setRec }) {
+function ThuTienSheet({ r, open, onClose, setRec, onSua }) {
   const [amount, setAmount] = useState(() => r?.rec?.thucThu || 0);
   const [pt, setPt] = useState("tm");
+  const desk = true; // mọi cỡ màn hình đều có 3 thẻ
+  const macDinh = () => (typeof window !== "undefined" && window.innerWidth >= 1024 ? "ct" : "tt"); // máy tính xem chi tiết trước; điện thoại vào thẳng Thanh toán để thu nhanh
+  const [dt, setDt] = useState(macDinh);
 
-  useEffect(() => { if (open) setAmount(r?.rec?.thucThu || 0); }, [open, r?.hs?.id]);
+  useEffect(() => { if (open) { setAmount(r?.rec?.thucThu || 0); setDt(macDinh()); } }, [open, r?.hs?.id]);
 
   if (!open || !r) return null;
 
@@ -116,13 +122,57 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
 
   return (
     <BottomSheet open={open} onClose={onClose} title={r.hs.ten}>
-      <div style={{ fontSize: 13, color: C.sub, marginBottom: 16, marginTop: -4 }}>{r.lop?.ten}</div>
+      <div style={{ fontSize: 13, color: C.sub, marginBottom: 16, marginTop: -4, display: "flex", alignItems: "center", gap: 6 }}><ClassAnimal name={r.lop?.ten || ""} size={22} />{r.lop?.ten}</div>
 
+      {desk && (
+        <Segmented full style={{ marginBottom: 14 }} items={[["ct", "Chi tiết"], ["tt", "Thanh toán"], ["ls", "Lịch sử"]]} value={dt} onChange={setDt} />
+      )}
+
+      {desk && dt === "ct" && (
+        <div>
+          {(r.ps?.dong || []).map(([ten, so, sua], i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.line}`, fontSize: 14 }}>
+              <span style={{ color: C.ink }}>{ten}{sua ? <span style={{ marginLeft: 6, fontSize: 11, color: C.amberText, fontWeight: 700 }}>sửa tay</span> : null}</span>
+              <b style={{ color: so < 0 ? C.greenText : C.ink, fontVariantNumeric: "tabular-nums" }}>{fmt(so)}</b>
+            </div>
+          ))}
+          {(r.noTruoc || 0) !== 0 && <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.line}`, fontSize: 14 }}><span>Nợ tháng trước</span><b style={{ color: C.coralText }}>{fmt(r.noTruoc)}</b></div>}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", marginTop: 10, fontSize: 15, background: C.graySoft, borderRadius: 10 }}><b>Tổng phải thu</b><b style={{ fontFamily: font.display, color: C.ink }}>{fmt(r.tongPhaiThu)}đ</b></div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", marginTop: 6, fontSize: 15, background: C.greenSoft, borderRadius: 10 }}><b style={{ color: C.ink }}>Đã thu</b><b style={{ fontFamily: font.display, color: C.greenText }}>{fmt(r.rec?.thucThu || 0)}đ</b></div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 12px", marginTop: 6, fontSize: 15, background: C.coralSoft, borderRadius: 10 }}><b style={{ color: C.ink }}>Còn nợ</b><b style={{ fontFamily: font.display, color: C.coralText }}>{r.conNo < 0 ? `Dư ${fmt(-r.conNo)}đ` : `${fmt(r.conNo)}đ`}</b></div>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <button onClick={() => setDt("tt")} style={{ flex: 1.4, padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Ghi nhận thanh toán</button>
+            {onSua && <button onClick={() => onSua(r.hs.id)} style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Sửa khoản</button>}
+          </div>
+        </div>
+      )}
+
+      {desk && dt === "ls" && (
+        <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.line}` }}><span>Số đã thu hiện tại</span><b style={{ color: C.greenText }}>{fmt(r.rec?.thucThu || 0)}</b></div>
+          {(r.rec?.lichSu || []).length === 0 ? (
+            <div style={{ marginTop: 12, padding: "10px 12px", background: C.graySoft, borderRadius: 10 }}>Chưa có lần thu nào được ghi lại. Từ nay mỗi lần đổi số đã thu sẽ hiện ở đây kèm ngày giờ. Các lần thu trước khi có tính năng này không có lịch sử.</div>
+          ) : (
+            [...r.rec.lichSu].reverse().map((h, i) => {
+              const d = new Date(h.ts), p2 = (n) => String(n).padStart(2, "0");
+              const chenh = h.sau - h.truoc;
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "9px 0", borderBottom: `1px solid ${C.line}`, fontSize: 13.5 }}>
+                  <span>{p2(d.getDate())}/{p2(d.getMonth() + 1)} {p2(d.getHours())}:{p2(d.getMinutes())} · {chenh >= 0 ? "Thu thêm" : "Giảm số thu"}</span>
+                  <b style={{ color: chenh >= 0 ? C.greenText : C.coralText }}>{chenh >= 0 ? "+" : "−"}{fmt(Math.abs(chenh))} <span style={{ color: C.sub, fontWeight: 500 }}>→ {fmt(h.sau)}</span></b>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {(!desk || dt === "tt") && (<>
       <div style={{ fontSize: 13, color: C.sub, marginBottom: 4 }}>Phải thu:</div>
-      <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 28, color: C.coral, marginBottom: 16 }}>{fmt(r.tongPhaiThu)}đ</div>
+      <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 28, color: C.coralText, marginBottom: 16 }}>{fmt(r.tongPhaiThu)}đ</div>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <button onClick={handleThuDu} style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: "none", background: C.green, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", minHeight: 46 }}>Thu đủ</button>
+        <button onClick={handleThuDu} style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: "none", background: C.green, color: C.onFill, fontWeight: 700, fontSize: 14, cursor: "pointer", minHeight: 46 }}>Thu đủ</button>
         <button onClick={handleThuTron} style={{ flex: 1, padding: "13px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 700, fontSize: 14, cursor: "pointer", minHeight: 46 }}>Thu tròn</button>
       </div>
 
@@ -147,7 +197,8 @@ function ThuTienSheet({ r, open, onClose, setRec }) {
       </div>
       )}
 
-      <button onClick={handleConfirm} style={{ width: "100%", padding: "15px 0", borderRadius: 12, border: "none", background: C.amber, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", minHeight: 50 }}>XÁC NHẬN THU</button>
+      <button onClick={handleConfirm} style={{ width: "100%", padding: "15px 0", borderRadius: 12, border: "none", background: C.amber, color: C.onFill, fontWeight: 800, fontSize: 16, cursor: "pointer", minHeight: 50 }}>XÁC NHẬN THU</button>
+      </>)}
     </BottomSheet>
   );
 }
@@ -202,7 +253,12 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
   const handleResetKhoan = (key) => { const def = r.rec.khoanDefault?.[key] ?? 0; setLocalKhoan(prev => ({ ...prev, [key]: def })); resetKhoan(sid, key); };
   const handleResetNgayAn = () => { setLocalNgayAn(r.rec.ngayAnDefault ?? 0); setRec(sid, { ngayAnManual: false }); };
   const addPT = () => { if (!ptTen.trim() || !ptSo) return; const newPT = { id: uid(), ten: ptTen.trim(), soTien: Number(ptSo) }; setLocalPhuThu(prev => [...prev, newPT]); addPhuThuHS(sid, ptTen.trim(), Number(ptSo)); setPtTen(""); setPtSo(""); };
-  const delPT = (id) => { setLocalPhuThu(prev => prev.filter(p => p.id !== id)); delPhuThuHS(sid, id); };
+  const delPT = async (id) => {
+    const pt = localPhuThu.find((p) => p.id === id);
+    if (!(await hoiXoa(`khoản riêng "${pt?.ten || ""}"`, pt?.soTien ? `Số tiền ${fmt(pt.soTien)}đ sẽ bị trừ khỏi hóa đơn của ${r.hs.ten}.` : ""))) return;
+    setLocalPhuThu(prev => prev.filter(p => p.id !== id)); delPhuThuHS(sid, id);
+    baoDaXoa("khoản riêng", pt ? () => { setLocalPhuThu(prev => [...prev, pt]); addPhuThuHS(sid, pt.ten, pt.soTien); } : undefined);
+  };
 
   return (
     <BottomSheet open={true} onClose={onClose} title={`SỬA KHOẢN THU — ${r.hs.ten.toUpperCase()}`}>
@@ -218,8 +274,8 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
           return (
             <div key={k.key} style={{ display: "flex", alignItems: "center", gap: C.sm }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: isEdited ? C.amber : C.ink }}>
-                  {k.label}{isEdited && <span style={{ fontSize: 11, color: C.amber, marginLeft: 4, fontWeight: 700 }}> · đã sửa</span>}
+                <div style={{ fontSize: 14, fontWeight: 600, color: isEdited ? C.amberText : C.ink }}>
+                  {k.label}{isEdited && <span style={{ fontSize: 11, color: C.amberText, marginLeft: 4, fontWeight: 700 }}> · đã sửa</span>}
                 </div>
                 {isEdited && !isNgayAn && (
                   <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>Mặc định: {fmt(def)}</div>
@@ -285,22 +341,22 @@ function QuickEditSheet({ sid, rows, onClose, setKhoan, resetKhoan, setRec, addP
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 13 }}>
               <span style={{ flex: 1, color: C.ink }}>{p.ten}</span>
               <span style={{ fontWeight: 600 }}>{fmt(p.soTien)}</span>
-              <button onClick={() => delPT(p.id)} style={{ border: "none", background: "none", display:"inline-flex", alignItems:"center", color: C.coral, cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={15} color={C.coral} /></button>
+              <button onClick={() => delPT(p.id)} style={{ border: "none", background: "none", display:"inline-flex", alignItems:"center", color: C.coralText, cursor: "pointer", fontSize: 14 }}><Icon name="trash" size={15} color={C.coral} /></button>
             </div>
           ))}
           <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
             <input value={ptTen} onChange={(e) => setPtTen(e.target.value)} placeholder="Tên khoản" style={{ flex: 2, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
             <input type="number" value={ptSo} onChange={(e) => setPtSo(e.target.value)} placeholder="Số tiền" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `1.5px solid ${C.line}`, fontSize: 13, minWidth: 0, fontFamily: font.body }} />
-            <button onClick={addPT} style={{ background: C.pine, color: "#fff", fontWeight: 700, fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Thêm</button>
+            <button onClick={addPT} style={{ background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Thêm</button>
           </div>
         </div>
 
         <div style={{ marginTop: C.md, paddingTop: C.md, borderTop: `2px solid ${C.line}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontWeight: 700, fontSize: 16 }}>Tổng tạm tính:</span>
-          <span style={{ fontWeight: 800, fontSize: 18, color: C.coral }}>{fmt(tongTamTinh)}đ</span>
+          <span style={{ fontWeight: 800, fontSize: 18, color: C.coralText }}>{fmt(tongTamTinh)}đ</span>
         </div>
 
-        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: C.sm }}>✓ LƯU THAY ĐỔI</button>
+        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 15, cursor: "pointer", marginTop: C.sm }}><Ii name="check" size={14} /> LƯU THAY ĐỔI</button>
       </div>
     </BottomSheet>
   );
@@ -436,26 +492,26 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
             <Avatar hs={r.hs} size={44} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{r.hs.ten}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: C.ink, overflowWrap: "anywhere", lineHeight: 1.2, minWidth: 0 }}>{r.hs.ten}</span>
                 {hasDiscount && (
-                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: C.orange, background: C.amberSoft, display:"inline-flex", alignItems:"center", gap:3, border: `1px solid ${C.line}`, padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color={C.amber} /></span>
+                  <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: C.orangeText, background: C.amberSoft, display:"inline-flex", alignItems:"center", gap:3, border: `1px solid ${C.line}`, padding: "1px 5px", borderRadius: 5, whiteSpace: "nowrap" }}><Icon name="gift" size={11} color={C.amber} /></span>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 11.5, color: C.sub, minWidth: 0 }}>
-                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
+                <ClassAnimal name={r.lop?.ten || ""} size={18} /><span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</span>
                 {r.hs.pl !== "Bthg" && (<><span style={{ color: C.line }}>•</span><PLBadge pl={r.hs.pl} /></>)}
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 2, scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             <span style={chipStyle}>HP {fmtK(hocPhi)}</span>
             <span style={chipStyle}>Ăn {fmtK(tienAn)}</span>
             {phuThu > 0 && <span style={chipStyle}>PT {fmtK(phuThu)}</span>}
             {truAnItems.map(([label, val], i) => (
-              <span key={i} style={{ ...chipStyle, background: C.coralSoft, color: C.coral }}>{label} {fmtK(Math.abs(val))}</span>
+              <span key={i} style={{ ...chipStyle, background: C.coralSoft, color: C.coralText }}>{label} {fmtK(Math.abs(val))}</span>
             ))}
             {noCu !== 0 && (
-              <span style={{ ...chipStyle, background: noCu > 0 ? C.coralSoft : C.greenSoft, color: noCu > 0 ? C.coral : C.green }}>
+              <span style={{ ...chipStyle, background: noCu > 0 ? C.coralSoft : C.greenSoft, color: noCu > 0 ? C.coralText : C.greenText }}>
                 {noCu > 0 ? `Nợ ${fmtK(noCu)}` : `Dư ${fmtK(-noCu)}`}
               </span>
             )}
@@ -484,14 +540,14 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
                   <span style={{ fontSize: 8.5, fontWeight: 700 }}>Đủ</span>
                 </button>
               ) : (
-                <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={colBtn(C.green, "#fff", false, locked)}>
-                  <Icon name="cash" size={15} color="#fff" />
+                <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={colBtn(C.green, C.onFill, false, locked)}>
+                  <Icon name="cash" size={15} color={C.onFill} />
                   <span style={{ fontSize: 8.5, fontWeight: 700 }}>Thu đủ</span>
                 </button>
               )
             ) : (
-              <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? C.amberSoft : C.amber, paidFull ? C.amber : "#fff", paidFull, locked)}>
-                <Icon name="cash" size={15} color={paidFull ? C.amber : "#fff"} />
+              <button onClick={() => !locked && onThuTien(r)} disabled={locked} style={colBtn(paidFull ? C.amberSoft : C.amber, paidFull ? C.amber : C.onFill, paidFull, locked)}>
+                <Icon name="cash" size={15} color={paidFull ? C.amber : C.onFill} />
                 <span style={{ fontSize: 8.5, fontWeight: 700 }}>{paidFull ? "Thu+" : "Thu"}</span>
               </button>
             )}
@@ -511,22 +567,22 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
       {isExpanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${C.line}` }}>
           {displayDong.map(([label, val, sua], i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.green : C.ink }}>
-              <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amber, display:"inline-flex", verticalAlign:"middle", marginLeft:3 }}><Icon name="alertTriangle" size={10} color={C.amber} /></span>}</span>
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: val < 0 ? C.greenText : C.ink }}>
+              <span style={{ color: C.sub }}>{label}{sua && <span style={{ color: C.amberText, display:"inline-flex", verticalAlign:"middle", marginLeft:3 }}><Icon name="alertTriangle" size={10} color={C.amber} /></span>}</span>
               <span>{fmt(val)}</span>
             </div>
           ))}
           {r.noTruoc !== 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coral : C.green }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, color: r.noTruoc > 0 ? C.coralText : C.greenText }}>
               <span style={{ color: C.sub }}>{r.noTruoc > 0 ? "Nợ cũ" : "Dư cũ"}</span>
               <span>{r.noTruoc > 0 ? fmt(r.noTruoc) : fmt(r.noTruoc)}</span>
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1.5px solid ${C.line}`, fontWeight: 800, fontSize: 14, color: C.coral }}>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1.5px solid ${C.line}`, fontWeight: 800, fontSize: 14, color: C.coralText }}>
             <span>TỔNG CỘNG HÓA ĐƠN</span>
             <span>{fmt(tongPhaiThu)}đ</span>
           </div>
-          <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 9, border: `1px solid ${C.line}`, background: C.blueASoft, color: C.blueA, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <button onClick={() => onViewPhieu(r)} style={{ marginTop: 10, width: "100%", padding: "9px 0", borderRadius: 10, border: `1px solid ${C.line}`, background: C.blueASoft, color: C.blueAText, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <Icon name="receipt" size={15} color={C.blueA} /> Xem phiếu thu
           </button>
         </div>
@@ -540,8 +596,9 @@ function HSCardV1({ r, locked, fastMode, onFastThu, onThuTien, onQuickEdit, onVi
 /* ============================================================
    6. THU PHI TAB V1 — MAIN
    ============================================================ */
-export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide }) {
+export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter, thuFilter, setThuFilter, search, setSearch, getLop, setRec, setKhoan, resetKhoan, resetAllKhoan, setNgayAnAll, thuDuNhieu, addPhuThuHS, delPhuThuHS, locked, mData, upMData, setPhieuId, setTab, isWide, isDesk, meta, upMeta, month, year }) {
   const [quickEditId, setQuickEditId] = useState(null);
+  const [phieuQuickId, setPhieuQuickId] = useState(null); // máy tính: xem/in/chia sẻ phiếu ngay tại bảng
   const [thuTienId, setThuTienId] = useState(null);
   const [expandId, setExpandId] = useState(null);
   const [lopSheetOpen, setLopSheetOpen] = useState(false);
@@ -565,6 +622,8 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
     setRec(id, { thucThu: old });
     setFastCount((c) => Math.max(0, c - 1));
   };
+  const [che, setCheState] = useState(() => { try { return localStorage.getItem("mn5:thuphiChe") === "gon" ? "gon" : "chitiet"; } catch { return "chitiet"; } });
+  const setChe = (v) => { setCheState(v); try { localStorage.setItem("mn5:thuphiChe", v); } catch {} };
   const [thuLimit, setThuLimit] = useState(50);
   const inputRefs = useRef({});
   const { sentinelRef, shrunk } = useStickyShrink();
@@ -596,18 +655,20 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
   const selStyle = { padding: "9px 10px", borderRadius: 12, border: `1.5px solid ${C.line}`, fontSize: 13, fontFamily: font.body, color: C.ink, background: C.card, minWidth: 0, cursor: "pointer" };
 
   const CHIP_CFG = [
-    { key: "all", label: "Tất cả", count: chipCounts.all, bg: C.pine, color: "#fff", border: C.pine },
-    { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
-    { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amber, border: C.amberSoft },
-    { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coral, border: C.coralSoft },
-    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: C.blueASoft, color: C.blueA, border: `${C.line}` },
+    { key: "all", label: "Tất cả", count: chipCounts.all, bg: C.pine, color: C.onFill, border: C.pine },
+    { key: "chuaThu", label: "Chưa thu", count: chipCounts.chuaThu, bg: C.coralSoft, color: C.coralText, border: C.coralSoft },
+    { key: "thieu", label: "Thu thiếu", count: chipCounts.thieu, bg: C.amberSoft, color: C.amberText, border: C.amberSoft },
+    { key: "noCu", label: "Nợ cũ", count: chipCounts.noCu, bg: C.coralSoft, color: C.coralText, border: C.coralSoft },
+    { key: "thuThua", label: "Thu thừa", count: chipCounts.thuThua, bg: C.blueASoft, color: C.blueAText, border: `${C.line}` },
   ];
 
   return (
     <>
       <div ref={sentinelRef} style={{ height: 1 }} />
 
-      <StickyBar shrunk={shrunk}>
+      {isDesk && <ThuPhiDeskHead tk={tk} allRows={allRows} rows={rows} chipCounts={chipCounts} search={search} setSearch={setSearch} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter} thuFilter={thuFilter} setThuFilter={setThuFilter} che={che} setChe={setChe} onXuat={() => xuatCSV(rows, cotHienThi(rows), month, year)} />}
+
+      {!isDesk && <StickyBar shrunk={shrunk}>
         <div style={{ display: "flex", gap: C.sm, marginBottom: C.sm, alignItems: "center" }}>
           <div style={{ flex: 1 }}><SearchBar value={search} onChange={setSearch} /></div>
           {isWide ? (
@@ -651,16 +712,14 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13.5, fontWeight: 600, marginBottom: 4 }}>
           <span style={{ color: C.ink }}>Phải thu: {fmtK(tk.ps)}</span>
-          <span style={{ color: C.green, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.green, flexShrink: 0 }} /> Đã thu: {fmtK(tk.thu)}</span>
-          <span style={{ color: C.coral, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.coral, flexShrink: 0 }} /> Còn nợ: {fmtK(tk.no)}</span>
+          <span style={{ color: C.greenText, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.green, flexShrink: 0 }} /> Đã thu: {fmtK(tk.thu)}</span>
+          <span style={{ color: C.coralText, display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 9, height: 9, borderRadius: 99, background: C.coral, flexShrink: 0 }} /> Còn nợ: {fmtK(tk.no)}</span>
         </div>
-        <div style={{ height: 6, borderRadius: 99, background: C.line, overflow: "hidden", marginBottom: 4 }}>
-          <div style={{ width: `${pct}%`, height: "100%", background: C.green, borderRadius: 99, transition: "width .3s" }} />
-        </div>
+        <Bar pct={pct} color={C.green} h={10} style={{ marginBottom: 6 }} />
         <div style={{ fontSize: 12.5, color: C.sub, marginBottom: C.md }}>
           {rows.filter(r => r.conNo <= 0 && r.ps.tong > 0).length}/{rows.length} học sinh đã hoàn thành
         </div>
-      </StickyBar>
+      </StickyBar>}
 
       {showNgayAn && <div style={{ marginBottom: 10 }}><NgayAnBar onApply={(v, ids) => { setNgayAnAll(v, ids); setShowNgayAn(false); }} rows={rows} dangLoc={search.trim() !== "" || lopFilter !== "all" || thuFilter !== "all"} /></div>}
 
@@ -668,13 +727,18 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
       {rows.length === 0 && <EmptyState search={search} onClear={() => { setSearch(""); setLopFilter("all"); setThuFilter("all"); }} />}
 
       {fastMode && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.amberSoft, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, fontWeight: 600 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.amberSoft, border: `1px solid ${C.line}`, borderRadius: 10, padding: "9px 12px", marginBottom: 10, fontSize: 12.5, color: C.amberText, fontWeight: 600 }}>
           <Icon name="zap" size={16} color={C.amber} />
           <span>Quét thu nhanh — bấm <b>Thu đủ</b> là thu ngay, có thể Hoàn tác.{fastCount > 0 ? ` Đã thu ${fastCount} cháu phiên này.` : ""}</span>
         </div>
       )}
 
+      {isDesk && !fastMode && rows.length > 0 && (
+        <ThuPhiBang rows={rows} che={che} locked={locked} onXem={(id) => setThuTienId(id)} onThu={(id) => setThuTienId(id)} onPhieu={(id) => setPhieuQuickId(id)} onSuaKhoan={setKhoan} onResetKhoan={resetKhoan} onSuaNgayAn={(id, n) => setRec(id, n === null ? { ngayAnManual: false } : { ngayAn: n, ngayAnManual: true })} onSuaDaThu={(id, n) => setRec(id, { thucThu: n })} />
+      )}
+
       {rows.slice(0, thuLimit).map((r) => {
+        if (isDesk && !fastMode) return null;
         if (!fastMode) {
           return (
             <HSCardV1
@@ -685,7 +749,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
               onFastThu={onFastThu}
               onThuTien={(row) => setThuTienId(row.hs.id)}
               onQuickEdit={(row) => setQuickEditId(row.hs.id)}
-              onViewPhieu={(row) => { setPhieuId(row.hs.id); setTab("phieu"); }}
+              onViewPhieu={(row) => setPhieuQuickId(row.hs.id)}
               setRec={setRec}
               expandId={expandId}
               setExpandId={setExpandId}
@@ -706,13 +770,13 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
               <div style={{ fontSize: 11.5, color: C.sub, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.lop?.ten}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0, marginRight: 2 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: done ? C.green : C.coral }}>{pf ? "ĐÃ ĐỦ" : khoiThu ? "KHỎI THU" : "Phải thu"}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: done ? C.greenText : C.coralText }}>{pf ? "ĐÃ ĐỦ" : khoiThu ? "KHỎI THU" : "Phải thu"}</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, whiteSpace: "nowrap" }}>{pf ? fmt(dThu) : khoiThu ? (r.conNo < 0 ? `Dư ${fmt(-r.conNo)}` : "0") : fmt(r.tongPhaiThu)}</div>
             </div>
             {done ? (
               <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <button disabled style={{ width: justPaid ? 56 : 72, height: 46, borderRadius: 10, border: `1.5px solid ${khoiThu ? C.line : C.green}`, background: C.card, color: khoiThu ? C.sub : C.green, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                  <span style={{ fontSize: 15, lineHeight: 1 }}>✓</span>
+                <button disabled style={{ width: justPaid ? 56 : 72, height: 46, borderRadius: 10, border: `1.5px solid ${khoiThu ? C.line : C.green}`, background: C.card, color: khoiThu ? C.sub : C.greenText, cursor: "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}><Ii name="check" size={14} /></span>
                   <span style={{ fontSize: 9.5, fontWeight: 700 }}>{khoiThu ? "Khỏi" : "Đủ"}</span>
                 </button>
                 {justPaid && (
@@ -720,7 +784,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
                 )}
               </div>
             ) : (
-              <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={{ flexShrink: 0, width: 72, height: 46, borderRadius: 10, border: "none", background: C.green, color: "#fff", cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1, boxShadow: "0 2px 6px rgba(16,185,129,.25)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+              <button onClick={() => !locked && onFastThu(r)} disabled={locked} style={{ flexShrink: 0, width: 72, height: 46, borderRadius: 10, border: "none", background: C.green, color: C.onFill, cursor: locked ? "default" : "pointer", opacity: locked ? 0.5 : 1, boxShadow: "0 2px 6px rgba(16,185,129,.25)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
                 <Icon name="zap" size={15} color={C.amber} />
                 <span style={{ fontSize: 9.5, fontWeight: 700 }}>Thu đủ</span>
               </button>
@@ -729,20 +793,23 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
         );
       })}
 
-      {rows.length > thuLimit && (
+      {!isDesk && rows.length > thuLimit && (
         <button onClick={() => setThuLimit((l) => l + 50)} style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.pine}`, background: C.pineSoft, color: C.pine, fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10 }}>
           Hiện thêm 50 HS ({Math.min(thuLimit, rows.length)}/{rows.length})
         </button>
       )}
 
-      <ThuNgoai mData={mData} upMData={upMData} locked={locked} />
-      <KhoanThuLop mData={mData} upMData={upMData} locked={locked} classes={chipsLop.slice(1).map(([id, ten]) => ({ id, ten }))} rows={rows} lopFilter={lopFilter} />
+      {phieuQuickId && meta && <PhieuQuick sid={phieuQuickId} setSid={setPhieuQuickId} allRows={allRows} meta={meta} upMeta={upMeta} mData={mData} upMData={upMData} month={month} year={year} onClose={() => setPhieuQuickId(null)} />}
+
+      <ThuNgoai mData={mData} upMData={upMData} locked={locked} desk={isDesk} />
+      {!isDesk && <KhoanThuLop mData={mData} upMData={upMData} locked={locked} classes={chipsLop.slice(1).map(([id, ten]) => ({ id, ten }))} rows={rows} lopFilter={lopFilter} />}
 
       <ThuTienSheet
         r={rows.find(x => x.hs.id === thuTienId)}
         open={!!thuTienId}
         onClose={() => setThuTienId(null)}
         setRec={setRec}
+        onSua={(id) => { setThuTienId(null); setQuickEditId(id); }}
       />
 
       <QuickEditSheet
@@ -758,12 +825,26 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
 
       <LopFilterSheet open={lopSheetOpen} onClose={() => setLopSheetOpen(false)} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter} allRows={allRows} />
 
-      {!locked && rows.length > 0 && (
+      {!locked && rows.length > 0 && isDesk && (
+        <NutThaoTac open={batchOpen} setOpen={setBatchOpen}>
+                <button onClick={() => { setShowNgayAn(v => !v); setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon name="utensils" size={16} color={C.ink} /> {showNgayAn ? "Ẩn áp ngày ăn" : "Áp ngày ăn hàng loạt"}
+                </button>
+                <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon name="zap" size={16} color={C.ink} /> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
+                </button>
+                <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.greenText : C.grayText, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon name="cash" size={16} color={soNo > 0 ? C.green : C.gray} /> Thu đủ {soNo} HS còn nợ đang hiển thị
+                </button>
+        </NutThaoTac>
+      )}
+
+      {!locked && rows.length > 0 && !isDesk && (
         <>
           <div style={{ height: 90 }} />
-          <div style={{ position: "fixed", bottom: 76, left: 0, right: 0, maxWidth: 640, margin: "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
-            <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.inkBg, color: "#fff", padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
-              <Icon name="zap" size={17} color="#fff" /> Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+          <div style={{ position: "fixed", bottom: isDesk ? 16 : 76, left: isDesk ? 240 : 0, right: 0, maxWidth: isDesk ? 520 : 640, margin: isDesk ? "0 auto" : "0 auto", padding: `0 ${C.md}`, zIndex: 15 }}>
+            <div onClick={() => setBatchOpen(v => !v)} style={{ background: C.inkBg, color: C.onInk, padding: `${C.md}px`, borderRadius: C.r, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", display: "flex", justifyContent: "center", alignItems: "center", gap: C.sm, cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
+              <Icon name="zap" size={17} color={C.onFill} /> Thao tác hàng loạt <span style={{ fontSize: 12, transition: "transform .2s", transform: batchOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
             </div>
             {batchOpen && (
               <div style={{ background: C.card, borderRadius: C.r, marginTop: C.xs, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", overflow: "hidden" }}>
@@ -773,7 +854,7 @@ export function ThuPhiTab({ rows, tk, allRows, chipsLop, lopFilter, setLopFilter
                 <button onClick={() => { setFastMode(v => !v); setFastCount(0); fastPrev.current = {}; setBatchOpen(false); }} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: "pointer", borderBottom: `1px solid ${C.line}`, color: C.ink, display: "flex", alignItems: "center", gap: 8 }}>
                   <Icon name="zap" size={16} color={C.ink} /> {fastMode ? "Tắt chế độ Tích thu nhanh" : "Bật chế độ Tích thu nhanh"}
                 </button>
-                <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.green : C.gray, display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => batchThuDu(true)} disabled={soNo === 0} style={{ width: "100%", padding: C.md, border: "none", background: "none", textAlign: "left", fontSize: 14, cursor: soNo > 0 ? "pointer" : "default", color: soNo > 0 ? C.greenText : C.grayText, display: "flex", alignItems: "center", gap: 8 }}>
                   <Icon name="cash" size={16} color={soNo > 0 ? C.green : C.gray} /> Thu đủ {soNo} HS còn nợ đang hiển thị
                 </button>
               </div>

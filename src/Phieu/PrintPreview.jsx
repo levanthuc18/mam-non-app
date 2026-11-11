@@ -1,15 +1,31 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Ii } from "../Icon.jsx";
 import { C, font, fileName } from "../lib.js";
 import { PhieuThu } from "./PhieuThu.jsx";
 import { PhieuTongHop } from "./PhieuTongHop.jsx";
 import { sharePhieuAnh } from "./shareImage.js";
 
-export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, includeTongHop, page, onPageChange }) {
+export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, includeTongHop, page, onPageChange, openSignal = 0 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalPage, setModalPage] = useState(0);
   const [sharing, setSharing] = useState(false);
   const captureRef = useRef(null);
+  const bigRef = useRef(null);
+  useEffect(() => { if (modalOpen && bigRef.current) { try { bigRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch {} } }, [modalOpen, modalPage]);
+  // openSignal tăng lên → mở bản phóng to của trang đang chọn (nơi có nút chia sẻ ảnh)
+  useEffect(() => { if (openSignal > 0) { setModalPage(page); setModalOpen(true); } }, [openSignal]);
   const totalPages = rows.length + (includeTongHop ? 1 : 0);
+  useEffect(() => {
+    if (!modalOpen) return;
+    const phim = (e) => {
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (e.key === "ArrowLeft" && modalPage > 0) { setModalPage(modalPage - 1); onPageChange(modalPage - 1); }
+      else if (e.key === "ArrowRight" && modalPage < totalPages - 1) { setModalPage(modalPage + 1); onPageChange(modalPage + 1); }
+      else if (e.key === "Escape") setModalOpen(false);
+    };
+    window.addEventListener("keydown", phim);
+    return () => window.removeEventListener("keydown", phim);
+  }, [modalOpen, modalPage, totalPages]);
 
   const getPageContent = (p) => {
     if (p < rows.length) return { type: "phieu", row: rows[p], idx: p };
@@ -33,9 +49,9 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, color: C.pine, display: "flex", alignItems: "center", gap: 6 }}>
-            <span>👁</span> XEM TRƯỚC NỘI DUNG IN
+            <Ii name="eye" size={15} /> XEM TRƯỚC NỘI DUNG IN
           </div>
-          <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>Bấm vào trang để phóng to</div>
+          <div style={{ fontSize: 11.5, color: C.sub, marginTop: 2 }}>Bấm vào trang để phóng to ngay tại đây</div>
         </div>
         <span style={{ fontSize: 12, color: C.pine, fontWeight: 700 }}>Tổng cộng: {totalPages} trang</span>
       </div>
@@ -52,8 +68,8 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
               style={{
                 flexShrink: 0, width: thumbW, height: thumbH, borderRadius: 10,
                 border: `2.5px solid ${active ? C.pine : "transparent"}`,
-                background: "#fff", overflow: "hidden", cursor: "pointer",
-                position: "relative", padding: 0, boxShadow: active ? "0 2px 8px rgba(11,107,79,.2)" : "0 1px 3px rgba(0,0,0,.08)"
+                background: C.card, overflow: "hidden", cursor: "pointer",
+                position: "relative", padding: 0, boxShadow: active ? "0 2px 8px rgba(13,111,168,.2)" : "0 1px 3px rgba(0,0,0,.08)"
               }}
             >
               <div style={{ 
@@ -71,7 +87,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
               {/* Badge số trang */}
               <div style={{
                 position: "absolute", bottom: 4, right: 4, fontSize: 9, fontWeight: 700,
-                background: active ? C.pine : "rgba(255,255,255,.95)", color: active ? "#fff" : C.ink,
+                background: active ? C.pine : "rgba(255,255,255,.95)", color: active ? C.onFill : C.ink,
                 padding: "2px 6px", borderRadius: 99,
                 boxShadow: "0 1px 3px rgba(0,0,0,.1)"
               }}>
@@ -94,30 +110,8 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
 
       {/* Modal phóng to full */}
       {modalOpen && (
-        <div 
-          onClick={() => setModalOpen(false)} 
-          style={{ 
-            position: "fixed", 
-            inset: 0, 
-            background: "rgba(0,0,0,.8)", 
-            zIndex: 200, 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            padding: 16 
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            style={{ 
-              maxWidth: 480, 
-              width: "100%", 
-              maxHeight: "90vh", 
-              overflow: "auto", 
-              background: "#fff", 
-              borderRadius: 16, 
-              padding: "16px" 
-            }}
+          <div key={modalPage} ref={bigRef} className="pv-big"
+            style={{ maxWidth: 520, width: "100%", margin: "0 auto 14px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 16, boxShadow: "0 10px 30px rgba(20,40,58,.14)", boxSizing: "border-box" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 15, color: C.ink }}>
@@ -139,10 +133,11 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                   justifyContent: "center"
                 }}
               >
-                ✕
+                <Ii name="x" size={14} />
               </button>
             </div>
-            <div ref={captureRef} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}`, background: "#fff" }}>
+            <div style={{ position: "relative" }}>
+            <div ref={captureRef} style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${C.line}`, background: C.card }}>
               {(() => {
                 const mc = getPageContent(modalPage);
                 return mc.type === "phieu" ? (
@@ -165,6 +160,17 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                   />
                 );
               })()}
+            </div>
+              {[[-1, "chevronLeft", "Phiếu trước", { left: -20 }], [1, "chevronRight", "Phiếu sau", { right: -20 }]].map(([d, icon, nhan, pos]) => {
+                const tat = modalPage + d < 0 || modalPage + d > totalPages - 1;
+                return (
+                  <button key={d} aria-label={nhan} title={nhan + " (phím " + (d < 0 ? "←" : "→") + ")"} disabled={tat}
+                    onClick={() => { if (!tat) { setModalPage(modalPage + d); onPageChange(modalPage + d); } }}
+                    style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", ...pos, width: 40, height: 40, borderRadius: 99, border: `1px solid ${C.line}`, background: tat ? C.graySoft : C.card, color: tat ? C.grayText : C.pine, boxShadow: tat ? "none" : "0 4px 14px rgba(20,40,58,.22)", cursor: tat ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, zIndex: 3 }}>
+                    <Ii name={icon} size={20} />
+                  </button>
+                );
+              })}
             </div>
 
             {/* Nút chia sẻ ảnh */}
@@ -199,7 +205,7 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 borderRadius: 12,
                 border: "none",
                 background: sharing ? C.graySoft : C.pine,
-                color: sharing ? C.gray : "#fff",
+                color: sharing ? C.grayText : C.onFill,
                 fontFamily: font.display,
                 fontWeight: 700,
                 fontSize: 15,
@@ -210,43 +216,10 @@ export function PrintPreview({ rows, meta, month, year, mData, upMData, upMeta, 
                 gap: 8,
               }}
             >
-              {sharing ? "⏳ Đang tạo ảnh..." : "📤 Chia sẻ ảnh phiếu"}
+              {sharing ? "Đang tạo ảnh…" : <><Ii name="share" size={15} /> Chia sẻ ảnh phiếu</>}
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <button 
-                onClick={() => modalPage > 0 && setModalPage(modalPage - 1)} 
-                disabled={modalPage === 0} 
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: modalPage === 0 ? C.gray : C.pine, 
-                  fontSize: 14, 
-                  cursor: modalPage === 0 ? "default" : "pointer", 
-                  fontWeight: 700,
-                  padding: "8px 12px"
-                }}
-              >
-                ❮ Trang trước
-              </button>
-              <button 
-                onClick={() => modalPage < totalPages - 1 && setModalPage(modalPage + 1)} 
-                disabled={modalPage === totalPages - 1} 
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: modalPage === totalPages - 1 ? C.gray : C.pine, 
-                  fontSize: 14, 
-                  cursor: modalPage === totalPages - 1 ? "default" : "pointer", 
-                  fontWeight: 700,
-                  padding: "8px 12px"
-                }}
-              >
-                Trang sau ❯
-              </button>
-            </div>
           </div>
-        </div>
       )}
     </div>
   );

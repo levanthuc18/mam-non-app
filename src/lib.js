@@ -1,4 +1,5 @@
 // Màu / font / radius / style chung gom ở theme.js (1 file để chỉnh sửa).
+import { lopTai } from "./giaLop.js";
 import { C, font, R, SH, S } from "./theme.js";
 export { C, font, R, SH, S };
 export { THEMES, PALETTES, applyTheme, setTheme, getTheme, LIGHT_VARS, DEFAULT_THEME, getCustom, setCustomColor, resetCustom, currentColor, EDITABLE_COLORS } from "./theme.js";
@@ -472,7 +473,7 @@ export function seedThangData(ym, students, meta) {
   const fees = {};
   students.forEach((hs) => {
     const lopId = lopOfMonth(hs, ym);
-    const lop = meta.classes.find((c) => c.id === lopId);
+    const lop = lopTai(meta.classes.find((c) => c.id === lopId), ym);
     if (!TT_THU_PHI[hs.trangThai]) return;
     const nhap = ngayNhapHocTrongThang(hs, Number(ym.slice(0,4)), Number(ym.slice(5,7)));
     const ngayAn = nhap <= 26 ? soNgayHoc(Number(ym.slice(0,4)), Number(ym.slice(5,7)), {}, nhap) : 0;
@@ -533,7 +534,7 @@ export function tinhPSFromRec(hs, rec, lop, soNghi) {
 
   if (hs.pl === "T7") {
     const tienT7 = (rec.buoiT7 || 0) * (rec.giaT7 ?? lop?.t7 ?? 0);
-    if (tienT7) { dong.push([`T7 (${rec.buoiT7} buổi)`, tienT7, false]); tong += tienT7; }
+    if (tienT7) { dong.push([`Học thứ 7 (${rec.buoiT7} buổi)`, tienT7, false]); tong += tienT7; }
     (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
     return { tong, dong, suaCount: 0 };
   }
@@ -556,7 +557,7 @@ export function tinhPSFromRec(hs, rec, lop, soNghi) {
     dong.push([k.label, val, sua]);
     tong += val; if (sua) suaCount++;
   });
-  if (rec.buoiT7 > 0) { const t = rec.buoiT7 * (rec.giaT7 ?? lop?.t7 ?? 0); dong.push([`T7 (${rec.buoiT7} buổi)`, t, false]); tong += t; }
+  if (rec.buoiT7 > 0) { const t = rec.buoiT7 * (rec.giaT7 ?? lop?.t7 ?? 0); dong.push([`Học thứ 7 (${rec.buoiT7} buổi)`, t, false]); tong += t; }
   (rec.phuThu || []).forEach((p) => { dong.push([p.ten, p.soTien, false]); tong += p.soTien; });
   return { tong, dong, suaCount };
 }
@@ -591,6 +592,14 @@ export function setAskRef(fn) { _ask = fn; }
 export function setToastRef(fn) { _toast = fn; }
 export function ask(msg, opts) { return new Promise((res) => { if (_ask) _ask({ msg, opts: opts || {}, res }); }); }
 export function toast(msg, undo) { if (_toast) _toast({ msg, undo }); }
+
+// ===== Xóa: MỌI nút xóa trong app dùng 2 hàm này cho đồng bộ =====
+// hoiXoa("khoản chi \"Tiền nước\"", "ghi chú thêm") → hộp xác nhận: Xóa <đối tượng>? [Giữ lại] [Xóa]
+// baoDaXoa("khoản chi", undo?) → thông báo "Đã xóa khoản chi", có nút Hoàn tác nếu truyền undo
+export function hoiXoa(doiTuong, ghiChu) {
+  return ask("Xóa " + doiTuong + "?" + (ghiChu ? String.fromCharCode(10) + ghiChu : ""), { danger: true, okText: "Xóa", cancelText: "Giữ lại", title: "Xác nhận xóa" });
+}
+export function baoDaXoa(loai, undo) { toast(`Đã xóa ${loai}`, undo); }
 
 export const BANK_BIN = { "vietcombank": "970436", "vcb": "970436", "techcombank": "970407", "tcb": "970407", "bidv": "970418", "vietinbank": "970415", "ctg": "970415", "agribank": "970405", "mbbank": "970422", "mb": "970422", "acb": "970416", "vpbank": "970432", "vpb": "970432", "tpbank": "970423", "tpb": "970423", "sacombank": "970403", "stb": "970403", "hdbank": "970437", "vib": "970441", "shb": "970443", "ocb": "970448", "msb": "970426", "scb": "970429", "eximbank": "970431", "lienvietpostbank": "970449", "lpbank": "970449", "seabank": "970440", "bacabank": "970409", "vietabank": "970427", "namabank": "970428", "pgbank": "970430", "vietbank": "970433", "baovietbank": "970438", "kienlongbank": "970452", "abbank": "970425", "dongabank": "970406", "gpbank": "970408", "ncb": "970419", "saigonbank": "970400", "pvcombank": "970412" };
 export function binOf(nh) { const k = noDau(nh || "").replace(/[^a-z]/g, ""); return BANK_BIN[k] || null; }
@@ -673,3 +682,16 @@ export async function sbRpc(name, body) {
   } catch { return false; }
 }
 export function getCurrentActor() { return CURRENT_ACTOR; }
+
+// ===== Thứ tự gốc của học sinh =====
+// Theo từng lớp (đúng thứ tự lớp trong Lớp học); trong lớp: Bình thường trước, rồi AE, T7, GV ở dưới cùng.
+// Trong cùng một nhóm giữ nguyên thứ tự lưu trong mảng students (kéo-thả đổi thứ tự = đổi vị trí trong mảng).
+export const PL_RANK = { Bthg: 0, AE: 1, T7: 2, GV: 3 };
+export const nhomGoc = (s, ym) => `${lopOfMonth(s, ym)}|${PL_RANK[s.pl || "Bthg"] ?? 0}`;
+export function thuTuGoc(students, classes, ym) {
+  if (!students) return students;
+  const co = {}; (classes || []).forEach((c, i) => { co[c.id] = i; });
+  const idx = new Map(students.map((s, i) => [s.id, i]));
+  const k = (s) => [co[lopOfMonth(s, ym)] ?? 999, PL_RANK[s.pl || "Bthg"] ?? 0];
+  return [...students].sort((a, b) => { const x = k(a), y = k(b); return (x[0] - y[0]) || (x[1] - y[1]) || (idx.get(a.id) - idx.get(b.id)); });
+}

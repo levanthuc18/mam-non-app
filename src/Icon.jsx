@@ -15,6 +15,10 @@ const PATHS = {
   bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
   check: <polyline points="20 6 9 17 4 12" />,
   chevronRight: <path d="m9 18 6-6-6-6" />,
+  chevronLeft: <path d="m15 18-6-6 6-6" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  copy: <><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></>,
+  wifiOff: <><path d="M12 20h.01" /><path d="M8.5 16.429a5 5 0 0 1 7 0" /><path d="M5 12.859a10 10 0 0 1 5.17-2.69" /><path d="M19 12.859a10 10 0 0 0-2.007-1.523" /><path d="M2 8.82a15 15 0 0 1 4.177-2.643" /><path d="M22 8.82a15 15 0 0 0-11.288-3.764" /><path d="m2 2 20 20" /></>,
   // bổ sung — dùng dần cho nút hành động
   lock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></>,
   unlock: <><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" /></>,
@@ -80,4 +84,9 @@ export function Icon({ name, size = 22, color = "currentColor", strokeWidth = 2,
       {PATHS[name] || null}
     </svg>
   );
+}
+
+// Ii = biểu tượng đặt TRONG DÒNG chữ (cùng hàng, canh theo chữ). Dùng thay cho ký tự ✓ ⚠ ❯ ✕ ✎ và emoji.
+export function Ii(props) {
+  return <Icon {...props} style={{ display: "inline-block", verticalAlign: "-0.2em", flexShrink: 0, ...(props.style || {}) }} />;
 }

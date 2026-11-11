@@ -4,25 +4,13 @@ import {
   ymKey, TT_THU_PHI, TUAN, lopOfMonth, sGetSafe, sSet, uid, toast, ask
 } from "./lib.js";
 import {
-  Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
+  Ring, Segmented, mauTheoTyLe, Card, Chips, SearchBar, useStickyShrink, StickyBar, Badge, LockNote, BottomSheet
 } from "./ui.jsx";
-import { Icon } from "./Icon.jsx";
-
-// Component Donut (tùy chỉnh kích thước)
-function Donut({ pct, color, size = 60 }) {
-  const r = (size - 10) / 2, c = size / 2, circ = 2 * Math.PI * r;
-  const dash = circ * Math.min(100, pct) / 100;
-  return (
-    <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      <circle cx={c} cy={c} r={r} fill="none" stroke={C.graySoft} strokeWidth={6} />
-      <circle cx={c} cy={c} r={r} fill="none" stroke={color} strokeWidth={6} strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" transform={`rotate(-90 ${c} ${c})`} />
-      <text x={c} y={c + (size > 70 ? 5 : 4)} textAnchor="middle" fontSize={size > 70 ? 16 : 11} fontWeight={800} fill={C.ink} fontFamily={font.display}>{pct}%</text>
-    </svg>
-  );
-}
+import { Icon, Ii } from "./Icon.jsx";
+import { ClassAnimal } from "./Brand.jsx";
 
 // Bảng tổng hợp điểm danh các lớp (Sửa lại layout theo ảnh)
-function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter, collapsed, onToggle, ddTimes }) {
+function DiemDanhTongHop({ isDesk, students, classes, ddData, year, month, viewDay, isGV, gvLopId, lastSaved, setLopFilter, collapsed, onToggle, ddTimes }) {
   const effClasses = isGV ? classes.filter(c => c.id === gvLopId) : classes;
   const dt = ddTimes || {};
   const lopTime = (id) => { const iso = dt[id]; if (!iso) return null; const d = new Date(iso); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
@@ -52,54 +40,68 @@ function DiemDanhTongHop({ students, classes, ddData, year, month, viewDay, isGV
 
       {collapsed ? (
         <div style={{ marginTop: 8, fontSize: 13.5, fontWeight: 600 }}>
-          <span style={{ color: pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral, fontWeight: 800 }}>{pct}% đi học</span>
+          <span style={{ color: pct >= 90 ? C.greenText : pct >= 70 ? C.amberText : C.coralText, fontWeight: 800 }}>{pct}% đi học</span>
           <span style={{ color: C.sub, fontWeight: 500 }}> · {totalDiHoc} đi học · </span>
-          <span style={{ color: totalNghi > 0 ? C.coral : C.sub }}>{totalNghi} nghỉ</span>
+          <span style={{ color: totalNghi > 0 ? C.coralText : C.sub }}>{totalNghi} nghỉ</span>
           <span style={{ color: C.sub, fontWeight: 500 }}> · {fmtTime(lastSaved)}</span>
         </div>
       ) : (<>
-      {/* Layout chia 2 cột: Biểu đồ (1/3) và Thông tin (2/3) */}
-      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-        <div style={{ flex: "0 0 33%", display: "flex", justifyContent: "center" }}>
-          <Donut pct={pct} color={pct >= 90 ? C.green : pct >= 70 ? C.amber : C.coral} size={isGV ? 60 : 100} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Tổng quan ngày {viewDay}/{month}</div>
-          <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Đã điểm danh {daDD}/{effClasses.length} lớp · {fmtTime(lastSaved)}</div>
-          <div style={{ display: "flex", gap: 10, fontSize: 13, flexWrap: "wrap" }}>
-            <span style={{ color: C.green, fontWeight: 700 }}>● Đi học: {totalDiHoc}</span>
-            <span style={{ color: C.coral, fontWeight: 700 }}>● Nghỉ: {totalNghi}</span>
-            <span style={{ color: C.sub }}>Tổng: {totalHS}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Danh sách lớp bên dưới biểu đồ (Chỉ Admin thấy) */}
-      {!isGV && stats.length > 1 && (
-        <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
-          {stats.map(c => (
-            <div 
-              key={c.id} 
-              onClick={() => setLopFilter(c.id)} 
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", cursor: "pointer" }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
-                <span style={{ fontSize: 11.5, color: lopTime(c.id) ? C.sub : C.amber, marginLeft: 8 }}>{lopTime(c.id) ? <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Icon name="clock" size={12} color={C.sub} /> {lopTime(c.id)}</span> : "• chưa điểm danh"}</span>
-              </div>
-              <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coral : C.green, fontWeight: 700, flexShrink: 0 }}>
-                {c.nghi > 0 ? `Nghỉ ${c.nghi}/${c.siSo}` : `Đủ ${c.siSo}`}
-              </span>
+      {(() => {
+        const mauVong = mauTheoTyLe(pct, 90, 70);
+        const thongTin = (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Tổng quan ngày {viewDay}/{month}</div>
+            <div style={{ fontSize: 11.5, color: C.sub, marginBottom: 8 }}>Đã điểm danh {daDD}/{effClasses.length} lớp · {fmtTime(lastSaved)}</div>
+            <div style={{ display: "flex", gap: 10, fontSize: 13, flexWrap: "wrap", justifyContent: isDesk && !isGV && stats.length > 1 ? "center" : "flex-start" }}>
+              <span style={{ color: C.greenText, fontWeight: 700 }}>● Đi học: {totalDiHoc}</span>
+              <span style={{ color: C.coralText, fontWeight: 700 }}>● Nghỉ: {totalNghi}</span>
+              <span style={{ color: C.sub }}>Tổng: {totalHS}</span>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        );
+        const danhSach = (
+          <div style={{ display: isDesk ? "grid" : "flex", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", flexDirection: "column", gap: isDesk ? 10 : 4 }}>
+            {stats.map((c, ci) => (
+              <div key={c.id} onClick={() => setLopFilter(c.id)}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: isDesk ? "10px 12px" : "5px 0", cursor: "pointer", minWidth: 0, ...(isDesk ? { border: `1px solid ${C.line}`, borderRadius: 12, background: C.card } : {}) }}>
+                <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <ClassAnimal name={c.ten} index={ci} size={isDesk ? 32 : 24} />
+                  <span style={{ fontSize: 14, color: C.ink, fontWeight: 600 }}>{c.ten}</span>
+                  <span style={{ fontSize: 11.5, color: lopTime(c.id) ? C.sub : C.amberText, marginLeft: 8 }}>{lopTime(c.id) ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="clock" size={12} color={C.sub} /> {lopTime(c.id)}</span> : "• chưa điểm danh"}</span>
+                </div>
+                <span style={{ fontSize: 13, color: c.nghi > 0 ? C.coralText : C.greenText, fontWeight: 700, flexShrink: 0 }}>
+                  {c.nghi > 0 ? `Nghỉ ${c.nghi}/${c.siSo}` : `Đủ ${c.siSo}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+        // Máy tính (admin, nhiều lớp): biểu đồ một bên, danh sách lớp một bên; hẹp thì danh sách xuống dưới.
+        if (isDesk && !isGV && stats.length > 1) {
+          return (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
+              <div style={{ flex: "0 0 300px", maxWidth: "100%", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12, margin: "0 auto" }}>
+                <Ring pct={pct} color={mauVong} size={112} sub="Đi học" />
+                {thongTin}
+              </div>
+              <div style={{ flex: "1 1 440px", minWidth: 0 }}>{danhSach}</div>
+            </div>
+          );
+        }
+        return (<>
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <div style={{ flex: "0 0 33%", display: "flex", justifyContent: "center" }}><Ring pct={pct} color={mauVong} size={isGV ? 60 : 100} sub="Đi học" /></div>
+            {thongTin}
+          </div>
+          {!isGV && stats.length > 1 && <div style={{ marginTop: 12, borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>{danhSach}</div>}
+        </>);
+      })()}
       </>)}
     </Card>
   );
 }
 
-export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, setMonth, setYear, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students, onSelectStudent }) {
+export function DiemDanhTab({ isDesk, allRows, chipsLop, lopFilter, setLopFilter, search, setSearch, ddData, upDDData, leData, upLeData, year, month, setMonth, setYear, locked, ddLockReason, isWide, ym, isGV, gvLopId, gvTen, students, onSelectStudent }) {
   const today = new Date();
   const isCurMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const days = new Date(year, month, 0).getDate();
@@ -210,7 +212,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
   return (
     <>
       {/* 1. KHỐI TỔNG QUAN QUẢN LÝ (ẩn với GV) */}
-      {!isGV && <DiemDanhTongHop 
+      {!isGV && <DiemDanhTongHop isDesk={isDesk}
         students={students} 
         classes={chipsLop.filter(c => c[0] !== "all").map(c => ({ id: c[0], ten: c[1] }))} 
         ddData={ddData} 
@@ -226,7 +228,7 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       {/* 2. KHỐI ĐIỂM DANH (thu gọn/mở) */}
       <div onClick={() => setOpenDD(v => !v)} style={{ position: "relative", textAlign: "center", cursor: "pointer", padding: "8px 4px", marginBottom: openDD ? 8 : 4 }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: C.pine, display:"inline-flex", alignItems:"center", gap:8 }}><Icon name="checkSquare" size={20} color={C.pine} /> Điểm danh{isGV ? ` — ${lopTen}` : ""}</div>
+        <div style={{ fontWeight: 800, fontSize: 18, color: C.pine, display:"inline-flex", alignItems:"center", gap:8 }}><Icon name="checkSquare" size={20} color={C.pine} /> {isDesk ? "Bảng điểm danh" : "Điểm danh"}{isGV ? ` — ${lopTen}` : ""}</div>
         {!openDD && <div style={{ fontSize: 12, color: C.sub, marginTop: 2, fontWeight: 600 }}>{studentRows.length} cháu · {soNghiNgay} nghỉ · Mở rộng ▼</div>}
         {openDD && <span style={{ position: "absolute", right: 6, top: 12, fontSize: 12.5, color: C.sub, fontWeight: 600 }}>Thu gọn ▲</span>}
       </div>
@@ -236,20 +238,17 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       {isGV && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10, padding: "10px 14px", background: C.pineSoft, borderRadius: 10 }}>
             <div style={{ fontSize: 13.5, color: C.pine, fontWeight: 700, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display:"flex", alignItems:"center", gap:6 }}><Icon name="graduationCap" size={16} color={C.pine} /> {gvTen}</div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: soNghiNgay > 0 ? C.coral : C.green }}>{soNghiNgay > 0 ? `Nghỉ ${soNghiNgay}/${studentRows.length}` : `Đủ ${studentRows.length}`}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: (lastSaved && !dirty) ? C.green : C.amber, marginTop: 1 }}>{(lastSaved && !dirty) ? `✓ Đã điểm danh · ${String(lastSaved.getHours()).padStart(2,"0")}:${String(lastSaved.getMinutes()).padStart(2,"0")}` : "⏳ Chưa điểm danh"}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: soNghiNgay > 0 ? C.coralText : C.greenText }}>{soNghiNgay > 0 ? `Nghỉ ${soNghiNgay}/${studentRows.length}` : `Đủ ${studentRows.length}`}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: (lastSaved && !dirty) ? C.greenText : C.amberText, marginTop: 1 }}>{(lastSaved && !dirty) ? `✓ Đã điểm danh · ${String(lastSaved.getHours()).padStart(2,"0")}:${String(lastSaved.getMinutes()).padStart(2,"0")}` : "⏳ Chưa điểm danh"}</div>
             </div>
           </div>}
       {isGV && <SearchBar value={search} onChange={setSearch} />}
       <div ref={sentinelRef} style={{ height: 1 }} />
       <StickyBar shrunk={shrunk}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          <button onClick={() => setMode("ngay")} style={{ flex: 1, padding: "6px 0", borderRadius: 9, border: `1.5px solid ${mode === "ngay" ? C.pine : C.line}`, background: mode === "ngay" ? C.pine : C.card, color: mode === "ngay" ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Theo ngày</button>
-          <button onClick={() => setMode("thang")} style={{ flex: 1, padding: "6px 0", borderRadius: 9, border: `1.5px solid ${mode === "thang" ? C.pine : C.line}`, background: mode === "thang" ? C.pine : C.card, color: mode === "thang" ? "#fff" : C.sub, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body }}>Cả tháng (bảng)</button>
-        </div>
+        <Segmented full small style={{ marginBottom: 8 }} items={[["ngay", "Theo ngày"], ["thang", "Cả tháng (bảng)"]]} value={mode} onChange={setMode} />
       </StickyBar>
       {locked && (ddLockReason
-        ? <div style={{ background: C.goldSoft, border: `1px solid #EAD8A0`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: C.amber, display: "flex", alignItems: "flex-start", gap: 6 }}><Icon name="lock" size={14} color="#7A5E12" /><span>Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</span></div>
+        ? <div style={{ background: C.goldSoft, border: `1px solid ${C.line}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12.5, color: C.amberText, display: "flex", alignItems: "flex-start", gap: 6 }}><Icon name="lock" size={14} color={C.amberText} /><span>Điểm danh tháng {month} đã khóa vì tháng {month === 12 ? 1 : month + 1} đã chốt. Mở khóa tháng sau để sửa.</span></div>
         : <LockNote />)}
 
       {/* 3. CHỌN NGÀY & DANH SÁCH HS */}
@@ -259,14 +258,14 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
               <button onClick={() => setViewDay(Math.max(1, viewDay - 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>‹</button>
               <label style={{ position: "relative", textAlign: "center", cursor: "pointer", flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: dow === 0 ? C.gray : isLeNgay ? C.amber : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 19, color: dow === 0 ? C.grayText : isLeNgay ? C.amberText : C.pine, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
                   <Icon name="calendarCheck" size={16} color={C.pine} />{dowLabel}, {viewDay}/{month}/{year}<span style={{ fontSize: 12, color: C.sub }}>▾</span>
                 </div>
                 <input type="date" value={`${year}-${String(month).padStart(2, "0")}-${String(viewDay).padStart(2, "0")}`} onChange={(e) => { const v = e.target.value.split("-").map(Number); if (!v[0]) return; setYear(v[0]); setMonth(v[1]); setViewDay(v[2]); }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", border: "none" }} />
               </label>
               {/* Icon ngày lễ (chỉ admin) */}
               {dow !== 0 && !locked && !isGV && (
-                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? "#fff" : C.coral} /></button>
+                <button onClick={() => toggleLe(viewDay)} title={isLeNgay ? "Đang là ngày lễ — chạm để bỏ" : "Đặt ngày lễ (nghỉ cả trường)"} style={{ fontSize: 17, lineHeight: 1, border: "none", background: isLeNgay ? C.amber : C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0, display:"inline-flex", alignItems:"center", justifyContent:"center" }}><Icon name="flag" size={18} color={isLeNgay ? C.onFill : C.coral} /></button>
               )}
               <button onClick={() => setViewDay(Math.min(days, viewDay + 1))} style={{ fontSize: 22, lineHeight: 1, color: C.pine, border: "none", background: C.card, cursor: "pointer", width: 38, height: 38, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.1)", flexShrink: 0 }}>›</button>
             </div>
@@ -276,21 +275,21 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
                 dow !== 0 && !isLeNgay ? (
                   <button onClick={() => { setBaoView("moi"); setBaoMoiTen(""); setBaoNote(""); setBaoOpen(true); }} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px dashed ${C.pine}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 11.5, cursor: "pointer", fontFamily: font.body, whiteSpace: "nowrap", display:"inline-flex", alignItems:"center", gap:5 }}><Icon name="plus" size={13} color={C.pine} /> Báo cháu mới</button>
                 ) : (
-                  <span style={{ fontSize: 12.5, color: C.amber, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "Ngày lễ — nghỉ cả trường"}</span>
+                  <span style={{ fontSize: 12.5, color: C.amberText, fontWeight: 600 }}>{dow === 0 ? "Chủ nhật — nghỉ" : "Ngày lễ — nghỉ cả trường"}</span>
                 )
               ) : (
-                <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amber : C.sub, fontWeight: 600 }}>
+                <span style={{ fontSize: 12.5, color: dow === 0 || isLeNgay ? C.amberText : C.sub, fontWeight: 600 }}>
                   {dow === 0 ? "Chủ nhật — nghỉ" : isLeNgay ? "Ngày lễ — nghỉ cả trường" : `Nghỉ: ${soNghiNgay}/${studentRows.length} cháu`}{isCurMonth && viewDay === today.getDate() ? " · hôm nay" : ""}
                 </span>
               )}
               {dow !== 0 && !isLeNgay && soNghiNgay > 0 && (
-                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? "#fff" : C.coral, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="eye" size={13} color="currentColor" /> Cháu nghỉ ({soNghiNgay})</span>}</button>
+                <button onClick={() => setChiVang((v) => !v)} style={{ flexShrink: 0, padding: "5px 11px", borderRadius: 99, border: `1.5px solid ${C.coral}`, cursor: "pointer", fontWeight: 700, fontSize: 11.5, fontFamily: font.body, background: chiVang ? C.coral : C.card, color: chiVang ? C.onFill : C.coralText, whiteSpace: "nowrap" }}>{chiVang ? "↩ Xem tất cả" : <span style={{display:"inline-flex",alignItems:"center",gap:5}}><Icon name="eye" size={13} color="currentColor" /> Cháu nghỉ ({soNghiNgay})</span>}</button>
               )}
             </div>
           </Card>
           
           {dow === 0 || isLeNgay ? (
-            <div style={{ textAlign: "center", color: isLeNgay ? C.amber : C.gray, fontSize: 13.5, padding: 24 }}>{isLeNgay ? "Ngày lễ — cả trường nghỉ, không điểm danh." : "Chủ nhật — không điểm danh."}</div>
+            <div style={{ textAlign: "center", color: isLeNgay ? C.amberText : C.grayText, fontSize: 13.5, padding: 24 }}>{isLeNgay ? "Ngày lễ — cả trường nghỉ, không điểm danh." : "Chủ nhật — không điểm danh."}</div>
           ) : studentRows.length === 0 ? (
             <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh.</div>
           ) : (
@@ -302,13 +301,13 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
               const disabled = locked || chuaNhap || chuaNhapThang;
               return (
                 <div key={r.hs.id} onClick={() => !disabled && toggle(r.hs.id, viewDay)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", marginBottom: 6, borderRadius: 12, background: C.card, border: `1.5px solid ${disabled ? C.gray : nghi ? C.coral : C.line}`, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.65 : 1 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 9, background: disabled ? C.graySoft : nghi ? C.coralSoft : C.greenSoft, color: disabled ? C.gray : nghi ? C.coral : C.green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>{disabled ? "·" : (nghi ? "✕" : "✓")}</div>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: disabled ? C.graySoft : nghi ? C.coralSoft : C.greenSoft, color: disabled ? C.grayText : nghi ? C.coralText : C.greenText, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>{disabled ? "·" : (nghi ? <Ii name="x" size={13} strokeWidth={3} /> : <Ii name="check" size={13} strokeWidth={3} />)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14.5 }}>{r.hs.ten}</div>
-                    <div style={{ fontSize: 12, color: C.sub }}>{r.lop?.ten}{chuaNhap && <span style={{ color: C.amber, marginLeft: 4 }}>· nhập {nhap}</span>}{chuaNhapThang && <span style={{ color: C.amber, marginLeft: 4 }}>· chưa nhập</span>}</div>
+                    <div style={{ fontSize: 12, color: C.sub, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}><ClassAnimal name={r.lop?.ten || ""} size={16} />{r.lop?.ten}{chuaNhap && <span style={{ color: C.amberText, marginLeft: 4 }}>· nhập {nhap}</span>}{chuaNhapThang && <span style={{ color: C.amberText, marginLeft: 4 }}>· chưa nhập</span>}</div>
                   </div>
                   <Badge s={disabled ? { t: "—", c: C.gray, bg: C.graySoft } : nghi ? { t: "Nghỉ", c: C.coral, bg: C.coralSoft } : { t: "Đi học", c: C.green, bg: C.greenSoft }} />
-                  {isGV && (() => { const daBao = baoSentIds.has(r.hs.id); return <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: `1.5px solid ${daBao ? C.amber : C.line}`, background: daBao ? C.amberSoft : C.card, color: daBao ? "#7A5E12" : C.sub, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 9, fontFamily: font.body, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>{daBao ? <><Icon name="clock" size={12} color="#7A5E12" /> Đã báo</> : "Khác"}</button>; })()}
+                  {isGV && (() => { const daBao = baoSentIds.has(r.hs.id); return <button onClick={(e) => { e.stopPropagation(); openBao(r.hs); }} style={{ flexShrink: 0, border: `1.5px solid ${daBao ? C.amber : C.line}`, background: daBao ? C.amberSoft : C.card, color: daBao ? "#7A5E12" : C.sub, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "6px 10px", borderRadius: 10, fontFamily: font.body, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>{daBao ? <><Icon name="clock" size={12} color={C.amberText} /> Đã báo</> : "Khác"}</button>; })()}
                 </div>
               );
             })
@@ -321,14 +320,14 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
       {!locked && studentRows.length > 0 && (mode === "thang" || (dow !== 0 && !isLeNgay)) && (
         <div style={{ position: "sticky", bottom: 0, zIndex: 5, marginTop: 8, paddingTop: 8, paddingBottom: 8, background: "linear-gradient(to top, " + C.bg + " 72%, rgba(245,247,243,0))" }}>
           {saveState === "err" ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: C.coralSoft, border: `1.5px solid ${C.coral}`, color: C.coral, fontSize: 13.5, fontWeight: 600, fontFamily: font.body }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 12, background: C.coralSoft, border: `1.5px solid ${C.coral}`, color: C.coralText, fontSize: 13.5, fontWeight: 600, fontFamily: font.body }}>
               <span style={{ flex: 1, display:"inline-flex", alignItems:"center", gap:6 }}><Icon name="alertTriangle" size={15} color={C.coral} /> Chưa lưu được — kiểm tra mạng rồi thử lại</span>
-              <button onClick={xacNhanDD} style={{ padding: "6px 14px", borderRadius: 9, border: "none", background: C.coral, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, flexShrink: 0 }}>Thử lại</button>
+              <button onClick={xacNhanDD} style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: C.coral, color: C.onFill, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: font.body, flexShrink: 0 }}>Thử lại</button>
             </div>
           ) : (lastSaved && !dirty) ? (
-            <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.green, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}>✓ Đã điểm danh{mode === "ngay" ? ` ${dowLabel}, ${viewDay}/${month}` : ` tháng ${month}`} · Lúc {String(lastSaved.getHours()).padStart(2,"0")}:{String(lastSaved.getMinutes()).padStart(2,"0")}</div>
+            <div style={{ padding: "11px 14px", borderRadius: 12, background: C.greenSoft, border: `1.5px solid ${C.green}`, color: C.greenText, fontSize: 13.5, fontWeight: 700, fontFamily: font.body, textAlign: "center" }}><Ii name="check" size={14} /> Đã điểm danh{mode === "ngay" ? ` ${dowLabel}, ${viewDay}/${month}` : ` tháng ${month}`} · Lúc {String(lastSaved.getHours()).padStart(2,"0")}:{String(lastSaved.getMinutes()).padStart(2,"0")}</div>
           ) : (
-            <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(23,107,91,0.28)" }}>{saveState === "saving" ? <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="save" size={16} color="#fff" /> Đang lưu…</span> : <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="check" size={16} color="#fff" /> Xác nhận đã điểm danh</span>}</button>
+            <button onClick={xacNhanDD} disabled={saveState === "saving"} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saveState === "saving" ? C.gray : C.pine, color: C.onFill, fontWeight: 700, fontSize: 14.5, cursor: saveState === "saving" ? "default" : "pointer", fontFamily: font.body, boxShadow: "0 4px 14px rgba(13,111,168,0.28)" }}>{saveState === "saving" ? <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="save" size={16} color={C.onFill} /> Đang lưu…</span> : <span style={{display:"inline-flex",alignItems:"center",gap:8,justifyContent:"center"}}><Icon name="check" size={16} color={C.onFill} /> Xác nhận đã điểm danh</span>}</button>
           )}
         </div>
       )}
@@ -336,21 +335,21 @@ export function DiemDanhTab({ allRows, chipsLop, lopFilter, setLopFilter, search
 
       <BottomSheet open={baoOpen} onClose={() => { setBaoOpen(false); setBaoView("menu"); }} title={baoView === "moi" ? "Báo cháu mới" : baoView === "chuyenlop" ? `Báo chuyển lớp: ${baoHs?.ten || ""}` : `Báo về: ${baoHs?.ten || ""}`}>
         {baoView === "menu" && (<div>
-          <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><Icon name="school" size={19} color={C.pine} /><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.gray }}>›</span></button>
-          <button onClick={async () => { if (await ask(`Báo cho quản lý: cháu "${baoHs.ten}" thôi học (nghỉ hẳn)?`, { okText: "Gửi báo" })) guiBao({ type: "thoihoc", hsId: baoHs.id, hsTen: baoHs.ten }); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, textAlign: "left" }}><Icon name="logOut" size={19} color={C.coral} /><span style={{ flex: 1 }}>Báo thôi học (nghỉ hẳn)</span></button>
+          <button onClick={() => setBaoView("chuyenlop")} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}><Icon name="school" size={19} color={C.pine} /><span style={{ flex: 1 }}>Báo chuyển lớp</span><span style={{ color: C.grayText }}>›</span></button>
+          <button onClick={async () => { if (await ask(`Báo cho quản lý: cháu "${baoHs.ten}" thôi học (nghỉ hẳn)?`, { okText: "Gửi báo" })) guiBao({ type: "thoihoc", hsId: baoHs.id, hsTen: baoHs.ten }); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "13px 14px", borderRadius: 11, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coralText, fontWeight: 600, fontSize: 14.5, cursor: "pointer", fontFamily: font.body, textAlign: "left" }}><Icon name="logOut" size={19} color={C.coral} /><span style={{ flex: 1 }}>Báo thôi học (nghỉ hẳn)</span></button>
         </div>)}
         {baoView === "chuyenlop" && (<div>
           <button onClick={() => setBaoView("menu")} style={{ border: "none", background: "none", color: C.pine, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 8, padding: 0 }}>‹ Quay lại</button>
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6 }}>Chuyển sang lớp:</div>
           {baoLops.map(([id, ten]) => (<button key={id} onClick={() => setBaoLop(id)} style={{ display: "block", width: "100%", padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${baoLop === id ? C.pine : C.line}`, background: baoLop === id ? C.pineSoft : C.card, color: C.ink, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: font.body, marginBottom: 8, textAlign: "left" }}>{baoLop === id ? "● " : "○ "}{ten}</button>))}
-          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (không bắt buộc)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
-          <button onClick={() => guiBao({ type: "chuyenlop", hsId: baoHs.id, hsTen: baoHs.ten, lop: baoLop, lopTen: baoLops.find(([i]) => i === baoLop)?.[1], note: baoNote })} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
+          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (không bắt buộc)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <button onClick={() => guiBao({ type: "chuyenlop", hsId: baoHs.id, hsTen: baoHs.ten, lop: baoLop, lopTen: baoLops.find(([i]) => i === baoLop)?.[1], note: baoNote })} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
         </div>)}
         {baoView === "moi" && (<div>
           <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 6 }}>Tên cháu mới:</div>
-          <input value={baoMoiTen} onChange={(e) => setBaoMoiTen(e.target.value)} placeholder="Họ tên cháu" style={{ width: "100%", padding: "10px 12px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 14, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
-          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (lớp, ngày bắt đầu...)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 9, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
-          <button onClick={() => { if (!baoMoiTen.trim()) { toast("Nhập tên cháu đã."); return; } guiBao({ type: "moi", hsTen: baoMoiTen.trim(), note: baoNote }); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
+          <input value={baoMoiTen} onChange={(e) => setBaoMoiTen(e.target.value)} placeholder="Họ tên cháu" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 14, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <textarea value={baoNote} onChange={(e) => setBaoNote(e.target.value)} placeholder="Ghi chú (lớp, ngày bắt đầu...)" rows={2} style={{ width: "100%", padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${C.line}`, fontSize: 13.5, fontFamily: font.body, marginBottom: 10, boxSizing: "border-box" }} />
+          <button onClick={() => { if (!baoMoiTen.trim()) { toast("Nhập tên cháu đã."); return; } guiBao({ type: "moi", hsTen: baoMoiTen.trim(), note: baoNote }); }} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: font.body }}>Gửi báo cho quản lý</button>
         </div>)}
       </BottomSheet>
     </>
@@ -365,7 +364,7 @@ const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locke
     <tr style={{ background: index % 2 ? C.graySoft : C.card }}>
       <td style={{ position: "sticky", left: 0, background: "inherit", padding: "5px 6px", fontWeight: 600, whiteSpace: "nowrap", zIndex: 1, borderRight: `1px solid ${C.line}` }}>
         <span onClick={() => onSelectStudent && onSelectStudent(r.hs.id)} style={{ cursor: "pointer" }}>{r.hs.ten}</span>
-        {nhap > 1 && nhap < 99 && <span style={{ fontSize: 9, color: C.amber, marginLeft: 4 }}>(nhập {nhap})</span>}
+        {nhap > 1 && nhap < 99 && <span style={{ fontSize: 9, color: C.amberText, marginLeft: 4 }}>(nhập {nhap})</span>}
       </td>
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const dw = new Date(year, month - 1, d).getDay();
@@ -378,13 +377,13 @@ const DDRow = memo(function DDRow({ r, att, toggle, le, year, month, days, locke
             title={chuaNhap || chuaNhapThang ? "Chưa nhập học" : ""}
             style={{ width: 34, height: 38, fontSize: 15, textAlign: "center", cursor: disabled ? "default" : "pointer",
               background: isCN ? C.graySoft : isLe ? C.amberSoft : chuaNhap || chuaNhapThang ? C.graySoft : off ? C.coralSoft : "transparent",
-              color: chuaNhap || chuaNhapThang ? C.gray : C.coral, fontWeight: 700, border: `1px solid ${C.line}`, userSelect: "none",
+              color: chuaNhap || chuaNhapThang ? C.grayText : C.coralText, fontWeight: 700, border: `1px solid ${C.line}`, userSelect: "none",
               outline: d === todayD ? `1.5px solid ${C.pine}` : "none", outlineOffset: -1 }}>
-            {chuaNhap || chuaNhapThang ? "·" : (off && !closed ? "✕" : "")}
+            {chuaNhap || chuaNhapThang ? "·" : (off && !closed ? <Ii name="x" size={13} strokeWidth={3} /> : "")}
           </td>
         );
       })}
-      <td style={{ position: "sticky", right: 0, background: "inherit", zIndex: 1, textAlign: "center", fontWeight: 700, color: soNghi ? C.coral : C.sub, padding: "0 6px", borderLeft: `1px solid ${C.line}` }}>{soNghi}</td>
+      <td style={{ position: "sticky", right: 0, background: "inherit", zIndex: 1, textAlign: "center", fontWeight: 700, color: soNghi ? C.coralText : C.sub, padding: "0 6px", borderLeft: `1px solid ${C.line}` }}>{soNghi}</td>
     </tr>
   );
 });
@@ -397,15 +396,15 @@ export function DiemDanhBang({ studentRows, att, toggle, le, toggleLe, year, mon
   if (studentRows.length === 0) return <div style={{ textAlign: "center", color: C.sub, fontSize: 13.5, padding: 20 }}>Không có học sinh.</div>;
   return (
     <Card style={{ padding: 8, overflowX: "auto" }}>
-      <div style={{ fontSize: 12, color: C.sub, margin: "2px 0 6px 4px" }}>Chạm ô để đánh <b style={{ color: C.coral }}>nghỉ ✕</b>{!isGV && <> · chạm <b style={{ color: C.amber }}>số ngày trên đầu cột</b> để đặt ngày lễ (nghỉ cả trường)</>}</div>
+      <div style={{ fontSize: 12, color: C.sub, margin: "2px 0 6px 4px" }}>Chạm ô để đánh <b style={{ color: C.coralText }}>nghỉ <Ii name="x" size={14} /></b>{!isGV && <> · chạm <b style={{ color: C.amberText }}>số ngày trên đầu cột</b> để đặt ngày lễ (nghỉ cả trường)</>}</div>
       <table style={{ borderCollapse: "collapse", fontSize: 11.5, fontFamily: font.body }}>
         <thead><tr>
           <th style={{ position: "sticky", left: 0, background: C.card, textAlign: "left", padding: "4px 6px", minWidth: 106, zIndex: 2 }}>Học sinh</th>
           {dayArr.map((d) => { const dw = new Date(year, month - 1, d).getDay(); const isCN = dw === 0; const isLe = le[d]; return (
-            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : d === todayD ? C.pineSoft : "transparent", color: isCN ? C.gray : isLe ? C.amber : d === todayD ? C.pine : dw === 6 ? C.blueA : C.sub, fontWeight: 600, borderBottom: d === todayD ? `2px solid ${C.pine}` : undefined }}>
+            <th key={d} onClick={() => !isCN && !locked && toggleLe(d)} title={isCN ? "Chủ nhật" : "Chạm đặt/bỏ ngày lễ"} style={{ padding: "2px 0", width: 34, minWidth: 34, cursor: isCN || locked ? "default" : "pointer", background: isLe ? C.amberSoft : d === todayD ? C.pineSoft : "transparent", color: isCN ? C.grayText : isLe ? C.amberText : d === todayD ? C.pine : dw === 6 ? C.blueAText : C.sub, fontWeight: 600, borderBottom: d === todayD ? `2px solid ${C.pine}` : undefined }}>
               <div style={{ fontSize: 9, opacity: 0.8 }}>{TUAN[dw]}</div><div>{d}</div>{isLe && <div style={{ fontSize: 8 }}>lễ</div>}
             </th>); })}
-          <th style={{ position: "sticky", right: 0, background: C.card, zIndex: 2, padding: "0 6px", color: C.coral, fontWeight: 700, borderLeft: `1px solid ${C.line}` }}>Nghỉ</th>
+          <th style={{ position: "sticky", right: 0, background: C.card, zIndex: 2, padding: "0 6px", color: C.coralText, fontWeight: 700, borderLeft: `1px solid ${C.line}` }}>Nghỉ</th>
         </tr></thead>
         <tbody>
           {studentRows.map((r, ri) => (

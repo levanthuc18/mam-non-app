@@ -12,7 +12,17 @@ const COLOR_KEYS = [
   "green", "greenSoft", "amber", "amberSoft", "gray", "graySoft", "line",
   "blueA", "blueASoft", "violetB", "violetBSoft", "gold", "goldSoft",
   "orange", "orangeSoft", "inkBg",
+  // Màu dùng làm CHỮ (đậm hơn màu nền tương ứng để đạt tương phản 4,5:1). Dùng C.coralText… khi đặt color: cho chữ.
+  // onInk = chữ đặt trên nền tối trung tính (inkBg/ink).
+  // onFill = chữ đặt trên nền màu nhấn (nút xanh/đỏ…): trắng ở nền sáng, tối ở chủ đề Đêm (vì màu nhấn của Đêm là màu sáng).
+  "onFill", "onInk",
+  // Cảnh nền (mây, bãi cỏ) ở màn đăng nhập/chào.
+  "cloud", "grassA", "grassB",
+  "grayText", "coralText", "greenText", "amberText", "blueAText", "violetBText", "goldText", "orangeText",
 ];
+
+// Khoá chữ → khoá màu gốc (nếu người dùng tự chỉnh màu gốc thì chữ đi theo màu đó).
+const TEXT_OF = { grayText: "gray", coralText: "coral", greenText: "green", amberText: "amber", blueAText: "blueA", violetBText: "violetB", goldText: "gold", orangeText: "orange" };
 
 // Bộ màu nhấn dùng chung cho các theme SÁNG (giữ đúng giá trị đang chạy)
 const ACCENTS = {
@@ -26,9 +36,30 @@ const ACCENTS = {
   violetB: "#8A56B8", violetBSoft: "#F2EAFA",
   gold: "#C99A2E", goldSoft: "#FBF1D8",
   orange: "#FF5722", orangeSoft: "#FFEDE6",
+  // Bản CHỮ (đạt 4,5:1 trên nền thẻ và nền nhạt tương ứng)
+  onFill: "#FFFFFF", onInk: "#FFFFFF", cloud: "#FFFFFF", grassA: "#CDEBD3", grassB: "#B5DFC0",
+  grayText: "#5F6863", coralText: "#B8422C", greenText: "#267853", amberText: "#8A5E12",
+  blueAText: "#2D6AB7", violetBText: "#7D4AAB", goldText: "#7A5A12", orangeText: "#C2481A",
 };
 
 export const PALETTES = {
+  // Tuổi Thần Tiên = màu lấy từ logo trường (xanh dương #158FD4, cam #F7630F, xanh lá #8BBA30).
+  // Màu logo gốc không đủ tương phản cho chữ/nút nên dùng bản đậm hơn; đã đo 0 đoạn chữ dưới 4,5:1 trên bản mẫu.
+  logo: {
+    bg: "#F2F7FB", card: "#FFFFFF", ink: "#14283A", sub: "#4F6475",
+    pine: "#0D6FA8", pineSoft: "#E4F2FB",
+    coral: "#B73426", coralSoft: "#FBE9E6",
+    green: "#3F6F0E", greenSoft: "#EAF4D8",
+    amber: "#7F5A0A", amberSoft: "#FFF4D1",
+    gray: "#55687A", graySoft: "#E9F0F6", line: "#D6E2EA", inkBg: "#14283A",
+    blueA: "#0D6FA8", blueASoft: "#E4F2FB",
+    violetB: "#7D4AAB", violetBSoft: "#F2EAFA",
+    gold: "#C99A2E", goldSoft: "#FFF4D1",
+    orange: "#C2480A", orangeSoft: "#FFEDE3",
+    onFill: "#FFFFFF", onInk: "#FFFFFF", cloud: "#FFFFFF", grassA: "#D6EAA6", grassB: "#BBDB74",
+    grayText: "#55687A", coralText: "#B73426", greenText: "#3F6F0E", amberText: "#7F5A0A",
+    blueAText: "#0D6FA8", violetBText: "#7D4AAB", goldText: "#7F5A0A", orangeText: "#B84407",
+  },
   // Xanh khói = giao diện đang chạy (mặc định)
   xanhkhoi: { ...ACCENTS, bg: "#F5F7F3", card: "#FFFFFF", graySoft: "#EEF1EE", line: "#E3E8E2" },
   // Trắng sữa = trắng sạch
@@ -49,17 +80,21 @@ export const PALETTES = {
     violetB: "#B584DC", violetBSoft: "#2A1F38",
     gold: "#D9B45E", goldSoft: "#332B14",
     orange: "#FF7A4D", orangeSoft: "#3A2218",
+    onFill: "#0F1A17", onInk: "#E8F0ED", cloud: "#2A3F37", grassA: "#1E3A33", grassB: "#24463C",
+    grayText: "#9DB2AA", coralText: "#F2795E", greenText: "#54B985", amberText: "#D9A94A",
+    blueAText: "#5B9BE0", violetBText: "#B584DC", goldText: "#D9B45E", orangeText: "#FF7A4D",
   },
 };
 
 export const THEMES = [
+  { id: "logo", label: "Tuổi Thần Tiên" },
   { id: "trangsua", label: "Trắng sữa" },
   { id: "xanhkhoi", label: "Xanh khói" },
   { id: "kemam", label: "Kem ấm" },
   { id: "xamnhe", label: "Xám nhẹ" },
   { id: "dem", label: "Đêm" },
 ];
-export const DEFAULT_THEME = "xanhkhoi";
+export const DEFAULT_THEME = "logo";
 
 // C: khoá màu trỏ tới biến CSS; số đo giữ nguyên giá trị.
 export const C = {
@@ -88,7 +123,7 @@ export function applyTheme(id) {
   const custom = getCustom();
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  COLOR_KEYS.forEach((k) => root.style.setProperty(`--c-${k}`, custom[k] || p[k] || def[k]));
+  COLOR_KEYS.forEach((k) => root.style.setProperty(`--c-${k}`, custom[k] || (TEXT_OF[k] && custom[TEXT_OF[k]]) || p[k] || def[k]));
   root.style.setProperty("color-scheme", id === "dem" ? "dark" : "light");
   try { root.style.background = (custom.bg || p.bg || def.bg); } catch {}
 }
@@ -152,7 +187,7 @@ export const R = {
 
 // 4) BÓNG ĐỔ chuẩn (tone xanh, cực nhẹ — phẳng nhưng có chiều sâu)
 export const SH = {
-  subtle: "0 2px 8px rgba(23,107,91,.05)",
+  subtle: "0 2px 8px rgba(20,40,58,.05)",
   card: "0 2px 10px rgba(20,60,48,.05)",
   sheet: "0 -4px 24px rgba(0,0,0,.12)",
 };

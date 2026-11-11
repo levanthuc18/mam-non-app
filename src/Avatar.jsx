@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, font, sGet, sSet, sDel, toast } from "./lib.js";
+import { C, font, sGet, sSet, sDel, toast, hoiXoa, baoDaXoa } from "./lib.js";
 import { Icon } from "./Icon.jsx";
 
 // Avatar demo theo giới tính (khi chưa có ảnh thật)
@@ -139,14 +139,14 @@ function AvatarCropper({ src, onCancel, onSave }) {
         <div style={{ fontSize: 11.5, color: C.sub, textAlign: "center", marginBottom: 12 }}>Kéo để dịch ảnh · chụm 2 ngón hoặc thanh trượt để phóng to</div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onCancel} style={{ flex: 1, padding: "11px 0", borderRadius: 11, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font.body }}>Hủy</button>
-          <button onClick={save} disabled={!nat} style={{ flex: 1, padding: "11px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font.body }}>Lưu ảnh</button>
+          <button onClick={save} disabled={!nat} style={{ flex: 1, padding: "11px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font.body }}>Lưu ảnh</button>
         </div>
       </div>
     </div>
   );
 }
 
-export function AvatarEditor({ hs, setHS }) {
+export function AvatarEditor({ hs, setHS, compact = false }) {
   const src = useAvatarSrc(hs);
   const [busy, setBusy] = useState(false);
   const [cropSrc, setCropSrc] = useState(null);
@@ -175,25 +175,27 @@ export function AvatarEditor({ hs, setHS }) {
   };
 
   const remove = async () => {
+    if (!(await hoiXoa(`ảnh đại diện của "${hs.ten || "em"}"`))) return;
     setBusy(true);
     try { await sDel(avtKey(hs.id)); } catch {}
     AVT_CACHE.set(hs.id, null);
     setHS({ avt: 0 });
     setBusy(false);
+    baoDaXoa("ảnh đại diện");
   };
 
-  const btn = { padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body };
+  const btn = { padding: "7px 14px", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.pine, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: font.body };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${C.line}` }}>
-      <Avatar hs={hs} size={64} />
+    <div style={{ display: "flex", alignItems: "center", gap: compact ? 10 : 14, ...(compact ? {} : { marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${C.line}` }) }}>
+      <Avatar hs={hs} size={compact ? 40 : 64} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <input ref={fileRef} type="file" accept="image/*" onChange={onFile} style={{ display: "none" }} />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ ...btn, borderColor: C.pine }}>{busy ? "Đang lưu…" : (src ? <span style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center"}}><Icon name="camera" size={15} color={C.pine} /> Đổi ảnh</span> : <span style={{display:"inline-flex",alignItems:"center",gap:6,justifyContent:"center"}}><Icon name="camera" size={15} color={C.pine} /> Thêm ảnh</span>)}</button>
-          {src && !busy && <button onClick={remove} style={{ ...btn, color: C.coral, borderColor: C.coral }}>Xóa ảnh</button>}
+          {src && !busy && <button onClick={remove} style={{ ...btn, color: C.coralText, borderColor: C.coral }}>Xóa ảnh</button>}
         </div>
-        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 6, lineHeight: 1.4 }}>Chưa có ảnh thì hiển thị icon theo giới tính.</div>
+        {!compact && <div style={{ fontSize: 11.5, color: C.sub, marginTop: 6, lineHeight: 1.4 }}>Chưa có ảnh thì hiển thị icon theo giới tính.</div>}
       </div>
       {cropSrc && <AvatarCropper src={cropSrc} onCancel={() => setCropSrc(null)} onSave={onSave} />}
     </div>

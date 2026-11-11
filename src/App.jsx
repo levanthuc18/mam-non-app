@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { C, font, TT_THU_PHI, setCurrentActor, sGetSafe, sSet, sDel, setAskRef, setToastRef, fmt, subSync, flushPending, hasSbSession, sbLogout } from "./lib.js";
 import { useBackHandler, dismissTop, registerDismiss } from "./nav.js";
 import { SbAuth } from "./SbAuth.jsx";
-import { BottomSheet } from "./ui.jsx";
+import { BottomSheet, Button, TieuDeTrang } from "./ui.jsx";
 import { useStore } from "./useStore.js";
 import { HomeTab } from "./Home.jsx";
 import { ThuPhiTab } from "./ThuPhi.jsx";
@@ -17,8 +17,10 @@ import { StudentProfile } from "./StudentProfile.jsx";
 import { MoreMenu } from "./MoreMenu.jsx";
 import { Splash } from "./Splash.jsx";
 import { LoginScreen } from "./LoginScreen.jsx";
-import { Icon } from "./Icon.jsx";
+import { Icon, Ii } from "./Icon.jsx";
 import { Logo } from "./Brand.jsx";
+import { Cloud, Sun, Grass } from "./Decor.jsx";
+import { THEMES, setTheme, getTheme } from "./theme.js";
 
 function ConfirmHost() {
   const [state, setState] = useState(null);
@@ -29,11 +31,17 @@ function ConfirmHost() {
   const danger = state.opts.danger;
   return (
     <div onClick={() => close(false)} style={{ position: "fixed", inset: 0, background: "rgba(20,40,30,.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: C.card, borderRadius: 16, padding: 20, maxWidth: 380, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,.2)" }}>
+      <div role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ background: C.card, borderRadius: 16, padding: 20, maxWidth: 380, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,.2)" }}>
+        {state.opts.title && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <span style={{ width: 34, height: 34, borderRadius: 99, background: danger ? C.coralSoft : C.pineSoft, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={danger ? "trash" : "alertTriangle"} size={17} color={danger ? C.coral : C.pine} /></span>
+            <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, color: C.ink }}>{state.opts.title}</span>
+          </div>
+        )}
         <div style={{ fontSize: 14.5, color: C.ink, whiteSpace: "pre-line", lineHeight: 1.55, marginBottom: 18 }}>{state.msg}</div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => close(false)} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font.body }}>{state.opts.cancelText || "Hủy"}</button>
-          <button onClick={() => close(true)} style={{ flex: 1, padding: "11px 0", borderRadius: 10, border: "none", background: danger ? C.coral : C.pine, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: font.body }}>{state.opts.okText || "Đồng ý"}</button>
+          <Button onClick={() => close(false)} style={{ flex: 1 }}>{state.opts.cancelText || (danger ? "Giữ lại" : "Hủy")}</Button>
+          <Button variant={danger ? "danger" : "primary"} onClick={() => close(true)} style={{ flex: 1 }}>{state.opts.okText || "Đồng ý"}</Button>
         </div>
       </div>
     </div>
@@ -45,7 +53,7 @@ function ToastHost() {
   useEffect(() => { setToastRef((s) => { setState(s); clearTimeout(tRef.current); tRef.current = setTimeout(() => setState(null), s && s.undo ? 6000 : 2600); }); return () => setToastRef(null); }, []);
   if (!state) return null;
   return (
-    <div style={{ position: "fixed", bottom: 78, left: "50%", transform: "translateX(-50%)", zIndex: 100, background: C.inkBg, color: "#fff", padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ position: "fixed", bottom: 78, left: "calc(50% + var(--sb-w, 0px) / 2)", transform: "translateX(-50%)", zIndex: 100, background: C.inkBg, color: C.onInk, padding: "11px 18px", borderRadius: 99, fontSize: 13.5, fontWeight: 600, maxWidth: "90%", textAlign: "center", boxShadow: "0 6px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", gap: 10 }}>
       <span>{state.msg}</span>
       {state.undo && <button onClick={() => { state.undo(); clearTimeout(tRef.current); setState(null); }} style={{ background: C.card, color: C.ink, border: "none", borderRadius: 99, padding: "4px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>↩ Hoàn tác</button>}
     </div>
@@ -56,7 +64,7 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Trung tâm thông báo">
       {alerts.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 30, color: C.green, fontWeight: 600 }}>✓ Tuyệt vời! Hệ thống không có cảnh báo nào.</div>
+        <div style={{ textAlign: "center", padding: 30, color: C.greenText, fontWeight: 600 }}><Ii name="check" size={14} /> Tuyệt vời! Hệ thống không có cảnh báo nào.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {alerts.map((a, i) => {
@@ -65,7 +73,7 @@ function NotificationSheet({ open, onClose, alerts, onAction }) {
               <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 10, height: 10, borderRadius: 99, background: c.fg, flexShrink: 0, marginTop: 4 }} />
                 <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: c.fg }}>{a.msg}</div>
-                <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: c.fg, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", width: 100, textAlign: "center" }}>
+                <button onClick={() => { onAction(a.tab, a.filter); onClose(); }} style={{ padding: "8px 12px", borderRadius: 8, border: "none", background: c.fg, color: C.onFill, fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap", width: 100, textAlign: "center" }}>
                   {a.actionLabel}
                 </button>
               </div>
@@ -84,10 +92,10 @@ function SyncBanner() {
   if (!st.pending && !st.err) return null;
   return (
     <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, background: C.coralSoft, borderBottom: `1.5px solid ${C.coral}`, padding: "8px 12px calc(8px)", display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
-      <span style={{ flex: 1, color: C.coral, fontWeight: 700 }}>
-        ⚠ {st.pending > 0 ? `${st.pending} thay đổi CHƯA lưu lên server` : "Mất kết nối server"} — đừng đóng app khi chưa đồng bộ
+      <span style={{ flex: 1, color: C.coralText, fontWeight: 700 }}>
+        <Ii name="alertTriangle" size={14} /> {st.pending > 0 ? `${st.pending} thay đổi CHƯA lưu lên server` : "Mất kết nối server"} — đừng đóng app khi chưa đồng bộ
       </span>
-      <button disabled={busy} onClick={async () => { setBusy(true); await flushPending(); setBusy(false); }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coral, fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>{busy ? "Đang thử…" : "↻ Thử lại"}</button>
+      <button disabled={busy} onClick={async () => { setBusy(true); await flushPending(); setBusy(false); }} style={{ padding: "6px 12px", borderRadius: 8, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coralText, fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}>{busy ? "Đang thử…" : "↻ Thử lại"}</button>
     </div>
   );
 }
@@ -95,7 +103,7 @@ function SyncBanner() {
 export default function App() {
   const [tab, setTab] = useState("home"); 
   // ===== Navigation v1: root vs drill-in + nút Back Android =====
-  const DRILL = ["phieu", "dash", "no", "caidat"]; // màn con — push stack; 5 tab gốc thì không
+  const DRILL = ["phieu", "dash", "no", "caidat", "lop", "cp"]; // màn con — push stack; 5 tab gốc thì không
   const tabStackRef = useRef([]);
   const navTab = (t) => {
     if (t === tab) return;
@@ -120,6 +128,16 @@ export default function App() {
   const [thuFilter, setThuFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [isWide, setIsWide] = useState(typeof window !== "undefined" && window.innerWidth >= 820);
+  const [isDesk, setIsDesk] = useState(typeof window !== "undefined" && window.innerWidth >= 1024); // máy tính: thanh bên trái thay thanh tab đáy
+  const [thuMo, setThuMo] = useState(true); // máy tính: nhóm con của Thu phí (Danh sách / Công nợ / Phiếu thu - In) đang sổ ra
+  const [sbW, setSbW] = useState(() => { try { const v = Number(localStorage.getItem("mn5:sbW")); return v >= 64 && v <= 380 ? v : 240; } catch { return 240; } }); // máy tính: độ rộng thanh bên (kéo mép phải để đổi)
+  const sbRef = useRef(sbW); sbRef.current = sbW;
+  const sbDrag = useRef(null);
+  const gon = sbW < 150; // hẹp: chỉ còn biểu tượng
+  useEffect(() => { document.documentElement.style.setProperty("--sb-w", (isDesk ? sbW : 0) + "px"); }, [sbW, isDesk]);
+  const sbBat = (e) => { e.preventDefault(); sbDrag.current = { sx: e.clientX, w: sbRef.current }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch {} };
+  const sbDi = (e) => { const d = sbDrag.current; if (!d) return; setSbW(Math.min(380, Math.max(64, Math.round(d.w + e.clientX - d.sx)))); };
+  const sbXong = () => { if (sbDrag.current) { try { localStorage.setItem("mn5:sbW", String(sbRef.current)); } catch {} } sbDrag.current = null; };
   const [viewStudentId, setViewStudentId] = useState(null); 
   // Back đóng hồ sơ HS / phiếu chi tiết trước khi lùi màn
   useEffect(() => { if (viewStudentId == null) return; return registerDismiss(() => setViewStudentId(null)); }, [viewStudentId]);
@@ -144,7 +162,7 @@ export default function App() {
   setCurrentActor(isAdmin ? "Admin" : (isGV ? gvTen : "?"));
 
   useEffect(() => {
-    const h = () => setIsWide(window.innerWidth >= 820);
+    const h = () => { setIsWide(window.innerWidth >= 820); setIsDesk(window.innerWidth >= 1024); };
     window.addEventListener("resize", h); return () => window.removeEventListener("resize", h);
   }, []);
 
@@ -166,7 +184,7 @@ export default function App() {
     const isAuth = store.loadErrKind === "auth";
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: C.bg, padding: 24, fontFamily: font.body }}>
       <div style={{ textAlign: "center", maxWidth: 340 }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>{isAuth ? "🔒" : "📡"}</div>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>{isAuth ? <Ii name="lock" size={40} /> : <Ii name="wifiOff" size={40} />}</div>
         <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>{isAuth ? "Phiên đăng nhập hết hạn" : "Không kết nối được máy chủ"}</div>
         <div style={{ fontSize: 13.5, color: C.sub, lineHeight: 1.6, marginBottom: 18 }}>
           {isAuth
@@ -174,8 +192,8 @@ export default function App() {
             : <>App tạm thời không tải được dữ liệu (mạng hoặc máy chủ đang trục trặc). <b style={{ color: C.ink }}>Dữ liệu của bạn vẫn an toàn</b> — app sẽ không khởi tạo lại khi chưa đọc được. Vui lòng kiểm tra mạng và thử lại.</>}
         </div>
         {isAuth
-          ? <button onClick={() => { sbLogout(); window.location.reload(); }} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Đăng nhập lại</button>
-          : <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>}
+          ? <button onClick={() => { sbLogout(); window.location.reload(); }} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>Đăng nhập lại</button>
+          : <button onClick={() => window.location.reload()} style={{ padding: "12px 28px", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>↻ Thử lại</button>}
         <div><button onClick={() => { if (isAuth) window.location.reload(); else { sbLogout(); window.location.reload(); } }} style={{ marginTop: 12, padding: "8px 18px", borderRadius: 10, border: `1px solid ${C.line}`, background: C.card, color: C.sub, fontFamily: font.body, fontSize: 12.5, cursor: "pointer" }}>{isAuth ? "↻ Thử lại" : "Đăng nhập lại tài khoản"}</button></div>
       </div>
     </div>;
@@ -205,7 +223,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font.body, color: C.ink }}>
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: font.body, color: C.ink, position: "relative" }}>
             <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
         input[type=number]::-webkit-inner-spin-button{display:none}
@@ -226,29 +244,91 @@ export default function App() {
         @media print { .no-print{display:none!important} #phieu-in{box-shadow:none!important} body{background:#fff} }
       `}</style>
 
-      <div className="no-print" style={{ background: C.bg, padding: "14px 16px", color: C.ink, minHeight: 70, display: "flex", flexDirection: "column", justifyContent: "center", borderBottom: `1px solid ${C.line}` }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+
+      {isDesk && (
+        <aside className="no-print" aria-label="Điều hướng chính" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: sbW, background: C.card, borderRight: `1px solid ${C.line}`, padding: gon ? "16px 8px" : "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", zIndex: 30 }}>
+          <div style={{ padding: gon ? "2px 0 12px" : "2px 8px 14px", display: "flex", justifyContent: gon ? "center" : "flex-start" }}>{gon ? <Logo mark style={{ height: 34, width: "auto" }} /> : <Logo w={Math.min(150, sbW - 40)} />}</div>
+          {(isAdmin
+            ? [["Vận hành", [["home", "Trang chủ", "home"], ["dd", "Điểm danh", "calendarCheck"], ["lop", "Lớp học", "building"], ["hs", "Học sinh", "users"]]],
+               ["Tài chính", [["thu", "Thu phí", "wallet"], ["cp", "Chi phí & lương", "banknote"], ["dash", "Báo cáo & quỹ", "barChart"]]],
+               ["Hệ thống", [["caidat", "Cài đặt", "settings"]]]]
+            : [["Vận hành", [["home", "Trang chủ", "home"], ["dd", "Điểm danh", "calendarCheck"], ["hs", "Học sinh", "users"]]]]
+          ).map(([grp, items]) => (
+            <div key={grp}>
+              {gon ? <div style={{ height: 8 }} /> : <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase", color: C.grayText, padding: "12px 12px 4px", whiteSpace: "nowrap", overflow: "hidden" }}>{grp}</div>}
+              {items.map(([id, lb, ic]) => {
+                const nhomThu = tab === "thu" || tab === "no" || tab === "phieu";
+                const laThu = id === "thu";
+                const on = laThu ? nhomThu : tab === id;
+                const moRa = laThu && nhomThu && thuMo && !gon;
+                const bam = () => { if (laThu && !gon) { if (nhomThu) setThuMo((v) => !v); else { navTab("thu"); setThuMo(true); } } else navTab(laThu ? "thu" : id); };
+                return (
+                  <div key={id}>
+                    <button onClick={bam} aria-current={on && !laThu ? "page" : undefined} aria-expanded={laThu ? moRa : undefined}
+                      title={gon ? lb : undefined} style={{ display: "flex", alignItems: "center", justifyContent: gon ? "center" : "flex-start", gap: 10, width: "100%", minHeight: 40, padding: gon ? "0" : "0 12px", whiteSpace: "nowrap", overflow: "hidden", borderRadius: 10, border: "none", background: on ? C.pineSoft : "transparent", color: on ? C.pine : C.sub, fontFamily: font.body, fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+                      <Icon name={ic} size={20} strokeWidth={on ? 2.4 : 2} />{!gon && lb}
+                      {laThu && !gon && <span style={{ marginLeft: "auto", display: "flex", transform: moRa ? "rotate(90deg)" : "none", transition: "transform .15s" }}><Icon name="chevronRight" size={16} /></span>}
+                    </button>
+                    {moRa && (
+                      <div style={{ margin: "2px 0 4px 20px", paddingLeft: 10, borderLeft: `2px solid ${C.line}` }}>
+                        {[["thu", "Danh sách"], ["no", "Công nợ"], ["phieu", "Phiếu thu - In"]].map(([k, nhan]) => {
+                          const dang = tab === k;
+                          return (
+                            <button key={k} onClick={() => navTab(k)} aria-current={dang ? "page" : undefined}
+                              style={{ display: "flex", alignItems: "center", width: "100%", minHeight: 34, padding: "0 12px", borderRadius: 8, border: "none", background: dang ? C.pine : "transparent", color: dang ? C.onFill : C.sub, fontFamily: font.body, fontSize: 13.5, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 2 }}>{nhan}</button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          <div style={{ flex: 1 }} />
+          <button onClick={logout} title={gon ? "Đăng xuất" : undefined} style={{ display: "flex", alignItems: "center", justifyContent: gon ? "center" : "flex-start", gap: 10, minHeight: 40, padding: gon ? "0" : "0 12px", borderRadius: 10, border: "none", background: "transparent", color: C.sub, fontFamily: font.body, fontSize: 14, fontWeight: 600, cursor: "pointer" }}><Icon name="logOut" size={20} />{!gon && "Đăng xuất"}</button>
+        <span role="separator" aria-orientation="vertical" title="Kéo để đổi độ rộng thanh bên (nhấp đúp: trả về mặc định)"
+          onPointerDown={sbBat} onPointerMove={sbDi} onPointerUp={sbXong} onPointerCancel={sbXong}
+          onDoubleClick={() => { setSbW(240); try { localStorage.setItem("mn5:sbW", "240"); } catch {} }}
+          style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 8, cursor: "col-resize", touchAction: "none", zIndex: 5 }} />
+        </aside>
+      )}
+
+      {isDesk && (
+        <div aria-hidden="true" className="no-print" style={{ position: "absolute", top: 0, left: sbW, right: 0, height: 230, background: `linear-gradient(180deg, ${C.pineSoft} 0%, ${C.bg} 100%)`, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+          <Sun w={76} style={{ position: "absolute", left: 28, top: 4, opacity: 0.5 }} />
+          <Cloud w={124} style={{ position: "absolute", left: "20%", top: 18, opacity: 0.9 }} />
+          <Cloud w={88} style={{ position: "absolute", left: "44%", top: 70, opacity: 0.7 }} />
+          <Cloud w={136} style={{ position: "absolute", left: "66%", top: 16, opacity: 0.85 }} />
+          <Cloud w={92} style={{ position: "absolute", left: "86%", top: 84, opacity: 0.7 }} />
+        </div>
+      )}
+
+      <div className="no-print" style={{ background: C.bg, padding: isDesk ? `8px 24px 0 ${sbW + 24}px` : "14px 16px", color: C.ink, minHeight: isDesk ? 40 : 70, display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", ...(isDesk ? { background: "transparent", borderBottom: "none" } : { borderBottom: `1px solid ${C.line}`, overflow: "hidden" }) }}>
+        <div style={{ maxWidth: isDesk ? "none" : 640, margin: isDesk ? "0" : "0 auto", width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          {isDesk ? <div /> : (
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <Logo mark style={{ height: 34, width: "auto", flexShrink: 0 }} />
             <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 16, lineHeight: 1.2, color: C.pine, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.tenTruong}</div>
+            <div style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, lineHeight: 1.2, color: C.pine, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{meta.tenTruong}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
               {isGV ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><Icon name="graduationCap" size={13} color={C.sub} /> {gvTen} - Lớp {meta.classes.find(c=>c.id===gvLopId)?.ten || "?"}</span> : `${students.filter((s) => TT_THU_PHI[s.trangThai]).length} học sinh · ${meta.classes.length} lớp`}
               {store.locked && <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>· <Icon name="lock" size={12} color={C.sub} /></span>}
             </div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, position: "relative" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 2, background: C.graySoft, border: `1px solid ${C.line}`, borderRadius: 999, padding: "4px 4px" }}>
-              <button onClick={prevM} style={{ color: C.sub, fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
-              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 64, textAlign: "center", color: C.ink, background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{store.month}/{store.year} <span style={{ fontSize: 9, color: C.sub }}>▾</span></button>
-              <button onClick={nextM} style={{ color: C.sub, fontSize: 18, padding: "0 8px", border: "none", background: "none", cursor: "pointer" }}>›</button>
+              <button onClick={prevM} style={{ color: C.sub, fontSize: 18, padding: "0 5px", border: "none", background: "none", cursor: "pointer" }}>‹</button>
+              <button onClick={() => setMonthPickerOpen(true)} style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14, minWidth: 58, textAlign: "center", color: C.ink, background: "none", border: "none", cursor: "pointer", padding: "2px 4px", display: "flex", alignItems: "center", gap: 3 }}>Th{store.month}/{store.year} <span style={{ fontSize: 9, color: C.sub }}>▾</span></button>
+              <button onClick={nextM} style={{ color: C.sub, fontSize: 18, padding: "0 5px", border: "none", background: "none", cursor: "pointer" }}>›</button>
             </div>
             
             {isAdmin && sysAlerts.length > 0 && (
               <button onClick={() => setNotifOpen(true)} style={{ position: "relative", background: "none", border: "none", borderRadius: 8, padding: "5px 7px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke={C.pine} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                <span style={{ position: "absolute", top: -1, right: -1, background: C.orange, color: "#fff", fontSize: 9, fontWeight: 800, minWidth: 15, height: 15, padding: "0 3px", borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${C.bg}` }}>{sysAlerts.length}</span>
+                <span style={{ position: "absolute", top: -1, right: -1, background: C.orange, color: C.onFill, fontSize: 9, fontWeight: 800, minWidth: 15, height: 15, padding: "0 3px", borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${C.bg}` }}>{sysAlerts.length}</span>
               </button>
             )}
             
@@ -257,19 +337,36 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "14px 14px 92px" }}>
-        {DRILL.includes(tab) && (
+      <div style={{ maxWidth: isDesk ? "none" : 640, margin: isDesk ? `0 0 0 ${sbW}px` : "0 auto", padding: isDesk ? "4px 24px 40px" : "14px 14px 92px", position: "relative" }}>
+        {["thu", "no", "phieu"].includes(tab) && !(isDesk && tab === "thu") && (
+          <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: isDesk ? 10 : 14 }}>
+            {isDesk && tab !== "phieu" && <TieuDeTrang tieuDe={tab === "no" ? "Công nợ" : "Phiếu thu - In"} phu={tab === "no" ? "Theo dõi công nợ của học sinh" : "In và chia sẻ phiếu thu"} />}
+            {!isDesk && <div role="tablist" style={{ display: "inline-flex", gap: 2, background: C.graySoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: 3 }}>
+              {[["thu", "Danh sách"], ["no", "Công nợ"], ["phieu", "Phiếu thu - In"]].map(([k, lb]) => (
+                <button key={k} role="tab" aria-selected={tab === k} onClick={() => navTab(k)} style={{ minHeight: 34, padding: "0 16px", border: "none", borderRadius: 10, fontFamily: font.body, fontWeight: 700, fontSize: 13.5, cursor: "pointer", background: tab === k ? C.pine : "transparent", color: tab === k ? C.onFill : C.sub }}>{lb}</button>
+              ))}
+            </div>}
+          </div>
+        )}
+
+        {DRILL.includes(tab) && !isDesk && (
           <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <button onClick={goBack} style={{ width: 38, height: 34, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, color: C.ink, fontSize: 17, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>←</button>
             <button onClick={() => navTab("home")} style={{ width: 38, height: 34, borderRadius: 10, border: `1.5px solid ${C.line}`, background: C.card, fontSize: 15, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>🏠</button>
-            <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.ink }}>{{ phieu: "Phiếu thu", dash: "Tổng quan", no: "Công nợ", caidat: "Cài đặt" }[tab]}</span>
+            <span style={{ fontFamily: font.display, fontWeight: 700, fontSize: 14.5, color: C.ink }}>{{ phieu: "Phiếu thu", dash: "Tổng quan", no: "Công nợ", caidat: "Cài đặt", lop: "Lớp học", cp: "Chi phí & lương" }[tab]}</span>
           </div>
         )}
         {store.seeded && tab === "home" && <div className="no-print" style={{ background: C.pineSoft, border: `1px solid ${C.line}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.pine }}>👋 Khởi tạo xong! Bắt đầu: vào Cài đặt → Học sinh để thêm/nhập danh sách, rồi tạo bảng thu cho tháng.</div>}
 
-        {!store.ddOk && tab === "dd" && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span>⚠ Chưa tải được điểm danh (mạng/phiên) — tạm khóa sửa để bảo vệ dữ liệu.</span><button onClick={store.reloadDD} style={{ border: "none", background: C.coral, color: "#fff", borderRadius: 8, padding: "6px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>↻ Thử lại</button></div>}
+        {!store.ddOk && tab === "dd" && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coralText, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}><span><Ii name="alertTriangle" size={14} /> Chưa tải được điểm danh (mạng/phiên) — tạm khóa sửa để bảo vệ dữ liệu.</span><button onClick={store.reloadDD} style={{ border: "none", background: C.coral, color: C.onFill, borderRadius: 8, padding: "6px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>↻ Thử lại</button></div>}
 
-        {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coral, fontWeight: 600 }}>⚠ Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
+        {store.prevDebtStale && (tab === "thu" || tab === "no") && <div className="no-print" style={{ background: C.coralSoft, border: `1px solid ${C.coral}`, borderRadius: 12, padding: "9px 12px", marginBottom: 12, fontSize: 12.5, color: C.coralText, fontWeight: 600 }}><Ii name="alertTriangle" size={14} /> Nợ cũ đang tạm tính (lỗi mạng) — số nợ có thể chưa đủ. Kiểm tra kết nối rồi mở lại tháng.</div>}
+
+        {isDesk && ({ home: 1, dd: 1, cp: 1, dash: 1, caidat: 1 })[tab] && (
+          <TieuDeTrang style={{ marginBottom: 12 }}
+            tieuDe={({ home: "Trang chủ", dd: "Điểm danh", cp: "Chi phí & lương", dash: "Báo cáo & quỹ", caidat: "Cài đặt" })[tab]}
+            phu={({ home: "Tổng quan hoạt động hôm nay", dd: "Điểm danh nghỉ của học sinh theo ngày và theo tháng", cp: "Khoản chi, bảng lương và chấm công", dash: "Thu chi, lợi nhuận và chia quỹ", caidat: "Giáo viên, bảng giá, giao diện và dữ liệu hệ thống" })[tab]} />
+        )}
 
         {tab === "home" && (
           <HomeTab store={store} auth={auth} setTab={navTab} setThuFilter={setThuFilter} openStudentProfile={setViewStudentId} setNotifOpen={setNotifOpen} baoPendingCount={baoPendingCount} />
@@ -296,12 +393,12 @@ export default function App() {
             setNgayAnAll={store.setNgayAnAll} thuDuNhieu={store.thuDuNhieu}
             addPhuThuHS={store.addPhuThuHS} delPhuThuHS={store.delPhuThuHS}
             locked={store.locked} mData={store.mData} upMData={store.upMData}
-            setPhieuId={setPhieuId} setTab={navTab} isWide={isWide} onSelectStudent={setViewStudentId}
+            setPhieuId={setPhieuId} setTab={navTab} isWide={isWide} isDesk={isDesk} meta={meta} upMeta={store.upMeta} month={store.month} year={store.year} onSelectStudent={setViewStudentId}
           />
         )}
         
         {tab === "dd" && (
-          <DiemDanhTab 
+          <DiemDanhTab isDesk={isDesk}
             allRows={store.ddRows} chipsLop={chipsLop} lopFilter={lopFilter} setLopFilter={setLopFilter}
             search={search} setSearch={setSearch} ddData={store.ddData} upDDData={store.upDDData}
             leData={store.leData} upLeData={store.upLeData} year={store.year} month={store.month}
@@ -329,14 +426,18 @@ export default function App() {
           />
         )}
         
-        {tab === "dash" && store.mData && (
-          <DashTab tk={store.tk} mData={store.mData} upMData={store.upMData} month={store.month} year={store.year} locked={store.locked} meta={meta} allRows={store.allRows} delThang={store.delThang} students={students} ym={store.ym} upMeta={store.upMeta} setTab={navTab} />
+        {(tab === "dash" || tab === "cp") && !isGV && store.mData && (
+          <DashTab view={isDesk ? (tab === "cp" ? "cp" : "bc") : "bcm"} key={tab} ddData={store.ddData} tk={store.tk} mData={store.mData} upMData={store.upMData} month={store.month} year={store.year} locked={store.locked} meta={meta} allRows={store.allRows} delThang={store.delThang} students={students} ym={store.ym} upMeta={store.upMeta} setTab={navTab} />
         )}
         
         {tab === "no" && (
           <CongNoTab students={students} meta={meta} ym={store.ym} mData={store.mData} setPhieuId={setPhieuId} setTab={navTab} />
         )}
         
+        {tab === "lop" && !isGV && (
+          <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} khoiPhucTruoc={store.khoiPhucTruoc} isWide={isWide} isDesk={isDesk} onlySec="lop" />
+        )}
+
         {tab === "caidat" && (
           <CaiDat meta={meta} upMeta={store.upMeta} students={students} upStudents={store.upStudents} ym={store.ym} reseedAll={store.reseedAll} khoiPhucTruoc={store.khoiPhucTruoc} isWide={isWide} />
         )}
@@ -349,6 +450,7 @@ export default function App() {
             ym={store.ym} 
             store={store}
             isWide={isWide}
+            isDesk={isDesk}
             openStudentProfile={setViewStudentId} 
           />
         )}
@@ -357,14 +459,14 @@ export default function App() {
           <MoreMenu setTab={navTab} onLogout={logout} students={students} meta={meta} />
         )}
 
-        {["thu", "phieu", "dash", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
+        {["thu", "phieu", "dash", "cp", "no", "caidat"].includes(tab) && !store.mData && !["caidat", "no", "more", "hs"].includes(tab) && (
           <div className="no-print" style={{ background: C.card, borderRadius: 16, padding: 28, textAlign: "center", border: `1px dashed ${C.line}` }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}><Icon name="calendarCheck" size={36} color={C.gray} strokeWidth={1.6} /></div>
             <div style={{ fontWeight: 600, margin: "8px 0 4px" }}>Tháng {store.month}/{store.year} chưa có dữ liệu</div>
             {isAdmin ? (
               <>
                 <div style={{ fontSize: 13, color: C.sub, marginBottom: 16 }}>Tạo bảng thu cho HS đang học.</div>
-                <button onClick={store.taoThang} style={{ background: C.pine, color: "#fff", padding: "11px 24px", borderRadius: 99, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", fontFamily: font.display }}>+ Tạo tháng {store.month}/{store.year}</button>
+                <button onClick={store.taoThang} style={{ background: C.pine, color: C.onFill, padding: "11px 24px", borderRadius: 99, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", fontFamily: font.display }}>+ Tạo tháng {store.month}/{store.year}</button>
               </>
             ) : (
               <div style={{ fontSize: 13, color: C.sub }}>Vui lòng liên hệ kế toán để tạo bảng thu.</div>
@@ -373,7 +475,7 @@ export default function App() {
         )}
       </div>
 
-      <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
+      {!isDesk && <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.line}`, display: "flex", justifyContent: "center", zIndex: 20 }}>
         <div style={{ display: "flex", width: "100%", maxWidth: 640 }}>
           {(isAdmin 
             ? [["home", "Trang chủ", "home"], ["thu", "Thu phí", "wallet"], ["dd", "Điểm danh", "calendarCheck"], ["hs", "Học sinh", "users"], ["more", "Thêm", "more"]] 
@@ -382,13 +484,13 @@ export default function App() {
             <button 
               key={id} 
               onClick={() => setTab(id)} 
-              style={{ flex: 1, padding: "8px 0 10px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.gray, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
+              style={{ flex: 1, padding: "8px 0 10px", border: "none", background: "none", cursor: "pointer", color: tab === id ? C.pine : C.grayText, fontFamily: font.body, fontSize: 10, fontWeight: tab === id ? 700 : 500, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}
             >
               <Icon name={ic} size={22} color={tab === id ? C.pine : C.gray} strokeWidth={tab === id ? 2.4 : 2} />{lb}
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       <BottomSheet open={monthPickerOpen} onClose={() => setMonthPickerOpen(false)} title="Chọn tháng xem báo cáo">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -400,15 +502,15 @@ export default function App() {
               const active = m === store.month && y === store.year;
               const isNow = m === base.getMonth() + 1 && y === base.getFullYear();
               return (
-                <button key={`${y}-${m}`} onClick={() => { store.setMonth(m); store.setYear(y); setMonthPickerOpen(false); }} style={{ flex: "1 1 28%", minWidth: 96, padding: "11px 6px", borderRadius: 11, border: `1.5px solid ${active ? C.pine : C.line}`, background: active ? C.pine : C.card, color: active ? "#fff" : C.ink, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                <button key={`${y}-${m}`} onClick={() => { store.setMonth(m); store.setYear(y); setMonthPickerOpen(false); }} style={{ flex: "1 1 28%", minWidth: 96, padding: "11px 6px", borderRadius: 11, border: `1.5px solid ${active ? C.pine : C.line}`, background: active ? C.pine : C.card, color: active ? C.onFill : C.ink, fontFamily: font.display, fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                   Th{m}/{y}
-                  {isNow && <span style={{ fontSize: 9.5, fontWeight: 600, color: active ? "#fff" : C.green }}>● hiện tại</span>}
+                  {isNow && <span style={{ fontSize: 9.5, fontWeight: 600, color: active ? C.onFill : C.greenText }}>● hiện tại</span>}
                 </button>
               );
             });
           })()}
         </div>
-        <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Xong</button>
+        <button onClick={() => setMonthPickerOpen(false)} style={{ width: "100%", marginTop: 14, padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Xong</button>
       </BottomSheet>
 
       {isAdmin && (

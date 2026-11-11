@@ -1,6 +1,7 @@
 // SoGiaoDich.jsx — Sổ giao dịch tiền (timeline theo tháng + lọc người/loại).
 // Diễn giải giao dịch nằm ở taichinh.buildGiaoDichThang; file này chỉ fetch + render.
 import { useState, useEffect } from "react";
+import { Ii } from "./Icon.jsx";
 import { C, font, fmt, sGetSafe, sListSafe } from "./lib.js";
 import { BottomSheet } from "./ui.jsx";
 import { buildGiaoDichThang } from "./taichinh.js";
@@ -48,7 +49,7 @@ export function SoGiaoDichSheet({ open, onClose, ym, students }) {
         </div>
         {loi ? (
           <div style={{ textAlign: "center", padding: 20 }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+            <div style={{ fontSize: 28, marginBottom: 8 }}><Ii name="wifiOff" size={32} /></div>
             <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 600, marginBottom: 4 }}>Không tải được sổ giao dịch</div>
             <div style={{ fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}>Mạng hoặc phiên đăng nhập đang trục trặc. Sổ đã được <b style={{ color: C.ink }}>tạm ẩn</b> vì có thể thiếu tháng — hiện ra sẽ khiến bạn đối chiếu nhầm. Đóng rồi mở lại để thử.</div>
           </div>
@@ -66,13 +67,13 @@ export function SoGiaoDichSheet({ open, onClose, ym, students }) {
               <div key={g.thang} style={{ marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                   <span style={{ fontFamily: font.display, fontWeight: 800, fontSize: 14, color: C.pine }}>{g.label}</span>
-                  <span style={{ fontSize: 11, color: C.sub }}>{tThu > 0 && <span style={{ color: C.green }}>+{fmt(tThu)} </span>}{tChi > 0 && <span style={{ color: C.coral }}>−{fmt(tChi)}</span>}</span>
+                  <span style={{ fontSize: 11, color: C.sub }}>{tThu > 0 && <span style={{ color: C.greenText }}>+{fmt(tThu)} </span>}{tChi > 0 && <span style={{ color: C.coralText }}>−{fmt(tChi)}</span>}</span>
                 </div>
                 <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
                   {evs.map((ev, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderTop: i ? `1px solid ${C.line}` : "none" }}>
                       <span style={{ fontSize: 10.5, color: C.sub, minWidth: 32, fontWeight: 600 }}>{ev.ts ? fmtNgay(ev.ts) : "—"}</span>
-                      {ev.nguoi && <span style={{ fontSize: 10.5, fontWeight: 800, color: ev.nguoi === "A" ? C.blueA : C.violetB }}>[{ev.nguoi}]</span>}
+                      {ev.nguoi && <span style={{ fontSize: 10.5, fontWeight: 800, color: ev.nguoi === "A" ? C.blueAText : C.violetBText }}>[{ev.nguoi}]</span>}
                       <span style={{ flex: 1, fontSize: 12.5, color: C.ink }}>{ev.label}</span>
                       <b style={{ fontSize: 12.5, color: colorOf(ev.dau), whiteSpace: "nowrap" }}>{ev.dau}{fmt(ev.amount)}</b>
                     </div>
@@ -84,7 +85,7 @@ export function SoGiaoDichSheet({ open, onClose, ym, students }) {
           return any ? <div>{blocks}</div> : <div style={{ textAlign: "center", color: C.sub, padding: 20 }}>Không có giao dịch khớp bộ lọc.</div>;
         })()}
         <div style={{ fontSize: 10.5, color: C.sub, marginTop: 2, marginBottom: 8, textAlign: "center" }}>Học phí gộp theo tháng (không có ngày). Giao dịch nhập từ giờ có ngày cụ thể.</div>
-        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: "#fff", fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✓ Đóng</button>
+        <button onClick={onClose} style={{ width: "100%", padding: "12px 0", borderRadius: 11, border: "none", background: C.pine, color: C.onFill, fontFamily: font.display, fontWeight: 700, fontSize: 15, cursor: "pointer" }}><Ii name="check" size={14} /> Đóng</button>
       </BottomSheet>
   );
 }

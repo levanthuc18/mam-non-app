@@ -1,0 +1,51 @@
+/* ui.css — nền tảng giao diện dùng chung (một nơi để chỉnh).
+   Màu luôn lấy từ biến chủ đề --c-* (xem theme.js), KHÔNG viết mã màu thô ở đây. */
+
+/* 1) Vòng focus khi dùng bàn phím (không hiện khi chạm/chuột). Style viết trực tiếp trong JSX không tự làm được việc này. */
+:where(button, [role="button"], a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--c-pine);
+  outline-offset: 2px;
+}
+/* 2) Giảm thao tác chạm đúp phóng to; phản hồi ngay khi bấm */
+button, [role="button"] { touch-action: manipulation; }
+/* 3) Tôn trọng "giảm chuyển động" của hệ điều hành */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+/* 4) Nút chuẩn: <Button variant="primary|secondary|danger|ghost" /> trong ui.jsx */
+.mn-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 16px; border-radius: 10px;
+  border: 1.5px solid var(--c-line); background: var(--c-card); color: var(--c-sub);
+  font: 700 14px/1 'Be Vietnam Pro', system-ui, sans-serif; cursor: pointer;
+  transition: background .12s ease, transform .12s ease, filter .12s ease;
+}
+.mn-btn:hover { background: var(--c-graySoft); }
+.mn-btn:active { transform: scale(.98); }
+.mn-btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
+.mn-btn--block { display: flex; width: 100%; }
+.mn-btn--primary { background: var(--c-pine); border-color: var(--c-pine); color: var(--c-onFill); }
+.mn-btn--primary:hover { background: var(--c-pine); filter: brightness(1.08); }
+.mn-btn--danger { background: var(--c-coral); border-color: var(--c-coral); color: var(--c-onFill); }
+.mn-btn--danger:hover { background: var(--c-coral); filter: brightness(1.08); }
+.mn-btn--ghost { background: transparent; border-color: transparent; color: var(--c-pine); }
+.mn-btn[aria-busy="true"] { pointer-events: none; opacity: .85; }
+
+/* Trang chủ (máy tính): cửa sổ hẹp thì ẩn biểu tượng ô số để số không bị chen */
+@media (max-width: 1180px) { .kpi-ic { display: none !important; } }
+
+/* Hàng ô số (KPI): ô co dần theo bề rộng hàng, chữ/số nhỏ theo; chỉ khi mỗi ô hẹp hơn ~112px (không đủ chỗ cho số) mới xuống dòng. */
+.kpi-row { container-type: inline-size; display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--kpi-min, 112px), 1fr)); gap: 10px; min-width: 0; }
+.kpi-row .kpi-val { font-size: clamp(12px, 2.5cqw, 20px) !important; }
+.kpi-row .kpi-nhan { font-size: clamp(10.5px, 1.5cqw, 12.5px) !important; }
+.kpi-row .kpi-phu { font-size: clamp(10px, 1.4cqw, 12px) !important; }
+/* khi đã xuống 2 hàng (mỗi ô rộng ra) thì chữ to lại */
+@container (max-width: 477px) { .kpi-row .kpi-val { font-size: clamp(14px, 4.4cqw, 20px) !important; } .kpi-row .kpi-nhan { font-size: 12.5px !important; } .kpi-row .kpi-phu { font-size: 12px !important; } }
+
+/* Phiếu phóng to ngay trong khu xem trước (In hàng loạt): mở ra từ từ, đổi trang thì chạy lại */
+@keyframes pvZoom { from { opacity: 0; transform: scale(.86) translateY(-10px); } to { opacity: 1; transform: none; } }
+.pv-big { transform-origin: top center; animation: pvZoom .26s cubic-bezier(.2, .8, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .pv-big { animation: none; } }
+
+/* Nút và ô nhập kế thừa phông chữ của app (mặc định trình duyệt là Arial) */
+button, input, select, textarea { font-family: inherit; }
