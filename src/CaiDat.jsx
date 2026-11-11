@@ -24,6 +24,22 @@ export function BackupExport({ meta, students }) {
   const [outName, setOutName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [incSecret, setIncSecret] = useState(false);
+  // Bản sao lưu TỰ ĐỘNG 17h (Supabase giữ 35 bản). null = đang tải, "loi" = không tải được.
+  const [banTD, setBanTD] = useState(null);
+  const goiRpc = async (ten, body) => {
+    await sbEnsureFresh();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${ten}`, { method: "POST", headers: SB_H, body: JSON.stringify(body || {}) });
+    if (!r.ok) throw new Error("rpc-" + r.status);
+    return r.json();
+  };
+  const taiBanTD = async () => { setBanTD(null); try { setBanTD(await goiRpc("sao_luu_ds")); } catch { setBanTD("loi"); } };
+  useEffect(() => { taiBanTD(); }, []);
+  const gioVN = (iso) => { try { return new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return iso; } };
+  const phucHoiBanTD = async (b) => {
+    let data; try { data = await goiRpc("sao_luu_lay", { p_id: b.id }); } catch { toast("Không lấy được bản sao lưu (mạng/phiên). Thử lại."); return; }
+    if (!data) { toast("Bản sao lưu này không còn nữa."); taiBanTD(); return; }
+    restore(JSON.stringify(data)); // dùng đúng chốt chặn + xác nhận + bản tự lưu trước khi ghi đè của "Phục hồi"
+  };
   const dl = (text, name, type) => { try { const blob = new Blob([type === "csv" ? "\uFEFF" + text : text], { type: type === "csv" ? "text/csv;charset=utf-8;" : "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); const d = new Date(); const hh = String(d.getHours()).padStart(2, "0"), mi = String(d.getMinutes()).padStart(2, "0"); try { localStorage.setItem("mn5:lastBackup", `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hh}:${mi}`); } catch {} } catch (e) {} };
 
   const buildJSON = async (includeSecrets) => {
@@ -159,6 +175,29 @@ export function BackupExport({ meta, students }) {
               <button onClick={copyOut} style={{ padding: "5px 12px", borderRadius: 8, border: "none", background: C.blueA, display:"inline-flex", alignItems:"center", gap:5, color: C.onFill, fontWeight: 700, fontSize: 12, cursor: "pointer" }}><Icon name="clipboard" size={13} color={C.onFill} /> Copy</button>
             </div>
             <textarea readOnly value={outText} onFocus={(e) => e.target.select()} style={{ width: "100%", height: 110, fontSize: 11, fontFamily: "monospace", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 8, resize: "vertical", color: C.ink, background: C.graySoft }} />
+          </div>
+        )}
+      </Card>
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <div style={{ flex: 1, minWidth: 0, fontFamily: font.display, fontWeight: 700, fontSize: 14.5, display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="clock" size={16} color={C.ink} /> Bản sao lưu tự động</div>
+          <button onClick={taiBanTD} style={{ padding: "5px 12px", borderRadius: 8, border: `1.5px solid ${C.line}`, background: C.card, color: C.sub, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>Tải lại</button>
+        </div>
+        <div style={{ fontSize: 12.5, color: C.sub, marginBottom: 10 }}>Hệ thống tự lưu <b>17:00 mỗi ngày</b>, giữ 35 bản mới nhất. PIN được ẩn; khi phục hồi, PIN hiện tại được giữ nguyên.</div>
+        {banTD == null && <div style={{ fontSize: 13, color: C.sub, padding: "8px 0" }}>Đang tải danh sách…</div>}
+        {banTD === "loi" && <div style={{ fontSize: 13, color: C.coralText, padding: "8px 0" }}>Không tải được danh sách (kiểm tra mạng / đăng nhập). Bấm "Tải lại" để thử lần nữa.</div>}
+        {Array.isArray(banTD) && banTD.length === 0 && <div style={{ fontSize: 13, color: C.sub, padding: "8px 0" }}>Chưa có bản nào.</div>}
+        {Array.isArray(banTD) && banTD.length > 0 && (
+          <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+            {banTD.map((b, i) => (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 12px", borderTop: i ? `1px solid ${C.line}` : "none", background: C.card }}>
+                <div style={{ flex: "1 1 150px", minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{gioVN(b.tao_luc)}</div>
+                  <div style={{ fontSize: 12, color: C.sub }}>{b.so_hs} học sinh · {b.so_muc} mục</div>
+                </div>
+                <button onClick={() => phucHoiBanTD(b)} disabled={busy} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${C.coral}`, background: C.card, color: C.coralText, fontWeight: 700, fontSize: 13, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Phục hồi</button>
+              </div>
+            ))}
           </div>
         )}
       </Card>
